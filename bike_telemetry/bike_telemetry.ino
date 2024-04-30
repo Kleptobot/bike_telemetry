@@ -71,9 +71,12 @@ logger log_data;
 //RTC
 RTC_DS3231 rtc;
 
-DateTime nCurrentTime, nLastIMURead, nLastBatteryRead, nLastAction, nStartTime;
-TimeSpan nIMUReadPeriod, nBatteryReadPeriod, nTimeoutPeriod, nStartDelayPeriod;
+DateTime nCurrentTime, nCurrentTime_Prev, nLastBatteryRead, nLastAction;
+TimeSpan nBatteryReadPeriod, nTimeoutPeriod;
 bool bSwitchOnDelay;
+
+uint32_t nMillisAtTick, nMillisAtTick_Prev, millisNow, nStartDelayPeriod, nIMUReadPeriod;
+uint64_t nCurrentTimeMillis, nStartTimeMillis, nLastIMURead;
 
 //declare methods with default values
 void drawMenuStopped(int x=0, int y=0);
@@ -148,10 +151,10 @@ void setup()
     while (1) delay(500);
   }
 
-  nIMUReadPeriod = TimeSpan(0,0,0,1);
+  nIMUReadPeriod = 500;
   nBatteryReadPeriod = TimeSpan(0,0,0,20);
   nTimeoutPeriod = TimeSpan(0,0,0,40);
-  nStartDelayPeriod = TimeSpan(0,0,0,1);
+  nStartDelayPeriod = 1000;
 
 
   display.setTextColor(SH110X_WHITE);
@@ -186,7 +189,8 @@ void setup()
   // Minimizes power when bluetooth is used
   //NRF_POWER->DCDCEN = 1;
 
-  nStartTime = rtc.now();
+  nStartTimeMillis = rtc.now().unixtime()*1000;
+  nLastIMURead = nStartTimeMillis;
 }
 
 int count=0;
@@ -195,8 +199,16 @@ void loop()
 
   //read the current time
   nCurrentTime = rtc.now();
-  TimeSpan ts1 = nCurrentTime-nStartTime;
-  bSwitchOnDelay = (nStartDelayPeriod.totalseconds() > ts1.totalseconds());
+
+  millisNow = millis();
+  if(nCurrentTime_Prev != nCurrentTime)
+  {
+    nMillisAtTick = millisNow;
+  }
+  nCurrentTime_Prev = nCurrentTime;
+  nCurrentTimeMillis = nCurrentTime.unixtime()*1000 + (millisNow-nMillisAtTick);
+
+  bSwitchOnDelay = (nStartDelayPeriod > (nCurrentTimeMillis-nStartTimeMillis));
 
   bRight  = digitalRead(D0);
   bUp     = digitalRead(D1);
@@ -225,15 +237,14 @@ void loop()
   }
 
   //imu read period check
-  ts1 = nCurrentTime- nLastIMURead;
-  if (ts1.totalseconds() > nIMUReadPeriod.totalseconds()){
+  if (nIMUReadPeriod > (nCurrentTimeMillis - nLastIMURead)){
     //get IMU data
     readIMU();
-    nLastIMURead = nCurrentTime;
+    nLastIMURead = nCurrentTimeMillis;
   }
 
   //battery voltage period check
-  ts1 = nCurrentTime- nLastBatteryRead;
+  TimeSpan ts1 = nCurrentTime- nLastBatteryRead;
   if (ts1.totalseconds() > nBatteryReadPeriod.totalseconds()){
     //get IMU data
     fBatteryVoltage = battery.GetBatteryVoltage();
@@ -278,7 +289,7 @@ void loop()
   display.clearDisplay();
 
   GUI();
-  log_data.log(nCurrentTime);
+  log_data.log(nCurrentTime, millisNow-nMillisAtTick);
 
   display.display();
 }

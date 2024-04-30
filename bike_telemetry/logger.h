@@ -28,8 +28,9 @@ class logger {
     uint16_t _num_sources;
     TimeSpan _interval, _elapsed_time;
     DateTime _last_log;
+    uint32_t _last_millis, _elapsed_millis;
     bool _logging;
-    void log_data(DateTime current_time);
+    void log_data(DateTime current_time, uint32_t milliseconds);
 
   public:
 
@@ -65,7 +66,7 @@ class logger {
     void pause_logging(){_logging=0;};
     void playPause_logging(){_logging=!_logging;};
 
-    void log(DateTime current_time);
+    void log(DateTime current_time, uint32_t milliseconds);
 
     bool logging(){return _logging;};
 

@@ -11,12 +11,14 @@ void logger::addSource(String name, float* data)
   }
 }
 
-void logger::log_data(DateTime current_time)
+void logger::log_data(DateTime current_time, uint32_t milliseconds)
 {
   logFile = SD.open("datalog.csv", FILE_WRITE);
   if(logFile)
   {
     logFile.print(current_time.timestamp(DateTime::TIMESTAMP_FULL));
+    logFile.print('.');
+    logFile.print(milliseconds);
     for(int i =0; i<_num_sources; i++)
     {
       logFile.print(",");
@@ -47,14 +49,16 @@ void logger::start_logging()
   logFile.close();
 }
 
-void logger::log(DateTime current_time)
+void logger::log(DateTime current_time, uint32_t milliseconds)
 {
   _elapsed_time = (current_time-_last_log);
+  _elapsed_millis = _elapsed_time.totalseconds()*1000 + (milliseconds - _last_millis);
   if(_logging){
-    if(_elapsed_time.totalseconds()>=1)
+    if(_elapsed_millis >=500)
     {
-      log_data(current_time);
+      log_data(current_time, milliseconds);
       _last_log = current_time;
+      _last_millis = milliseconds;
     }
   }
 }
