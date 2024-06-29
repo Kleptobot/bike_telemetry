@@ -431,7 +431,7 @@
     "pinned_symbol_libs": []
   },
   "meta": {
-    "filename": "Obike.kicad_pro",
+    "filename": "OBike.kicad_pro",
     "version": 1
   },
   "net_settings": {
@@ -576,8 +576,8 @@
   },
   "sheets": [
     [
-      "e1a6bdfe-cb29-4f29-aefd-878e1b10c20b",
-      ""
+      "b6c91502-91b9-44d0-9569-7774925b5f71",
+      "Root"
     ]
   ],
   "text_variables": {}

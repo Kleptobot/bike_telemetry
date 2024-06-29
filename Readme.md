@@ -11,12 +11,16 @@ The XIAO nRF52840 (Sense) includes a temperature sensor and a 6 axis IMU
 
 Data from the BLE peripherals is logged to a micro SD card. Temperature from the RTC, acceleration, angular velocity and battery voltage from the XIAO nRF52840 (Sense) are also logged.
 
-
-Currently supported peripherals are:
+## Currently supported peripherals are:
 - peripherals that implement the Cycling Speed and Cadence (CSC) profile.
 
+## Future goals
+- Support for heart rate monitor (HRM) peripherals
+- Support for Cycling Power Service (CPS) peripherals
+- Add GPS module and log GPS speed and position
+- Better sleep power usage
+- Advanced filtering to combine multiple signals into a best estimate. eg. GPS speed, CSC speed and acceleration values blended to create an estimated velocity.
 
-Future goals
-- support for heart rate monitor (HRM) peripherals
-- support for Cycling Power Service (CPS) peripherals
-- add GPS module and log GPS speed and position
+### Extreme Goals
+- Add maps support
+- Add ANT+ support
