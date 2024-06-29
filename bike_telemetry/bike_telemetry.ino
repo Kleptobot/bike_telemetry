@@ -8,11 +8,15 @@
 #include <RTClib.h>
 #include <xiaobattery.h>
 #include <nrf52840.h>
+#include <Adafruit_MCP23X17.h>
 #include "ListLib.h"
 
 #include "csc.h"
 #include "GFX.h"
 #include "logger.h"
+
+#define MCP23017_ADDR 0x20
+Adafruit_MCP23X17 mcp;
 
 #define i2c_Address 0x3c //initialize with the I2C addr 0x3C Typically eBay OLED's
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
@@ -20,7 +24,15 @@
 #define OLED_RESET -1   //   QT-PY / XIAO
 Adafruit_SH1107 display = Adafruit_SH1107(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-#define WAKEUP_PIN   D3
+#define WAKEUP_PIN   D1
+#define GPIOB0  8
+#define GPIOB1  9
+#define GPIOB2  10
+#define GPIOB3  11
+#define GPIOB4  12
+
+#define Battery_Read_Period 60
+#define Timeout_Period  40
 
 //Create a instance of class LSM6DS3
 LSM6DS3 myIMU(I2C_MODE, 0x6A);    //I2C device address 0x6A
@@ -72,8 +84,8 @@ logger log_data;
 RTC_DS3231 rtc;
 
 DateTime nCurrentTime, nCurrentTime_Prev, nLastBatteryRead, nLastAction;
-TimeSpan nBatteryReadPeriod, nTimeoutPeriod;
 bool bSwitchOnDelay;
+bool started;
 
 uint32_t nMillisAtTick, nMillisAtTick_Prev, millisNow, nStartDelayPeriod, nIMUReadPeriod;
 uint64_t nCurrentTimeMillis, nStartTimeMillis, nLastIMURead;
@@ -99,23 +111,9 @@ void disconnectPin(uint32_t ulPin) {
         | ((uint32_t)GPIO_PIN_CNF_SENSE_Disabled   << GPIO_PIN_CNF_SENSE_Pos);
 }
 
-void setup()
+//run this once but not in the setup
+void setup_peripherals()
 {
-  // Initialize Bluefruit with maximum connections as Peripheral = 0, Central = 4
-  // SRAM usage required by SoftDevice will increase dramatically with number of connections
-  Bluefruit.begin(0, 2);
-
-  // Set up the sense mechanism to generate the DETECT signal to wake from system_off
-  pinMode(WAKEUP_PIN, INPUT_PULLUP_SENSE);
-
-  Serial.begin(115200);
-
-  pinMode(D0,INPUT);
-  pinMode(D1,INPUT);
-  pinMode(D2,INPUT);
-  pinMode(D3,INPUT);
-  pinMode(D6,INPUT);
-
   display.begin(i2c_Address, true); // Address 0x3C default
   display.clearDisplay();
   display.setTextSize(1);
@@ -128,12 +126,15 @@ void setup()
 
   // initialise SD card
   if (!SD.begin(SD_CS)) {
-    display.println("initialization failed. Things to check:");
+    Serial.println("initialisation failed.");
+    display.println("initialisation failed. Things to check:");
     display.println("* is a card inserted?");
     display.println("* is your wiring correct?");
     display.println("* did you change the chipSelect pin to match your shield or module?");
     display.display();
     delay(500);
+  }else{
+    Serial.println("SD card initialised");
   };
   
   display.clearDisplay();
@@ -141,19 +142,12 @@ void setup()
   if (myIMU.begin() != 0) {
     display.println("IMU init error");
     while (1) delay(500);
+  }else{
+    Serial.println("IMU initialised");
   }
   display.display();
 
-  if (! rtc.begin()) {
-    display.clearDisplay();
-    display.println("Couldn't find RTC");
-    display.display();
-    while (1) delay(500);
-  }
-
   nIMUReadPeriod = 500;
-  nBatteryReadPeriod = TimeSpan(0,0,0,20);
-  nTimeoutPeriod = TimeSpan(0,0,0,40);
   nStartDelayPeriod = 1000;
 
 
@@ -189,13 +183,49 @@ void setup()
   // Minimizes power when bluetooth is used
   //NRF_POWER->DCDCEN = 1;
 
+  started = true;
+}
+
+void setup()
+{
+  // Initialize Bluefruit with maximum connections as Peripheral = 0, Central = 4
+  // SRAM usage required by SoftDevice will increase dramatically with number of connections
+  Bluefruit.begin(0, 2);
+
+  // Set up the sense mechanism to generate the DETECT signal to wake from system_off
+  pinMode(WAKEUP_PIN, INPUT_PULLDOWN_SENSE);  // this pin (WAKE_HIGH_PIN) is pulled down and wakes up the feather when externally connected to 3.3v.
+
+  Serial.begin(115200);
+
+  if (!mcp.begin_I2C()) {
+    Serial.println("Error.");
+    while (1);
+  }
+  mcp.setupInterrupts(true, true, HIGH);
+  mcp.pinMode(GPIOB0, INPUT_PULLUP);
+  mcp.pinMode(GPIOB1, INPUT_PULLUP);
+  mcp.pinMode(GPIOB2, INPUT_PULLUP);
+  mcp.pinMode(GPIOB3, INPUT_PULLUP);
+  mcp.pinMode(GPIOB4, INPUT_PULLUP);
+  mcp.setupInterruptPin(GPIOB0, HIGH);
+
+  if (! rtc.begin()) {
+    Serial.println("Couldn't find RTC");
+    while (1) delay(500);
+  }else{
+    Serial.println("RTC initialised");
+  }
+
   nStartTimeMillis = rtc.now().unixtime()*1000;
   nLastIMURead = nStartTimeMillis;
+  
+  Serial.println("Booted");
 }
 
 int count=0;
 void loop()
 {
+  uint8_t currentB;
 
   //read the current time
   nCurrentTime = rtc.now();
@@ -210,11 +240,15 @@ void loop()
 
   bSwitchOnDelay = (nStartDelayPeriod > (nCurrentTimeMillis-nStartTimeMillis));
 
-  bRight  = digitalRead(D0);
-  bUp     = digitalRead(D1);
-  bDown   = digitalRead(D2);
-  bCenter = digitalRead(D3);
-  bLeft   = digitalRead(D6);
+  currentB = mcp.readGPIOB();
+
+  bCenter = currentB & 0x01;
+  bRight  = (currentB>>1) & 0x01;
+  bDown   = (currentB>>2) & 0x01;
+  bLeft   = (currentB>>3) & 0x01;
+  bUp     = (currentB>>4) & 0x01;
+
+  mcp.clearInterrupts();
 
   bRight_RE = bRight && !bRight_Prev && !bSwitchOnDelay;
   bRight_FE = !bRight && bRight_Prev && !bSwitchOnDelay;
@@ -236,6 +270,14 @@ void loop()
     nLastAction = nCurrentTime;
   }
 
+  //check if the device has timed out
+  TimeSpan ts1 = nCurrentTime - nLastAction;
+  if (ts1.totalseconds() > Timeout_Period && !b_Running){
+    NRF_POWER->SYSTEMOFF=1;
+  }
+
+  setup_peripherals();
+
   //imu read period check
   if (nIMUReadPeriod > (nCurrentTimeMillis - nLastIMURead)){
     //get IMU data
@@ -243,25 +285,14 @@ void loop()
     nLastIMURead = nCurrentTimeMillis;
   }
 
+
   //battery voltage period check
-  TimeSpan ts1 = nCurrentTime- nLastBatteryRead;
-  if (ts1.totalseconds() > nBatteryReadPeriod.totalseconds()){
+  ts1 = nCurrentTime- nLastBatteryRead;
+  if (ts1.totalseconds() > Battery_Read_Period){
     //get IMU data
     fBatteryVoltage = battery.GetBatteryVoltage();
     nBatteryPercentage = fBatteryVoltage/.036;
     nLastBatteryRead = nCurrentTime;
-  }
-
-  //check if the device has timed out
-  ts1 = nCurrentTime - nLastAction;
-  if (ts1.totalseconds() > nTimeoutPeriod.totalseconds() && !b_Running){
-    disconnectPin(D0);
-    disconnectPin(D1);
-    disconnectPin(D2);
-    disconnectPin(D3);
-    disconnectPin(D6);
-    nrf_gpio_cfg_sense_input(g_ADigitalPinMap[D3], NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_SENSE_LOW);
-    sd_power_system_off();
   }
   
   //if there are csc devices
