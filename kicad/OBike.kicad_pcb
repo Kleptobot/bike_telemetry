@@ -206,7 +206,7 @@
 		(property ki_fp_filters "Connector*:*_1x??_*")
 		(path "/5b4d5d20-8637-44db-8e1c-2270925ed8b0")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr through_hole)
 		(fp_line
 			(start 1.33 1.27)
@@ -492,7 +492,7 @@
 		(property ki_fp_filters "R_*")
 		(path "/01311eae-1aa6-4597-9f7d-9bccab0e2b24")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start -0.227064 0.735)
@@ -702,7 +702,7 @@
 		(property ki_fp_filters "R_*")
 		(path "/0f908bd1-e69a-439e-8aab-684d3c45422d")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start -0.227064 0.735)
@@ -915,7 +915,7 @@
 		(property ki_fp_filters "microSD*")
 		(path "/1cffd527-4f20-4e39-9262-1868ea30df81")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start 0 -11.78)
@@ -1202,7 +1202,7 @@
 		(property ki_fp_filters "C_*")
 		(path "/63c28962-85f5-4c17-8e4f-1f2dd8508e60")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start -0.261252 0.735)
@@ -1412,7 +1412,7 @@
 		(property ki_fp_filters "R_*")
 		(path "/21755e87-d374-445c-b9f6-ab3078b1fe08")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start -0.227064 0.735)
@@ -1622,7 +1622,7 @@
 		(property ki_fp_filters "R_*")
 		(path "/4c3be5c4-8eda-49cc-bf15-0a94b70a2854")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start -0.227064 0.735)
@@ -1832,7 +1832,7 @@
 		(property ki_fp_filters "R_*")
 		(path "/a8815fc4-08ba-470b-ac29-c0a4761d9dfe")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start -0.227064 0.735)
@@ -2042,7 +2042,7 @@
 		(property ki_fp_filters "R_*")
 		(path "/bb8cc013-c154-43f4-965e-7c54abcbd055")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start -0.227064 0.735)
@@ -2327,7 +2327,7 @@
 		(property ki_fp_filters "R_*")
 		(path "/1124d0cc-a532-403b-a585-fc9abe5b296b")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd dnp)
 		(fp_line
 			(start -0.237258 -0.5225)
@@ -2537,7 +2537,7 @@
 		(property ki_fp_filters "Connector*:*_1x??_*")
 		(path "/fafbc32b-ee9a-4e77-8fe6-80f08c9e54a9")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr through_hole dnp)
 		(fp_line
 			(start 1.11 0.76)
@@ -2832,7 +2832,7 @@
 		(property ki_fp_filters "R_*")
 		(path "/535eedf5-f887-4cde-8f70-4c9d1c662bdb")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd dnp)
 		(fp_line
 			(start -0.237258 -0.5225)
@@ -3042,7 +3042,7 @@
 		(property ki_fp_filters "R_*")
 		(path "/62c7ee30-3982-48ce-afec-ae0415e9847a")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd dnp)
 		(fp_line
 			(start -0.237258 -0.5225)
@@ -3252,7 +3252,7 @@
 		(property ki_fp_filters "R_*")
 		(path "/a6a22450-8714-46bf-9666-a4cd4bd3ad46")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start -0.227064 0.735)
@@ -3536,7 +3536,7 @@
 		)
 		(path "/38565a6c-fa55-4ce9-936f-0323f84e4c6c")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start 6.65 6.5)
@@ -3807,7 +3807,7 @@
 		(property ki_fp_filters "Connector*:*_1x??_*")
 		(path "/533bebdf-d936-4be8-9aad-f0c4011d57f4")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr through_hole dnp)
 		(fp_line
 			(start -1.11 -0.76)
@@ -4162,7 +4162,7 @@
 		(property ki_fp_filters "C_*")
 		(path "/556eb7d3-1e5f-4a4e-b245-de1b8f0b1a38")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start 0.261252 0.735)
@@ -4378,7 +4378,7 @@
 		(property ki_fp_filters "C_*")
 		(path "/8a131471-87ae-4f5c-86eb-30c89a5e0ac1")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start 0.261252 -0.735)
@@ -4594,7 +4594,7 @@
 		(property ki_fp_filters "R_*")
 		(path "/4167ca2f-b3ec-42ca-92a8-f5d4a968f071")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start 0.227064 0.735)
@@ -4810,7 +4810,7 @@
 		(property ki_fp_filters "C_*")
 		(path "/096ed020-3d44-4f43-b76d-e7610d3f459d")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start 0.261252 -0.735)
@@ -5026,7 +5026,7 @@
 		(property ki_fp_filters "R_*")
 		(path "/0353ee18-c271-4aaa-befb-47c70625831d")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start 0.237258 0.5225)
@@ -5242,7 +5242,7 @@
 		(property ki_fp_filters "Connector*:*_1x??_*")
 		(path "/f3361dcb-440b-4d68-aeb2-4f249f6457cc")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr through_hole)
 		(fp_line
 			(start 1.11 -4.505)
@@ -5582,7 +5582,7 @@
 		(property ki_fp_filters "D*SOD?123*")
 		(path "/d32e7a8c-ec7f-4196-805f-31673bfaddfa")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start -2.36 -1)
@@ -5880,7 +5880,7 @@
 		(property ki_fp_filters "R_*")
 		(path "/b81e2f79-af68-4a7b-be0e-2d70a8083713")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start 0.227064 -0.735)
@@ -6096,7 +6096,7 @@
 		(property ki_fp_filters "R_*")
 		(path "/a2f3a282-637c-4fc2-9148-3473fe6a4966")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start 0.227064 0.735)
@@ -6312,7 +6312,7 @@
 		(property ki_fp_filters "CONN_S2B-PH-K-S_JST")
 		(path "/031fecb4-a3ca-4b11-b722-be8597cfd7b5")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr through_hole)
 		(fp_line
 			(start 4.06 -6.36)
@@ -6833,7 +6833,7 @@
 		(property ki_fp_filters "R_*")
 		(path "/3babf204-14fe-49af-9825-d67993866dc1")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start 0.227064 0.735)
@@ -7049,7 +7049,7 @@
 		(property ki_fp_filters "C_*")
 		(path "/aab0dbbe-365e-4999-94c1-7d3582b3f741")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start 0.261252 -0.735)
@@ -7265,7 +7265,7 @@
 		(property ki_fp_filters "C_*")
 		(path "/69422578-a99c-4514-a0c5-c94909d7c18e")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start 0.261252 0.735)
@@ -7481,7 +7481,7 @@
 		(property ki_fp_filters "SOIC*7.5x10.3mm*P1.27mm*")
 		(path "/d3ac5613-437d-4a8a-b199-e5f3d9fe3823")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start -1.95 2.56)
@@ -7801,7 +7801,7 @@
 		(property ki_fp_filters "R_*")
 		(path "/abd04708-1cd6-4fa1-b87f-8c927af5d971")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start 0.227064 -0.735)
@@ -8017,7 +8017,7 @@
 		(property ki_fp_filters "C_*")
 		(path "/7f4503ac-b2a1-4227-a3d9-864a3fee512f")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start 0.261252 0.735)
@@ -8233,7 +8233,7 @@
 		(property ki_fp_filters "R_*")
 		(path "/6b5c4d2d-6700-40b6-ad8d-a961387cc464")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start 0.237258 -0.5225)
@@ -8449,7 +8449,7 @@
 		(property ki_fp_filters "R_*")
 		(path "/e990aad5-1051-49c3-94ff-3db1930b55d9")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start 0.227064 0.735)
@@ -8665,7 +8665,7 @@
 		(property ki_fp_filters "C_*")
 		(path "/8b88b395-731e-4904-bc6b-9cbef0485f02")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start 0.261252 0.735)
@@ -8881,7 +8881,7 @@
 		(property ki_fp_filters "C_*")
 		(path "/0765f2ae-cb75-40e4-af31-e6c186e64d1d")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start 0.261252 -0.735)
@@ -9097,7 +9097,7 @@
 		(property ki_fp_filters "DIP*W7.62mm*")
 		(path "/ddb097a3-8039-4bd5-900c-b27a8237b347")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start -1.95 -4.435)
@@ -9489,7 +9489,7 @@
 		(property ki_fp_filters "D*SOD?123*")
 		(path "/eacd338b-cbf2-4a53-b43f-1014fd57a5d8")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start -2.36 -1)
@@ -9815,7 +9815,7 @@
 		(property ki_fp_filters "D*SOD?123*")
 		(path "/b0e8cfd7-67bc-4484-abac-b149f7a9fb10")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start -2.36 -1)
@@ -10113,7 +10113,7 @@
 		(property ki_fp_filters "R_*")
 		(path "/6819d545-1d24-44c2-943b-a34e1c807490")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start 0.227064 -0.735)
@@ -10329,7 +10329,7 @@
 		(property ki_fp_filters "C_*")
 		(path "/49e7f4f3-0272-4f3a-a24b-91d3361947ca")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start 0.261252 0.735)
@@ -10545,7 +10545,7 @@
 		(property ki_fp_filters "R_*")
 		(path "/d865dd3c-95a5-43a8-8135-ba212f89f1d7")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start 0.227064 -0.735)
@@ -10761,7 +10761,7 @@
 		(property ki_fp_filters "R_*")
 		(path "/e1c2c8b3-450c-4da9-aec0-5b1ab59cfbba")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start 0.227064 0.735)
@@ -10977,7 +10977,7 @@
 		(property ki_fp_filters "R_*")
 		(path "/0787e6eb-5836-457f-a370-ddd897f159a3")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start 0.227064 -0.735)
@@ -11192,7 +11192,7 @@
 		)
 		(path "/e04cc9a6-965f-4c89-bc2b-0ef7d9cb1cb0")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start -8.9 -8.5)
@@ -14220,7 +14220,7 @@
 		(property ki_fp_filters "R_*")
 		(path "/d07c3f31-91c9-44d9-bb32-016ecdaaea67")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start 0.227064 -0.735)
@@ -14436,7 +14436,7 @@
 		(property ki_fp_filters "R_*")
 		(path "/d909f48c-dbe6-4b10-aaf0-f18778c11141")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start 0.227064 -0.735)
@@ -14680,7 +14680,7 @@
 		(property ki_fp_filters "D*SOD?123*")
 		(path "/1a87098b-39e5-4acd-b2d7-30742c69170c")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start 1.65 1)
@@ -14978,7 +14978,7 @@
 		(property ki_fp_filters "R_*")
 		(path "/787a10a9-870e-4cea-a0b1-a1ede16666f8")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start 0.227064 0.735)
@@ -15194,7 +15194,7 @@
 		(property ki_fp_filters "C_*")
 		(path "/276cdd08-2776-4598-997a-14ef40465e18")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start 0.261252 0.735)
@@ -15410,7 +15410,7 @@
 		(property ki_fp_filters "C_*")
 		(path "/842cb09e-ff12-45b0-bb5e-0d930cb72945")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start 0.261252 0.735)
@@ -15626,7 +15626,7 @@
 		(property ki_fp_filters "R_*")
 		(path "/de6ed4e9-b522-4142-b9d0-acf1290527bf")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start 0.227064 0.735)
@@ -15870,7 +15870,7 @@
 		(property ki_fp_filters "D*SOD?123*")
 		(path "/4d53f15e-4823-425d-a938-307e081a296a")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start 1.65 1)
@@ -16169,7 +16169,7 @@
 		(property ki_fp_filters "PG-VLGA-8-2_INF PG-VLGA-8-2_INF-M PG-VLGA-8-2_INF-L")
 		(path "/ed4460bd-f16d-4106-a1dc-3da494656572")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start 1.427 0.307718)
@@ -16944,7 +16944,7 @@
 		(property ki_fp_filters "R_*")
 		(path "/9d9a77b2-585e-4309-ad54-d76018d65303")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start 0.227064 0.735)
@@ -17160,7 +17160,7 @@
 		(property ki_fp_filters "R_*")
 		(path "/3162ecd2-d481-4ddf-997a-5e89b73a7b8e")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start 0.227064 -0.735)
@@ -17376,7 +17376,7 @@
 		(property ki_fp_filters "SOIC*7.5x17.9mm*P1.27mm*")
 		(path "/6454edf6-d2f2-41ce-9fcd-25190dbef5eb")
 		(sheetname "Root")
-		(sheetfile "combined board.kicad_sch")
+		(sheetfile "OBike.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start -3.86 -9.06)
