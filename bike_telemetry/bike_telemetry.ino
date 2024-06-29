@@ -51,7 +51,7 @@ uint8_t toConnectMAC[6];
 int16_t s16DeviceSel;
 bool bBackFocDev, bBackSelDev;
 
-float f32_acc_x, f32_acc_y, f32_acc_z, f32_gyro_x, f32_gyro_y, f32_gyro_z, f32_kph, f32_cadence;
+float f32_Temp, f32_acc_x, f32_acc_y, f32_acc_z, f32_gyro_x, f32_gyro_y, f32_gyro_z, f32_kph, f32_cadence;
 
 bool b_Running, b_Running_Prev;
 
@@ -153,12 +153,14 @@ void setup_peripherals()
 
   display.setTextColor(SH110X_WHITE);
 
+  log_data.addSource((char*)"Temp", &f32_Temp);
   log_data.addSource((char*)"X Acc", &f32_acc_x);
   log_data.addSource((char*)"Y Acc", &f32_acc_y);
   log_data.addSource((char*)"Z Acc", &f32_acc_z);
   log_data.addSource((char*)"X Gyro", &f32_gyro_x);
   log_data.addSource((char*)"Y Gyro", &f32_gyro_y);
   log_data.addSource((char*)"Z Gyro", &f32_gyro_z);
+  log_data.addSource((char*)"Batt", &fBatteryVoltage);
 
   Bluefruit.setName("Bluefruit52 Central");
 
@@ -282,6 +284,7 @@ void loop()
   if (nIMUReadPeriod > (nCurrentTimeMillis - nLastIMURead)){
     //get IMU data
     readIMU();
+    f32_Temp = rtc.getTemperature();
     nLastIMURead = nCurrentTimeMillis;
   }
 
