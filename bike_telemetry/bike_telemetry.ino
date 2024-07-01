@@ -10,6 +10,7 @@
 #include <xiaobattery.h>
 #include <nrf52840.h>
 #include <Adafruit_MCP23X17.h>
+#include <Dps3xx.h>
 #include "ListLib.h"
 
 #include "csc.h"
@@ -55,7 +56,7 @@ uint8_t toConnectMAC[6];
 int16_t s16DeviceSel;
 bool bBackFocDev, bBackSelDev;
 
-float f32_Temp, f32_acc_x, f32_acc_y, f32_acc_z, f32_gyro_x, f32_gyro_y, f32_gyro_z, f32_kph, f32_cadence;
+float f32_RTC_Temp, f32_DSP_Temp, f32_DSP_Pa, f32_Alt, f32_acc_x, f32_acc_y, f32_acc_z, f32_gyro_x, f32_gyro_y, f32_gyro_z, f32_kph, f32_cadence;
 
 bool b_Running, b_Running_Prev;
 
@@ -93,6 +94,9 @@ bool started;
 
 uint32_t nMillisAtTick, nMillisAtTick_Prev, millisNow, nStartDelayPeriod, nIMUReadPeriod;
 uint64_t nCurrentTimeMillis, nStartTimeMillis, nLastIMURead;
+
+// Dps3xx Object
+Dps3xx Dps3xxPressureSensor = Dps3xx();
 
 //declare methods with default values
 void drawMenuStopped(int x=0, int y=0);
@@ -150,6 +154,7 @@ void setup_peripherals()
     Serial.println("IMU initialised");
   }
   
+  Dps3xxPressureSensor.begin(Wire);
 
   nIMUReadPeriod = 500;
   nStartDelayPeriod = 1000;
@@ -157,7 +162,10 @@ void setup_peripherals()
 
   display.setTextColor(ST77XX_WHITE);
 
-  log_data.addSource((char*)"Temp", &f32_Temp);
+  log_data.addSource((char*)"Temp1", &f32_RTC_Temp);
+  log_data.addSource((char*)"Temp2", &f32_DSP_Temp);
+  log_data.addSource((char*)"Pres", &f32_DSP_Pa);
+  log_data.addSource((char*)"Alt", &f32_Alt);
   log_data.addSource((char*)"X Acc", &f32_acc_x);
   log_data.addSource((char*)"Y Acc", &f32_acc_y);
   log_data.addSource((char*)"Z Acc", &f32_acc_z);
@@ -278,17 +286,25 @@ void loop()
 
   //check if the device has timed out
   TimeSpan ts1 = nCurrentTime - nLastAction;
-  if (ts1.totalseconds() > Timeout_Period && !b_Running){
-    NRF_POWER->SYSTEMOFF=1;
-  }
-
-  setup_peripherals();
+  // if (ts1.totalseconds() > Timeout_Period && !b_Running){
+  //   NRF_POWER->SYSTEMOFF=1;
+  // }
+  if (!started)
+    setup_peripherals();
 
   //imu read period check
   if (nIMUReadPeriod > (nCurrentTimeMillis - nLastIMURead)){
     //get IMU data
     readIMU();
-    f32_Temp = rtc.getTemperature();
+    f32_RTC_Temp = rtc.getTemperature();
+    Dps3xxPressureSensor.measureTempOnce(f32_DSP_Temp, 7);
+    Dps3xxPressureSensor.measurePressureOnce(f32_DSP_Pa, 7);
+
+    //estimate altitude from pressure and temperature
+    float Tb = 273.15+f32_DSP_Temp;
+    float P_Pb = pow(f32_DSP_Pa/101325,-0.1902663539);
+    float Lb = 0.0065;
+    f32_Alt = (Tb*P_Pb-Tb)/(Lb*P_Pb);
     nLastIMURead = nCurrentTimeMillis;
   }
 
