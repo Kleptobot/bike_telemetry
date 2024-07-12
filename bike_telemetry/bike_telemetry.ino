@@ -1,7 +1,8 @@
 #include <LSM6DS3.h>
 #include <Wire.h>
-//#include <Adafruit_ST77XX.h>
-#include <Adafruit_ST7789.h> // Hardware-specific library for ST7789
+//#include <Adafruit_SH110X.h>
+//#include <Adafruit_ST7789.h> // Hardware-specific library for ST7789
+#include <Adafruit_SH110X.h>
 #include <SPI.h>
 #include <SD.h>
 #include <Wire.h>
@@ -26,8 +27,9 @@ Adafruit_MCP23X17 mcp;
 #define TFT_CS        D0
 #define TFT_RST       -1
 #define TFT_DC        D2
-//Adafruit_SH1107 display = Adafruit_SH1107(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-Adafruit_ST7789 display = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
+#define OLED_RESET -1   //   QT-PY / XIAO
+Adafruit_SH1107 display = Adafruit_SH1107(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+//Adafruit_ST7789 display = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
 
 #define WAKEUP_PIN   D1
 #define GPIOB0  8
@@ -122,14 +124,14 @@ void disconnectPin(uint32_t ulPin) {
 //run this once but not in the setup
 void setup_peripherals()
 {
-  display.init(240, 280);      // Init ST7789V2 chip
-  display.fillScreen(ST77XX_BLACK);
+  display.begin(i2c_Address, true); // Address 0x3C default
+  display.clearDisplay();
   display.setTextSize(1);
-  display.setTextColor(ST77XX_WHITE);
+  display.setTextColor(SH110X_WHITE);
   display.setCursor(0, 0);
   display.setRotation(3);
 
-  display.fillScreen(ST77XX_BLACK);
+  display.clearDisplay();
   display.setCursor(0, 0);
 
   // initialise SD card
@@ -145,7 +147,7 @@ void setup_peripherals()
     Serial.println("SD card initialised");
   };
   
-  display.fillScreen(ST77XX_BLACK);
+  display.clearDisplay();
   display.setCursor(0, 0);
   if (myIMU.begin() != 0) {
     display.println("IMU init error");
@@ -160,7 +162,7 @@ void setup_peripherals()
   nStartDelayPeriod = 1000;
 
 
-  display.setTextColor(ST77XX_WHITE);
+  display.setTextColor(SH110X_WHITE);
 
   log_data.addSource((char*)"Temp1", &f32_RTC_Temp);
   log_data.addSource((char*)"Temp2", &f32_DSP_Temp);
@@ -233,14 +235,14 @@ void setup()
   nStartTimeMillis = rtc.now().unixtime()*1000;
   nLastIMURead = nStartTimeMillis;
 
-  display.init(240, 280);      // Init ST7789V2 chip
-  display.fillScreen(ST77XX_BLACK);
+  display.begin(i2c_Address, true); // Address 0x3C default
+  display.clearDisplay();
   display.setTextSize(1);
-  display.setTextColor(ST77XX_WHITE);
+  display.setTextColor(SH110X_WHITE);
   display.setCursor(0, 0);
   display.setRotation(3);
 
-  display.fillScreen(ST77XX_BLACK);
+  display.clearDisplay();
   display.setCursor(0, 0);
 
   // initialise SD card
@@ -256,7 +258,7 @@ void setup()
     Serial.println("SD card initialised");
   };
   
-  display.fillScreen(ST77XX_BLACK);
+  display.clearDisplay();
   display.setCursor(0, 0);
   if (myIMU.begin() != 0) {
     display.println("IMU init error");
@@ -271,7 +273,7 @@ void setup()
   nStartDelayPeriod = 1000;
 
 
-  display.setTextColor(ST77XX_WHITE);
+  display.setTextColor(SH110X_WHITE);
 
   log_data.addSource((char*)"Temp1", &f32_RTC_Temp);
   log_data.addSource((char*)"Temp2", &f32_DSP_Temp);
@@ -428,11 +430,12 @@ void loop()
     }
   }
 
-  display.fillScreen(ST77XX_BLACK);
+  display.clearDisplay();
 
   GUI();
   log_data.log(nCurrentTime, millisNow-nMillisAtTick);
 
+  display.display();
   
 }
 
@@ -444,13 +447,13 @@ void drawSelectable(int16_t x, int16_t y, const uint8_t * bitmap, const char * t
   display.setTextSize(2);
   display.getTextBounds(text,x+16,y, &x1, &y1, &w, &h);
   if(selected){
-    display.setTextColor(ST77XX_BLACK);
+    display.setTextColor(SH110X_BLACK);
     display.fillRect(x-1, y-1, w+17, h+1, 1);
     display.setCursor(x+16, y);
     display.drawInvertedBitmap(x, y, bitmap,16, 16, 1);
     display.print(text);
   }else{
-    display.setTextColor(ST77XX_WHITE);
+    display.setTextColor(SH110X_WHITE);
     if(focus)
       display.drawRect(x-2, y-2, w+18, h+2, 1);
     display.setCursor(x+16, y);
@@ -467,12 +470,12 @@ void drawSelectable(int16_t x, int16_t y, const char * text,bool focus, bool sel
   display.setTextSize(2);
   display.getTextBounds(text,x,y, &x1, &y1, &w, &h);
   if(selected){
-    display.setTextColor(ST77XX_BLACK);
+    display.setTextColor(SH110X_BLACK);
     display.fillRect(x-1, y-1, w, h, 1);
     display.setCursor(x, y);
     display.print(text);
   }else{
-    display.setTextColor(ST77XX_WHITE);
+    display.setTextColor(SH110X_WHITE);
     if(focus)
       display.drawRect(x-2, y-2, w+2, h+2, 1);
     display.setCursor(x, y);
@@ -497,12 +500,12 @@ void drawSelectable(int16_t x, int16_t y, int num,bool focus, bool selected)
   display.setTextSize(2);
   display.getTextBounds(text,x,y, &x1, &y1, &w, &h);
   if(selected){
-    display.setTextColor(ST77XX_BLACK);
+    display.setTextColor(SH110X_BLACK);
     display.fillRect(x-1, y-1, w, h, 1);
     display.setCursor(x, y);
     display.print(text);
   }else{
-    display.setTextColor(ST77XX_WHITE);
+    display.setTextColor(SH110X_WHITE);
     if(focus)
       display.drawRect(x-2, y-2, w+2, h+2, 1);
     display.setCursor(x, y);
@@ -518,7 +521,7 @@ void drawSelectable(int16_t x, int16_t y, int num,bool focus, bool selected)
  */
 void drawDateTime(DateTime someTime, int x, int y)
 {
-  display.setTextColor(ST77XX_WHITE);
+  display.setTextColor(SH110X_WHITE);
   display.setTextSize(2);
   display.setCursor(x, y);
 
@@ -795,12 +798,12 @@ void DrawDevice(int x, int y, prph_info_t device, bool focus, bool selected)
   display.getTextBounds(tempString,x,y, &x1, &y1, &w, &h);
 
   if(selected){
-    display.setTextColor(ST77XX_BLACK);
+    display.setTextColor(SH110X_BLACK);
     display.fillRect(x-1, y-1, w, h+1, 1);
     display.setCursor(x, y);
     display.print(tempString);
   }else{
-    display.setTextColor(ST77XX_WHITE);
+    display.setTextColor(SH110X_WHITE);
     if(focus)
       display.drawRect(x-2, y-2, w, h+2, 1);
     display.setCursor(x, y);
