@@ -232,6 +232,83 @@ void setup()
 
   nStartTimeMillis = rtc.now().unixtime()*1000;
   nLastIMURead = nStartTimeMillis;
+
+  display.init(240, 280);      // Init ST7789V2 chip
+  display.fillScreen(ST77XX_BLACK);
+  display.setTextSize(1);
+  display.setTextColor(ST77XX_WHITE);
+  display.setCursor(0, 0);
+  display.setRotation(3);
+
+  display.fillScreen(ST77XX_BLACK);
+  display.setCursor(0, 0);
+
+  // initialise SD card
+  if (!SD.begin(SD_CS)) {
+    Serial.println("initialisation failed.");
+    display.println("initialisation failed. Things to check:");
+    display.println("* is a card inserted?");
+    display.println("* is your wiring correct?");
+    display.println("* did you change the chipSelect pin to match your shield or module?");
+    
+    delay(500);
+  }else{
+    Serial.println("SD card initialised");
+  };
+  
+  display.fillScreen(ST77XX_BLACK);
+  display.setCursor(0, 0);
+  if (myIMU.begin() != 0) {
+    display.println("IMU init error");
+    while (1) delay(500);
+  }else{
+    Serial.println("IMU initialised");
+  }
+  
+  Dps3xxPressureSensor.begin(Wire);
+
+  nIMUReadPeriod = 500;
+  nStartDelayPeriod = 1000;
+
+
+  display.setTextColor(ST77XX_WHITE);
+
+  log_data.addSource((char*)"Temp1", &f32_RTC_Temp);
+  log_data.addSource((char*)"Temp2", &f32_DSP_Temp);
+  log_data.addSource((char*)"Pres", &f32_DSP_Pa);
+  log_data.addSource((char*)"Alt", &f32_Alt);
+  log_data.addSource((char*)"X Acc", &f32_acc_x);
+  log_data.addSource((char*)"Y Acc", &f32_acc_y);
+  log_data.addSource((char*)"Z Acc", &f32_acc_z);
+  log_data.addSource((char*)"X Gyro", &f32_gyro_x);
+  log_data.addSource((char*)"Y Gyro", &f32_gyro_y);
+  log_data.addSource((char*)"Z Gyro", &f32_gyro_z);
+  log_data.addSource((char*)"Batt", &fBatteryVoltage);
+
+  Bluefruit.setName("Bluefruit52 Central");
+
+  // Increase Blink rate to different from PrPh advertising mode
+  Bluefruit.setConnLedInterval(250);
+
+  // Callbacks for Central
+  Bluefruit.Central.setDisconnectCallback(disconnect_callback);
+  Bluefruit.Central.setConnectCallback(connect_callback);
+
+  /* Start Central Scanning
+   * - Enable auto scan if disconnected
+   * - Interval = 100 ms, window = 80 ms
+   * - Don't use active scan
+   * - Filter only accept csc service
+   * - Start(timeout) with timeout = 0 will scan forever (until connected)
+   */
+  
+  Bluefruit.Scanner.restartOnDisconnect(true);
+  Bluefruit.Scanner.setInterval(160, 80); // in unit of 0.625 ms
+
+  // Minimizes power when bluetooth is used
+  //NRF_POWER->DCDCEN = 1;
+
+  started = true;
   
   Serial.println("Booted");
 }
@@ -289,8 +366,8 @@ void loop()
   // if (ts1.totalseconds() > Timeout_Period && !b_Running){
   //   NRF_POWER->SYSTEMOFF=1;
   // }
-  if (!started)
-    setup_peripherals();
+  // if (!started)
+  //   setup_peripherals();
 
   //imu read period check
   if (nIMUReadPeriod > (nCurrentTimeMillis - nLastIMURead)){
@@ -305,6 +382,17 @@ void loop()
     float P_Pb = pow(f32_DSP_Pa/101325,-0.1902663539);
     float Lb = 0.0065;
     f32_Alt = (Tb*P_Pb-Tb)/(Lb*P_Pb);
+
+    Serial.print("RTC temp: ");
+    Serial.println(f32_RTC_Temp);
+    Serial.print("DSP temp: ");
+    Serial.println(f32_DSP_Temp);
+    Serial.print("DSP pressure: ");
+    Serial.println(f32_DSP_Pa);
+    Serial.print("Altitude: ");
+    Serial.println(f32_Alt);
+    Serial.println(" ");
+
     nLastIMURead = nCurrentTimeMillis;
   }
 
