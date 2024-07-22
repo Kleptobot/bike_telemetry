@@ -13,7 +13,7 @@ void logger::addSource(String name, float* data)
 
 void logger::log_data(DateTime current_time, uint32_t milliseconds)
 {
-  logFile = SD.open("datalog.csv", FILE_WRITE);
+  logFile.open(_filename, FILE_WRITE);
   if(logFile)
   {
     logFile.print(current_time.timestamp(DateTime::TIMESTAMP_FULL));
@@ -26,17 +26,23 @@ void logger::log_data(DateTime current_time, uint32_t milliseconds)
     }
     logFile.println(' ');
     logFile.close();
+  }else{
+    Serial.print(_filename);
+    Serial.println(" not found!");
   }
 }
 
-void logger::start_logging()
+void logger::start_logging(DateTime current_time)
 {
-  if(SD.exists("datalog.csv"))
-  {
-    SD.remove("datalog.csv");
-  };
+  sprintf(_filename, "%d-%d-%d_%02d-%02d-%02d.csv", current_time.day(),current_time.month(),current_time.year(),current_time.hour(),current_time.minute(),current_time.second());
   
-  logFile = SD.open("datalog.csv", FILE_WRITE);
+  if(SD.exists(_filename))
+  {
+    SD.remove(_filename);
+  };
+  Serial.println(_filename);
+  
+  logFile.open(_filename, FILE_WRITE);
 
   logFile.print("Time");
   for(int i =0; i<_num_sources; i++)

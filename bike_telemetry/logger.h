@@ -4,12 +4,13 @@
 
 #include <Arduino.h>
 #include <SPI.h>
-#include <SD.h>
+#include "SdFat.h"
+#include "sdios.h"
 #include <Wire.h>
 #include <RTClib.h>
 
 #define MAX_SOURCES 10
-#define SD_CS       D7      // SD CS
+#define SD_CS       D3      // SD CS
 
 // Struct containing peripheral info
 typedef struct
@@ -23,7 +24,7 @@ typedef struct
 class logger {
 
   private:
-    File logFile;
+    File32 logFile;
     data_source_t sources[MAX_SOURCES];
     uint16_t _num_sources;
     TimeSpan _interval, _elapsed_time;
@@ -31,8 +32,10 @@ class logger {
     uint32_t _last_millis, _elapsed_millis;
     bool _logging;
     void log_data(DateTime current_time, uint32_t milliseconds);
+    char _filename[32];
 
   public:
+    SdFat32 SD;
 
     logger()
     {
@@ -61,7 +64,7 @@ class logger {
       ;
     };
 
-    void start_logging();
+    void start_logging(DateTime current_time);
     void play_logging(){_logging=1;};
     void pause_logging(){_logging=0;};
     void playPause_logging(){_logging=!_logging;};

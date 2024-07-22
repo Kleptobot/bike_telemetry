@@ -4,7 +4,8 @@
 //#include <Adafruit_ST7789.h> // Hardware-specific library for ST7789
 #include <Adafruit_SH110X.h>
 #include <SPI.h>
-#include <SD.h>
+#include "SdFat.h"
+#include "sdios.h"
 #include <Wire.h>
 #include <bluefruit.h>
 #include <RTClib.h>
@@ -40,6 +41,9 @@ Adafruit_SH1107 display = Adafruit_SH1107(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OL
 
 #define Battery_Read_Period 60
 #define Timeout_Period  40
+#define nIMUReadPeriod 500
+#define nDSPReadPeriod 10000
+#define nStartDelayPeriod 3000
 
 //Create a instance of class LSM6DS3
 LSM6DS3 myIMU(I2C_MODE, 0x6A);    //I2C device address 0x6A
@@ -94,8 +98,8 @@ DateTime nCurrentTime, nCurrentTime_Prev, nLastBatteryRead, nLastAction;
 bool bSwitchOnDelay;
 bool started;
 
-uint32_t nMillisAtTick, nMillisAtTick_Prev, millisNow, nStartDelayPeriod, nIMUReadPeriod;
-uint64_t nCurrentTimeMillis, nStartTimeMillis, nLastIMURead;
+uint32_t nMillisAtTick, nMillisAtTick_Prev, millisNow;
+uint64_t nCurrentTimeMillis, nStartTimeMillis, nLastIMURead, nLastDSPRead;
 
 // Dps3xx Object
 Dps3xx Dps3xxPressureSensor = Dps3xx();
@@ -121,87 +125,6 @@ void disconnectPin(uint32_t ulPin) {
         | ((uint32_t)GPIO_PIN_CNF_SENSE_Disabled   << GPIO_PIN_CNF_SENSE_Pos);
 }
 
-//run this once but not in the setup
-void setup_peripherals()
-{
-  display.begin(i2c_Address, true); // Address 0x3C default
-  display.clearDisplay();
-  display.setTextSize(1);
-  display.setTextColor(SH110X_WHITE);
-  display.setCursor(0, 0);
-  display.setRotation(3);
-
-  display.clearDisplay();
-  display.setCursor(0, 0);
-
-  // initialise SD card
-  if (!SD.begin(SD_CS)) {
-    Serial.println("initialisation failed.");
-    display.println("initialisation failed. Things to check:");
-    display.println("* is a card inserted?");
-    display.println("* is your wiring correct?");
-    display.println("* did you change the chipSelect pin to match your shield or module?");
-    
-    delay(500);
-  }else{
-    Serial.println("SD card initialised");
-  };
-  
-  display.clearDisplay();
-  display.setCursor(0, 0);
-  if (myIMU.begin() != 0) {
-    display.println("IMU init error");
-    while (1) delay(500);
-  }else{
-    Serial.println("IMU initialised");
-  }
-  
-  Dps3xxPressureSensor.begin(Wire);
-
-  nIMUReadPeriod = 500;
-  nStartDelayPeriod = 1000;
-
-
-  display.setTextColor(SH110X_WHITE);
-
-  log_data.addSource((char*)"Temp1", &f32_RTC_Temp);
-  log_data.addSource((char*)"Temp2", &f32_DSP_Temp);
-  log_data.addSource((char*)"Pres", &f32_DSP_Pa);
-  log_data.addSource((char*)"Alt", &f32_Alt);
-  log_data.addSource((char*)"X Acc", &f32_acc_x);
-  log_data.addSource((char*)"Y Acc", &f32_acc_y);
-  log_data.addSource((char*)"Z Acc", &f32_acc_z);
-  log_data.addSource((char*)"X Gyro", &f32_gyro_x);
-  log_data.addSource((char*)"Y Gyro", &f32_gyro_y);
-  log_data.addSource((char*)"Z Gyro", &f32_gyro_z);
-  log_data.addSource((char*)"Batt", &fBatteryVoltage);
-
-  Bluefruit.setName("Bluefruit52 Central");
-
-  // Increase Blink rate to different from PrPh advertising mode
-  Bluefruit.setConnLedInterval(250);
-
-  // Callbacks for Central
-  Bluefruit.Central.setDisconnectCallback(disconnect_callback);
-  Bluefruit.Central.setConnectCallback(connect_callback);
-
-  /* Start Central Scanning
-   * - Enable auto scan if disconnected
-   * - Interval = 100 ms, window = 80 ms
-   * - Don't use active scan
-   * - Filter only accept csc service
-   * - Start(timeout) with timeout = 0 will scan forever (until connected)
-   */
-  
-  Bluefruit.Scanner.restartOnDisconnect(true);
-  Bluefruit.Scanner.setInterval(160, 80); // in unit of 0.625 ms
-
-  // Minimizes power when bluetooth is used
-  //NRF_POWER->DCDCEN = 1;
-
-  started = true;
-}
-
 void setup()
 {
   // Initialize Bluefruit with maximum connections as Peripheral = 0, Central = 4
@@ -217,7 +140,7 @@ void setup()
     Serial.println("Error.");
     while (1);
   }
-  mcp.setupInterrupts(true, true, HIGH);
+  mcp.setupInterrupts(true, false, LOW);
   mcp.pinMode(GPIOB0, INPUT_PULLUP);
   mcp.pinMode(GPIOB1, INPUT_PULLUP);
   mcp.pinMode(GPIOB2, INPUT_PULLUP);
@@ -234,6 +157,7 @@ void setup()
 
   nStartTimeMillis = rtc.now().unixtime()*1000;
   nLastIMURead = nStartTimeMillis;
+  nLastDSPRead = nStartTimeMillis;
 
   display.begin(i2c_Address, true); // Address 0x3C default
   display.clearDisplay();
@@ -246,13 +170,8 @@ void setup()
   display.setCursor(0, 0);
 
   // initialise SD card
-  if (!SD.begin(SD_CS)) {
+  if (!log_data.SD.begin(SD_CS)) {
     Serial.println("initialisation failed.");
-    display.println("initialisation failed. Things to check:");
-    display.println("* is a card inserted?");
-    display.println("* is your wiring correct?");
-    display.println("* did you change the chipSelect pin to match your shield or module?");
-    
     delay(500);
   }else{
     Serial.println("SD card initialised");
@@ -268,17 +187,18 @@ void setup()
   }
   
   Dps3xxPressureSensor.begin(Wire);
-
-  nIMUReadPeriod = 500;
-  nStartDelayPeriod = 1000;
-
+  int16_t temp_mr = 2;
+  int16_t temp_osr = 2;
+  int16_t prs_mr = 2;
+  int16_t prs_osr = 2;
+  int16_t ret = Dps3xxPressureSensor.startMeasureBothCont(temp_mr, temp_osr, prs_mr, prs_osr);
 
   display.setTextColor(SH110X_WHITE);
 
   log_data.addSource((char*)"Temp1", &f32_RTC_Temp);
-  log_data.addSource((char*)"Temp2", &f32_DSP_Temp);
-  log_data.addSource((char*)"Pres", &f32_DSP_Pa);
-  log_data.addSource((char*)"Alt", &f32_Alt);
+  // log_data.addSource((char*)"Temp2", &f32_DSP_Temp);
+  // log_data.addSource((char*)"Pres", &f32_DSP_Pa);
+  // log_data.addSource((char*)"Alt", &f32_Alt);
   log_data.addSource((char*)"X Acc", &f32_acc_x);
   log_data.addSource((char*)"Y Acc", &f32_acc_y);
   log_data.addSource((char*)"Z Acc", &f32_acc_z);
@@ -319,6 +239,11 @@ int count=0;
 void loop()
 {
   uint8_t currentB;
+  uint8_t pressureCount = 20;
+  float pressure[pressureCount];
+  uint8_t temperatureCount = 20;
+  float temperature[temperatureCount];
+  int16_t ret;
 
   //read the current time
   nCurrentTime = rtc.now();
@@ -365,38 +290,56 @@ void loop()
 
   //check if the device has timed out
   TimeSpan ts1 = nCurrentTime - nLastAction;
-  // if (ts1.totalseconds() > Timeout_Period && !b_Running){
-  //   NRF_POWER->SYSTEMOFF=1;
-  // }
-  // if (!started)
-  //   setup_peripherals();
+  if (ts1.totalseconds() > Timeout_Period && !b_Running){
+    display.clearDisplay();
+    display.display();
+    NRF_POWER->SYSTEMOFF=1;
+  }
 
   //imu read period check
-  if (nIMUReadPeriod > (nCurrentTimeMillis - nLastIMURead)){
+  if (nIMUReadPeriod < (nCurrentTimeMillis - nLastIMURead)){
     //get IMU data
     readIMU();
     f32_RTC_Temp = rtc.getTemperature();
-    Dps3xxPressureSensor.measureTempOnce(f32_DSP_Temp, 7);
-    Dps3xxPressureSensor.measurePressureOnce(f32_DSP_Pa, 7);
-
-    //estimate altitude from pressure and temperature
-    float Tb = 273.15+f32_DSP_Temp;
-    float P_Pb = pow(f32_DSP_Pa/101325,-0.1902663539);
-    float Lb = 0.0065;
-    f32_Alt = (Tb*P_Pb-Tb)/(Lb*P_Pb);
-
-    Serial.print("RTC temp: ");
-    Serial.println(f32_RTC_Temp);
-    Serial.print("DSP temp: ");
-    Serial.println(f32_DSP_Temp);
-    Serial.print("DSP pressure: ");
-    Serial.println(f32_DSP_Pa);
-    Serial.print("Altitude: ");
-    Serial.println(f32_Alt);
-    Serial.println(" ");
-
     nLastIMURead = nCurrentTimeMillis;
   }
+  
+  // if (nDSPReadPeriod < (nCurrentTimeMillis - nLastDSPRead)){
+    
+  //   ret = Dps3xxPressureSensor.getContResults(temperature, temperatureCount, pressure, pressureCount);
+  //   //Dps3xxPressureSensor.measureTempOnce(f32_DSP_Temp, 7);
+  //   //Dps3xxPressureSensor.measurePressureOnce(f32_DSP_Pa, 7);
+  //   if (ret != 0)
+  //   {
+  //     Serial.println();
+  //     Serial.println();
+  //     Serial.print("FAIL! ret = ");
+  //     Serial.println(ret);
+  //   }
+  //   else
+  //   {
+  //     f32_DSP_Temp=0;
+  //     for (int16_t i = 0; i < temperatureCount; i++)
+  //     {
+  //       f32_DSP_Temp+=temperature[i];
+  //     }
+  //     f32_DSP_Temp = f32_DSP_Temp/(float)temperatureCount;
+
+  //     f32_DSP_Pa=0;
+  //     for (int16_t i = 0; i < pressureCount; i++)
+  //     {
+  //       f32_DSP_Pa+=pressure[i];
+  //     }
+  //     f32_DSP_Pa = f32_DSP_Pa/(float)pressureCount;
+
+  //     //estimate altitude from pressure and temperature
+  //     float Tb = 273.15+f32_DSP_Temp;
+  //     float P_Pb = pow(f32_DSP_Pa/101325,-0.1902663539);
+  //     float Lb = 0.0065;
+  //     f32_Alt = (Tb*P_Pb-Tb)/(Lb*P_Pb);
+  //   }
+  //   nLastDSPRead = nCurrentTimeMillis;
+  // }
 
 
   //battery voltage period check
@@ -595,10 +538,10 @@ void GUI()
       if(bStateEntry)
       {
         bool startScan;
-        if(SD.exists("devices.txt"))
+        if(log_data.SD.exists("devices.txt"))
         {
           Serial.println("Devices file found...");
-          File dataFile = SD.open("devices.txt", FILE_READ);
+          File32 dataFile = log_data.SD.open("devices.txt", FILE_READ);
 
           //determin how many devices are encoded in the file
           //will need to be updated when more device types are available
@@ -677,7 +620,7 @@ void GUI()
       }
 
       if(b_Running && !b_Running_Prev){
-        log_data.start_logging();
+        log_data.start_logging(nCurrentTime);
         log_data.play_logging();
       }else if(!b_Running && b_Running_Prev){
         log_data.pause_logging();
@@ -768,7 +711,7 @@ void showDevices()
           Serial.printBufferReverse(nearby_devices[i].MAC, 6, ':');
           Serial.print("\n");
 
-          File dataFile = SD.open("devices.txt", FILE_WRITE);
+          File32 dataFile = log_data.SD.open("devices.txt", FILE_WRITE);
           dataFile.write(nearby_devices[i].MAC,6);
           dataFile.write(nearby_devices[i].name,32);
           dataFile.close();
@@ -834,39 +777,6 @@ template <typename T> uint16_t anythingToBytes(const T& value, File dataFile)
       dataFile.print((char)*p++,HEX);
   }
   return i;
-}
-
-template <typename T> uint16_t bytesToAnything(T *value,File dataFile)
-{
-  byte* p = (byte*) value;
-  uint16_t i;
-  Serial.print("attempting to read ");
-  Serial.print(sizeof(*value));
-  Serial.println(" bytes");
-  for(i = 0; i<sizeof(*value);i++)
-  {
-    char hexString[2];
-    dataFile.read(hexString,2);
-    *p++ = (byte)hex2num(hexString);
-  }
-  Serial.print('\n');
-  delay(1000);
-  return i;
-}
-
-static unsigned char nibble(char c)
-{
-  Serial.print(c);
-  return c % 16 + 9*(c >> 6);
-  delay(10);
-}
-
-uint8_t hex2num(char *s)
-{
-  uint8_t r = 0;
-  r = nibble(s[0]);
-  r = (r << 4) | nibble(s[1]);
-  return r;
 }
 
 /**
