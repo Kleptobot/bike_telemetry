@@ -158,7 +158,10 @@ void setup()
   nStartTimeMillis = rtc.now().unixtime()*1000;
   nLastIMURead = nStartTimeMillis;
   nLastDSPRead = nStartTimeMillis;
+}
 
+void init_devices()
+{
   display.begin(i2c_Address, true); // Address 0x3C default
   display.clearDisplay();
   display.setTextSize(1);
@@ -291,10 +294,15 @@ void loop()
   //check if the device has timed out
   TimeSpan ts1 = nCurrentTime - nLastAction;
   if (ts1.totalseconds() > Timeout_Period && !b_Running){
-    display.clearDisplay();
-    display.display();
+    if(started)
+    {
+      display.clearDisplay();
+      display.display();
+    }
     NRF_POWER->SYSTEMOFF=1;
   }
+  if(!started)
+    init_devices();
 
   //imu read period check
   if (nIMUReadPeriod < (nCurrentTimeMillis - nLastIMURead)){
@@ -763,22 +771,6 @@ void ExitDevices()
   }
 }
 
-template <typename T> uint16_t anythingToBytes(const T& value, File dataFile)
-{
-  const byte * p = (const byte*) &value;
-  uint16_t i;
-  for (i = 0; i < sizeof(value); i++)
-  {
-    if(*p < 0x10)
-    {
-      dataFile.print(0);
-      dataFile.print((char)*p++,HEX);
-    }else
-      dataFile.print((char)*p++,HEX);
-  }
-  return i;
-}
-
 /**
  * Callback invoked when scanner pick up an advertising data
  * @param report Structural advertising data
@@ -1003,13 +995,12 @@ void drawMain()
   display.setCursor(0, 32);
 
   if(f32_cadence<10)
-    display.print(' ');
-  if(f32_cadence>99.9)
-  {
-    display.print(99.9,1);
-  }else{
-    display.print(f32_cadence,1);
-  }
+    display.print("   ");
+  else if(f32_cadence<100)
+    display.print("  ");
+  else
+    display.print(" ");
+  display.print(f32_cadence,0);
   display.setTextSize(1);
   display.println("  rpm");
 
@@ -1018,9 +1009,15 @@ void drawMain()
   display.print(nBatteryPercentage);
 
   if(b_Running){
-    drawMenuRunning(64,96);
+    drawMenuRunning(64,88);
+    display.setCursor(0, 112);
+    display.setTextSize(2);
+    uint16_t hours = log_data.elapsed().hours();
+    uint16_t minutes = log_data.elapsed().minutes();
+    uint16_t seconds = log_data.elapsed().seconds();
+    display.print(String(hours)+":"+String(minutes)+":"+String(seconds));
   }else{
-    drawMenuStopped(64,96);
+    drawMenuStopped(64,88);
   }
 }
 

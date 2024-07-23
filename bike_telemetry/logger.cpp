@@ -34,6 +34,8 @@ void logger::log_data(DateTime current_time, uint32_t milliseconds)
 
 void logger::start_logging(DateTime current_time)
 {
+  _startLog = current_time;
+  _PauseTime = 0;
   sprintf(_filename, "%d-%d-%d_%02d-%02d-%02d.csv", current_time.day(),current_time.month(),current_time.year(),current_time.hour(),current_time.minute(),current_time.second());
   
   if(SD.exists(_filename))
@@ -57,14 +59,17 @@ void logger::start_logging(DateTime current_time)
 
 void logger::log(DateTime current_time, uint32_t milliseconds)
 {
-  _elapsed_time = (current_time-_last_log);
+  _elapsed_time = current_time-_last_log;
   _elapsed_millis = _elapsed_time.totalseconds()*1000 + (milliseconds - _last_millis);
+  _totalTime = current_time - _startLog;
   if(_logging){
     if(_elapsed_millis >=500)
     {
       log_data(current_time, milliseconds);
-      _last_log = current_time;
-      _last_millis = milliseconds;
     }
+  }else{
+    _PauseTime = _PauseTime + (current_time-_last_log);
   }
+  _last_log = current_time;
+  _last_millis = milliseconds;
 }

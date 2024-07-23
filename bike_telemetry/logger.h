@@ -27,8 +27,8 @@ class logger {
     File32 logFile;
     data_source_t sources[MAX_SOURCES];
     uint16_t _num_sources;
-    TimeSpan _interval, _elapsed_time;
-    DateTime _last_log;
+    TimeSpan _interval, _elapsed_time, _totalTime, _PauseTime;
+    DateTime _last_log, _startLog;
     uint32_t _last_millis, _elapsed_millis;
     bool _logging;
     void log_data(DateTime current_time, uint32_t milliseconds);
@@ -70,8 +70,8 @@ class logger {
     void playPause_logging(){_logging=!_logging;};
 
     void log(DateTime current_time, uint32_t milliseconds);
-
     bool logging(){return _logging;};
+    TimeSpan elapsed(){return _totalTime-_PauseTime;};
 
 };
 

@@ -42,6 +42,9 @@ void csc::begin()
   csc_meas.setNotifyCallback(csc_static_callback);
   csc_meas.begin();
 
+  b_cadence_present =0;
+  b_speed_present =0;
+
   _begun = true;
 
   return;
