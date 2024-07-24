@@ -27,7 +27,7 @@ Adafruit_MCP23X17 mcp;
 #define SCREEN_HEIGHT 128 // OLED display height, in pixels
 #define TFT_CS        D0
 #define TFT_RST       -1
-#define TFT_DC        D2
+//#define TFT_DC        D2
 #define OLED_RESET -1   //   QT-PY / XIAO
 Adafruit_SH1107 display = Adafruit_SH1107(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 //Adafruit_ST7789 display = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
@@ -62,7 +62,7 @@ uint8_t toConnectMAC[6];
 int16_t s16DeviceSel;
 bool bBackFocDev, bBackSelDev;
 
-float f32_RTC_Temp, f32_DSP_Temp, f32_DSP_Pa, f32_Alt, f32_acc_x, f32_acc_y, f32_acc_z, f32_gyro_x, f32_gyro_y, f32_gyro_z, f32_kph, f32_cadence;
+float f32_RTC_Temp, f32_DSP_Temp, f32_DSP_Pa, f32_Alt, f32_acc_x, f32_acc_y, f32_acc_z, f32_gyro_x, f32_gyro_y, f32_gyro_z, f32_kph, f32_cadence, f32_speedSum, f32_max_speed, f32_avgSpeed;
 
 bool b_Running, b_Running_Prev;
 
@@ -81,10 +81,10 @@ bool bBackFoc, bBackSel, bSaveFoc, bSaveSel;
 DateTime dtTimeDisplay;
 
 //button inputs
-bool bUp, bDown, bLeft, bRight, bCenter;
-bool bUp_Prev, bDown_Prev, bLeft_Prev, bRight_Prev, bCenter_Prev;
-bool bUp_RE, bDown_RE, bLeft_RE, bRight_RE, bCenter_RE;
-bool bUp_FE, bDown_FE, bLeft_FE, bRight_FE, bCenter_FE;
+bool bUp, bDown, bLeft, bRight, bCenter, bSD_Det;
+bool bUp_Prev, bDown_Prev, bLeft_Prev, bRight_Prev, bCenter_Prev, bSD_Det_Prev;
+bool bUp_RE, bDown_RE, bLeft_RE, bRight_RE, bCenter_RE, bSD_Det_RE;
+bool bUp_FE, bDown_FE, bLeft_FE, bRight_FE, bCenter_FE, bSD_Det_FE;
 
 uint16_t u16_state, u16_state_prev;
 bool bStateEntry = true;
@@ -98,7 +98,7 @@ DateTime nCurrentTime, nCurrentTime_Prev, nLastBatteryRead, nLastAction;
 bool bSwitchOnDelay;
 bool started;
 
-uint32_t nMillisAtTick, nMillisAtTick_Prev, millisNow;
+uint32_t nMillisAtTick, nMillisAtTick_Prev, millisNow, nLastSecond;
 uint64_t nCurrentTimeMillis, nStartTimeMillis, nLastIMURead, nLastDSPRead;
 
 // Dps3xx Object
@@ -133,6 +133,7 @@ void setup()
 
   // Set up the sense mechanism to generate the DETECT signal to wake from system_off
   pinMode(WAKEUP_PIN, INPUT_PULLDOWN_SENSE);  // this pin (WAKE_HIGH_PIN) is pulled down and wakes up the feather when externally connected to 3.3v.
+  pinMode(D2, INPUT);
 
   Serial.begin(115200);
 
@@ -171,14 +172,6 @@ void init_devices()
 
   display.clearDisplay();
   display.setCursor(0, 0);
-
-  // initialise SD card
-  if (!log_data.SD.begin(SD_CS)) {
-    Serial.println("initialisation failed.");
-    delay(500);
-  }else{
-    Serial.println("SD card initialised");
-  };
   
   display.clearDisplay();
   display.setCursor(0, 0);
@@ -268,6 +261,7 @@ void loop()
   bDown   = (currentB>>2) & 0x01;
   bLeft   = (currentB>>3) & 0x01;
   bUp     = (currentB>>4) & 0x01;
+  bSD_Det = digitalRead(D2);
 
   mcp.clearInterrupts();
 
@@ -286,6 +280,9 @@ void loop()
   bLeft_RE = bLeft && !bLeft_Prev && !bSwitchOnDelay;
   bLeft_FE = !bLeft && bLeft_Prev && !bSwitchOnDelay;
   bLeft_Prev = bLeft;
+  bSD_Det_RE = bSD_Det && !bSD_Det_Prev && !bSwitchOnDelay;
+  bSD_Det_FE = !bSD_Det && bSD_Det_Prev && !bSwitchOnDelay;
+  bSD_Det_Prev = bSD_Det;
 
   if(bRight | bUp | bDown | bCenter | bLeft){
     nLastAction = nCurrentTime;
@@ -301,9 +298,20 @@ void loop()
     }
     NRF_POWER->SYSTEMOFF=1;
   }
+
+  if(bSD_Det_FE || !started)
+  {
+    // initialise SD card
+    if (!log_data.SD.begin(SD_CS)) {
+      Serial.println("initialisation failed.");
+      delay(500);
+    }else{
+      Serial.println("SD card initialised");
+    }
+  }
+
   if(!started)
     init_devices();
-
   //imu read period check
   if (nIMUReadPeriod < (nCurrentTimeMillis - nLastIMURead)){
     //get IMU data
@@ -371,6 +379,8 @@ void loop()
         if(cscDevices[i].b_speed_present)
         {
           f32_kph = cscDevices[i].f32_kph;
+          if(f32_kph>f32_max_speed)
+            f32_max_speed = f32_kph;
         }
 
         if(cscDevices[i].b_cadence_present)
@@ -385,6 +395,17 @@ void loop()
 
   GUI();
   log_data.log(nCurrentTime, millisNow-nMillisAtTick);
+  if(log_data.logging())
+  {
+  if(nCurrentTime.secondstime()>nLastSecond)
+  {
+    f32_speedSum += f32_kph;
+    nLastSecond = nCurrentTime.secondstime();
+  }
+  }else{
+    f32_speedSum = 0;
+  }
+  f32_avgSpeed = f32_speedSum / log_data.elapsed().totalseconds();
 
   display.display();
   
@@ -632,6 +653,7 @@ void GUI()
         log_data.play_logging();
       }else if(!b_Running && b_Running_Prev){
         log_data.pause_logging();
+        log_data.write_tail(f32_avgSpeed, f32_max_speed);
       }
       b_Running_Prev = b_Running;
       break;
@@ -1012,10 +1034,7 @@ void drawMain()
     drawMenuRunning(64,88);
     display.setCursor(0, 112);
     display.setTextSize(2);
-    uint16_t hours = log_data.elapsed().hours();
-    uint16_t minutes = log_data.elapsed().minutes();
-    uint16_t seconds = log_data.elapsed().seconds();
-    display.print(String(hours)+":"+String(minutes)+":"+String(seconds));
+    display.print(log_data.elapsedString());
   }else{
     drawMenuStopped(64,88);
   }

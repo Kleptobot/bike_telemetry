@@ -66,10 +66,41 @@ void logger::log(DateTime current_time, uint32_t milliseconds)
     if(_elapsed_millis >=500)
     {
       log_data(current_time, milliseconds);
+      _last_log = current_time;
+      _last_millis = milliseconds;
     }
   }else{
-    _PauseTime = _PauseTime + (current_time-_last_log);
+    _PauseTime = _PauseTime + (current_time-_lastPause);
   }
-  _last_log = current_time;
-  _last_millis = milliseconds;
+    _lastPause = current_time;
+}
+void logger::write_tail(){
+  logFile.open(_filename, FILE_WRITE);
+  if(logFile)
+  {
+    logFile.println(' ');
+    logFile.println(' ');
+    logFile.print("Total duration: ");
+    logFile.println(elapsedString());
+    logFile.close();
+  }else{
+    Serial.print(_filename);
+    Serial.println(" not found!");
+  }
+}
+void logger::write_tail(float f32_avgSpeed, float f32_maxSpeed)
+{
+  write_tail();
+  logFile.open(_filename, FILE_WRITE);
+  if(logFile)
+  {
+    logFile.print("Average speed: ");
+    logFile.println(f32_avgSpeed,1);
+    logFile.print("Max speed: ");
+    logFile.print(f32_maxSpeed,1);
+    logFile.close();
+  }else{
+    Serial.print(_filename);
+    Serial.println(" not found!");
+  }
 }
