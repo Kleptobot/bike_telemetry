@@ -28,6 +28,21 @@ void csc::csc_static_disconnect_callback(uint16_t conn_handle)
   }
 }
 
+void csc::clearInstances()
+{
+  if(instances>0)
+  {
+    for(int i=0;i<instances-1;i++)
+    {
+      instantiated[i]->b_cadence_present =0;
+      instantiated[i]->b_speed_present =0;
+      instantiated[i]->_begun=false;
+      instantiated[i]=0;
+    }
+  }
+    instances = 0;
+}
+
 void csc::begin()
 {
   // Initialize csc client
@@ -106,7 +121,7 @@ bool csc::discovered()
 void csc::csc_notify_callback(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len)
 {
   // https://github.com/oesmith/gatt-xml/blob/master/org.bluetooth.service.cycling_speed_and_cadence.xml
-
+  
   uint8_t offset = 1;
   uint32_t u32_WheelCount, u32_WheelCount_delta;
   uint16_t u16_SpeedEvt, u16_CrankCount, u16_CrankCount_delta, u16_CrankEvt, u16_speed_delta, u16_crank_delta;
@@ -208,25 +223,24 @@ void csc::csc_notify_callback(BLEClientCharacteristic* chr, uint8_t* data, uint1
       u16_CrankCount_delta = 0;
     }
     
-    f32_cadence_raw = f32_cadence;
     if (u16_crank_delta>0)
     {
       f32_cadence_raw = 61140.0 *float(u16_CrankCount_delta)/float(u16_crank_delta);
-    }else if (f32_cadence>200){
-      f32_cadence_raw = f32_cadence - 200;
-    }else if (f32_cadence>100){
-      f32_cadence_raw = f32_cadence - 100;
-    }else if (f32_cadence>50){
-      f32_cadence_raw = f32_cadence - 50;
-    }else if (f32_cadence>20){
-      f32_cadence_raw = f32_cadence - 20;
-    }else if (f32_cadence>5){
-      f32_cadence_raw = f32_cadence - 5;
-    }else if (f32_cadence>1){
-      f32_cadence_raw = f32_cadence - 1;
-    }else if (f32_cadence<1){
-      if (f32_cadence >0.1)
-      f32_cadence_raw = f32_cadence - 0.1;
+    }else if (f32_cadence_raw>200){
+      f32_cadence_raw -= 200;
+    }else if (f32_cadence_raw>100){
+      f32_cadence_raw -= 100;
+    }else if (f32_cadence_raw>50){
+      f32_cadence_raw -= 50;
+    }else if (f32_cadence_raw>20){
+      f32_cadence_raw -= 20;
+    }else if (f32_cadence_raw>5){
+      f32_cadence_raw -= 5;
+    }else if (f32_cadence_raw>1){
+      f32_cadence_raw -= 1;
+    }else if (f32_cadence_raw<1){
+      if (f32_cadence_raw >0.1)
+      f32_cadence_raw -= 0.1;
     }
   }
 

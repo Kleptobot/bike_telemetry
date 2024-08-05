@@ -68,7 +68,7 @@ class logger {
     void play_logging(){_logging=1;};
     void pause_logging(){_logging=0;};
     void write_tail();
-    void write_tail(float f32_avgSpeed, float f32_maxSpeed);
+    void write_tail(float f32_avgSpeed, float f32_maxSpeed, float f32_avgCad, float f32_maxCad);
     void playPause_logging(){_logging=!_logging;};
 
     void log(DateTime current_time, uint32_t milliseconds);

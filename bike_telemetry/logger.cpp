@@ -88,7 +88,7 @@ void logger::write_tail(){
     Serial.println(" not found!");
   }
 }
-void logger::write_tail(float f32_avgSpeed, float f32_maxSpeed)
+void logger::write_tail(float f32_avgSpeed, float f32_maxSpeed, float f32_avgCad, float f32_maxCad)
 {
   write_tail();
   logFile.open(_filename, FILE_WRITE);
@@ -97,7 +97,11 @@ void logger::write_tail(float f32_avgSpeed, float f32_maxSpeed)
     logFile.print("Average speed: ");
     logFile.println(f32_avgSpeed,1);
     logFile.print("Max speed: ");
-    logFile.print(f32_maxSpeed,1);
+    logFile.println(f32_maxSpeed,1);
+    logFile.print("Average Cadence: ");
+    logFile.println(f32_avgCad,1);
+    logFile.print("Max Cadence: ");
+    logFile.print(f32_maxCad,1);
     logFile.close();
   }else{
     Serial.print(_filename);

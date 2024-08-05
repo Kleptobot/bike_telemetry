@@ -109,6 +109,8 @@ class csc {
 
     static void csc_static_disconnect_callback(uint16_t conn_handle);
 
+    static void clearInstances();
+
     void begin();
 
     void csc_discover(uint16_t conn_handle);
