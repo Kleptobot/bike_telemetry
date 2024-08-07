@@ -1,4 +1,11 @@
-bool compareMAC(uint8_t *mac1, uint8_t *mac2)
+#ifndef utils_H
+#define utils_H
+#include <Arduino.h>
+#include "SdFat.h"
+
+static File32 debugLog;
+
+inline bool compareMAC(uint8_t *mac1, uint8_t *mac2)
 {
   bool bMatch = 1;
   bMatch &= mac1[0] == mac2[0];
@@ -10,7 +17,7 @@ bool compareMAC(uint8_t *mac1, uint8_t *mac2)
   return bMatch;
 }
 
-void copyMAC(uint8_t *dest_MAC, uint8_t *src_MAC)
+inline void copyMAC(uint8_t *dest_MAC, uint8_t *src_MAC)
 {
   dest_MAC[0] = src_MAC[0];
   dest_MAC[1] = src_MAC[1];
@@ -19,3 +26,13 @@ void copyMAC(uint8_t *dest_MAC, uint8_t *src_MAC)
   dest_MAC[4] = src_MAC[4];
   dest_MAC[5] = src_MAC[5];
 }
+
+inline void logInfo(const char* text)
+{
+  Serial.println(text);
+  if(!debugLog)
+    debugLog.open("/log.txt", FILE_WRITE);
+  debugLog.println(text);
+}
+
+#endif /* utils_H */

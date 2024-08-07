@@ -15,7 +15,7 @@
 #include <Dps3xx.h>
 #include "ListLib.h"
 #include <ArduinoJson.h>
-#include "MAC_Tools.h"
+#include "Utils.h"
 
 #include "csc.h"
 #include "GFX.h"
@@ -42,12 +42,13 @@ Adafruit_SH1107 display = Adafruit_SH1107(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OL
 #define GPIOB4 12
 
 #define Battery_Read_Period 60
-#define Timeout_Period 25
+#define Timeout_Period 60
 #define nIMUReadPeriod 500
 #define nDSPReadPeriod 10000
 #define nStartDelayPeriod 3000
 #define nLoadDevicesDelay 3000
 #define nDeviceScanDelay 1000
+#define nHeldPressTime 2000
 
 //Create a instance of class LSM6DS3
 LSM6DS3 myIMU(I2C_MODE, 0x6A);  //I2C device address 0x6A
@@ -57,6 +58,8 @@ typedef struct
   char name[32];
   uint8_t MAC[6];
   bool stored;
+  uint16_t batt;
+  csc* device = NULL;
 } prph_info_t;
 List<prph_info_t> nearby_devices;
 
@@ -90,6 +93,9 @@ bool bUp, bDown, bLeft, bRight, bCenter, bSD_Det;
 bool bUp_Prev, bDown_Prev, bLeft_Prev, bRight_Prev, bCenter_Prev, bSD_Det_Prev;
 bool bUp_RE, bDown_RE, bLeft_RE, bRight_RE, bCenter_RE, bSD_Det_RE;
 bool bUp_FE, bDown_FE, bLeft_FE, bRight_FE, bCenter_FE, bSD_Det_FE;
+bool bUp_long, bDown_long, bLeft_long, bRight_long, bCenter_long;
+uint64_t nUpPress, nDownPress, nLeftPress, nRightPress, nCenterPress;
+bool bSysOff;
 
 uint16_t u16_state, u16_state_prev;
 bool bStateEntry = true;
@@ -99,7 +105,7 @@ logger log_data;
 //RTC
 RTC_DS3231 rtc;
 
-DateTime nCurrentTime, nCurrentTime_Prev, nLastBatteryRead, nLastAction;
+DateTime nCurrentTime, nCurrentTime_Prev, nLastAction, nLastBatteryRead;
 bool bSwitchOnDelay;
 bool started, bDevicesLoaded;
 
@@ -142,7 +148,8 @@ void setup() {
   Serial.begin(115200);
 
   if (!mcp.begin_I2C()) {
-    Serial.println("Error.");
+
+    logInfo("MCP init Error");
     while (1)
       ;
   }
@@ -155,14 +162,14 @@ void setup() {
   mcp.setupInterruptPin(GPIOB0, HIGH);
 
   if (!rtc.begin()) {
-    Serial.println("Couldn't find RTC");
+    logInfo("Couldn't find RTC");
     while (1) delay(500);
   } else {
-    Serial.println("RTC initialised");
+    logInfo("RTC initialised");
   }
 
   if (rtc.lostPower()) {
-    Serial.println("RTC lost power, let's set the time!");
+    logInfo("RTC lost power, let's set the time!");
     // When time needs to be set on a new device, or after a power loss, the
     // following line sets the RTC to the date & time this sketch was compiled
     rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
@@ -191,7 +198,7 @@ void init_devices() {
     display.println("IMU init error");
     while (1) delay(500);
   } else {
-    Serial.println("IMU initialised");
+    logInfo("IMU initialised");
   }
 
   Dps3xxPressureSensor.begin(Wire);
@@ -221,7 +228,7 @@ void init_devices() {
   Bluefruit.setConnLedInterval(250);
 
   // Callbacks for Central
-  Bluefruit.Central.setDisconnectCallback(disconnect_callback);
+  Bluefruit.Central.setDisconnectCallback(csc::csc_static_disconnect_callback);
   Bluefruit.Central.setConnectCallback(connect_callback);
 
   /* Start Central Scanning
@@ -241,12 +248,12 @@ void init_devices() {
   started = true;
   delay(1000);
 
-  Serial.println("Booted");
+  logInfo("Booted");
 }
 
 void loadDevices() {
   if (log_data.SD.exists("devices.txt")) {
-    Serial.println("Devices file found...");
+    logInfo("Devices file found...");
     // Open file for reading
     File32 dataFile = log_data.SD.open("/devices.txt", FILE_READ);
     // Allocate the memory pool on the stack.
@@ -257,7 +264,7 @@ void loadDevices() {
 
     if (error) {
       Serial.print("deserializeJson() failed: ");
-      Serial.println(error.c_str());
+      logInfo(error.c_str());
       return;
     }
 
@@ -283,9 +290,11 @@ void loadDevices() {
       newDevice.stored = true;
       nearby_devices.Add(newDevice);
 
-      Serial.println("Adding device:");
+
+
+      logInfo("Adding device:");
       Serial.print("Name: ");
-      Serial.println(name);
+      logInfo(name);
       Serial.print("MAC: ");
       Serial.printBufferReverse(MAC, 6, ':');
       Serial.print("\n");
@@ -331,18 +340,33 @@ void loop() {
 
   bRight_RE = bRight && !bRight_Prev && !bSwitchOnDelay;
   bRight_FE = !bRight && bRight_Prev && !bSwitchOnDelay;
+  if(bRight_RE)
+    nRightPress = nCurrentTimeMillis;
+  bRight_long = bRight && ((nCurrentTimeMillis - nRightPress) > nHeldPressTime);
   bRight_Prev = bRight;
   bUp_RE = bUp && !bUp_Prev && !bSwitchOnDelay;
   bUp_FE = !bUp && bUp_Prev && !bSwitchOnDelay;
+  if(bUp_RE)
+    nUpPress = nCurrentTimeMillis;
+  bUp_long = bUp && ((nCurrentTimeMillis - nUpPress) > nHeldPressTime);
   bUp_Prev = bUp;
   bDown_RE = bDown && !bDown_Prev && !bSwitchOnDelay;
   bDown_FE = !bDown && bDown_Prev && !bSwitchOnDelay;
+  if(bDown_RE)
+    nDownPress = nCurrentTimeMillis;
+  bDown_long = bDown && ((nCurrentTimeMillis - nDownPress) > nHeldPressTime);
   bDown_Prev = bDown;
   bCenter_RE = bCenter && !bCenter_Prev && !bSwitchOnDelay;
   bCenter_FE = !bCenter && bCenter_Prev && !bSwitchOnDelay;
+  if(bCenter_RE)
+    nCenterPress = nCurrentTimeMillis;
+  bCenter_long = bCenter && ((nCurrentTimeMillis - nCenterPress) > nHeldPressTime);
   bCenter_Prev = bCenter;
   bLeft_RE = bLeft && !bLeft_Prev && !bSwitchOnDelay;
   bLeft_FE = !bLeft && bLeft_Prev && !bSwitchOnDelay;
+  if(bLeft_RE)
+    nLeftPress = nCurrentTimeMillis;
+  bLeft_long = bLeft && ((nCurrentTimeMillis - nLeftPress) > nHeldPressTime);
   bLeft_Prev = bLeft;
   bSD_Det_RE = bSD_Det && !bSD_Det_Prev && !bSwitchOnDelay;
   bSD_Det_FE = !bSD_Det && bSD_Det_Prev && !bSwitchOnDelay;
@@ -354,24 +378,30 @@ void loop() {
 
   //check if the device has timed out
   TimeSpan ts1 = nCurrentTime - nLastAction;
-  if (ts1.totalseconds() > Timeout_Period && !b_Running) {
+  if ((ts1.totalseconds() > Timeout_Period && !b_Running) || bSysOff){
     if (started) {
       display.clearDisplay();
       display.display();
     }
     csc::clearInstances();
     cscDevices.Clear();
+    debugLog.close();
     NRF_POWER->SYSTEMOFF = 1;
   }
 
   if (bSD_Det_FE || !started) {
     // initialise SD card
     if (!log_data.SD.begin(SD_CS)) {
-      Serial.println("initialisation failed.");
+      logInfo("initialisation failed.");
       delay(500);
     } else {
-      Serial.println("SD card initialised");
+      debugLog.open("/log.txt", FILE_WRITE);
+      logInfo("SD card initialised");
     }
+  }
+  if(bSD_Det_RE)
+  {
+    debugLog.close();
   }
 
   //run the rest of the init if it has not already been run
@@ -398,10 +428,10 @@ void loop() {
   //   //Dps3xxPressureSensor.measurePressureOnce(f32_DSP_Pa, 7);
   //   if (ret != 0)
   //   {
-  //     Serial.println();
-  //     Serial.println();
+  //     logInfo();
+  //     logInfo();
   //     Serial.print("FAIL! ret = ");
-  //     Serial.println(ret);
+  //     logInfo(ret);
   //   }
   //   else
   //   {
@@ -601,6 +631,7 @@ void drawMenuStopped(int x, int y) {
   display.drawBitmap(x - 32, y - 8, epd_bitmap_Bluetooth, 16, 16, 1);
   display.drawBitmap(x - 8, y - 8, epd_bitmap_play, 16, 16, 1);
   display.drawBitmap(x + 16, y - 8, epd_bitmap_clock, 16, 16, 1);
+  display.drawBitmap(x - 8, y + 16, epd_bitmap_power, 16, 16, 1);
 }
 
 /**
@@ -636,12 +667,14 @@ void GUI() {
         }
         if (startScan) {
           Bluefruit.Scanner.setRxCallback(scan_callback);
-          Bluefruit.Scanner.filterUuid(GATT_CSC_UUID, UUID16_SVC_HEART_RATE, GATT_CPS_UUID);
+          Bluefruit.Scanner.filterUuid(GATT_CSC_UUID, UUID16_SVC_HEART_RATE, GATT_CPS_UUID, GATT_BAT_UUID);
           Bluefruit.Scanner.useActiveScan(true);
           Bluefruit.Scanner.start(0);
         }
         nLastScan = nCurrentTimeMillis;
       }
+
+      bSysOff = bDown_long && !b_Running;
 
       drawMain();
       if (b_Running) {
@@ -740,9 +773,9 @@ void deviceSelection() {
       if(nearby_devices[index].stored && !MacExists) 
       {
           cscDevices.Add(csc(nearby_devices[index].name, nearby_devices[index].MAC));
-          Serial.println("Adding device:");
+          logInfo("Adding device:");
           Serial.print("Name: ");
-          Serial.println(nearby_devices[index].name);
+          logInfo(nearby_devices[index].name);
           Serial.print("MAC: ");
           Serial.printBufferReverse(nearby_devices[index].MAC, 6, ':');
           Serial.print("\n");
@@ -764,11 +797,18 @@ void showDevices() {
   if (nearby_devices.Count() > 0) {
     //iterate the list
     for (int i = 0; i < nearby_devices.Count(); i++) {
-      bool selected, focus;
+      bool selected, focus, discovered;
+      uint8_t batt;
 
       focus = s16DeviceSel >> 4 == i;
 
-      DrawDevice(2, i * 10 + 20 + 2, nearby_devices[i], focus, nearby_devices[i].stored);
+      csc* device = csc::getDeviceWithMAC(nearby_devices[i].MAC);
+      if(device!=NULL)
+      {
+        discovered=device->discovered();
+        batt = device->readBatt();
+      }
+      DrawDevice(2, i * 28 + 20 + 2, nearby_devices[i], focus,  nearby_devices[i].stored, discovered, batt);
     }
   }
 
@@ -776,7 +816,7 @@ void showDevices() {
   drawSelectable(3, 95, epd_bitmap_left, "Back", bBackFocDev, bBackSelDev);
 };
 
-void DrawDevice(int x, int y, prph_info_t device, bool focus, bool selected) {
+void DrawDevice(int x, int y, prph_info_t device, bool focus, bool stored, bool discovered, uint16_t batt) {
   display.setTextSize(1);
   display.setCursor(x, y);
   String tempString = device.name;
@@ -786,18 +826,24 @@ void DrawDevice(int x, int y, prph_info_t device, bool focus, bool selected) {
 
   display.getTextBounds(tempString, x, y, &x1, &y1, &w, &h);
 
-  if (selected) {
-    display.setTextColor(SH110X_BLACK);
-    display.fillRect(x - 1, y - 1, w+1, h + 1, 1);
-    display.setCursor(x, y);
-    display.print(tempString);
-  } else {
-    display.setTextColor(SH110X_WHITE);
-    if (focus)
-      display.drawRect(x - 2, y - 3, w+3, h + 3, 1);
-    display.setCursor(x, y);
-    display.print(tempString);
-  }
+  display.setTextColor(SH110X_WHITE);
+  if (focus)
+    display.drawRect(x - 2, y - 3, w+3, h + 4 + 18, 1);
+  display.setCursor(x, y);
+  display.print(tempString);
+  display.drawBitmap(x, y+10, epd_bitmap_down_right, 16, 16, 1);
+  
+  if(device.stored)
+    display.drawBitmap(x+18, y+10, epd_bitmap_save, 16, 16, 1);
+  
+  if(discovered)
+    display.drawBitmap(x+34, y+10, epd_bitmap_Bluetooth, 16, 16, 1);
+
+  display.drawBitmap(x+50, y+10, epd_bitmap_battery, 32, 16, 1);
+  display.setCursor(x+57, y+15);
+  display.print(batt);
+
+  
 }
 
 void ExitDevices() {
@@ -830,7 +876,7 @@ void ExitDevices() {
       File32 dataFile = log_data.SD.open("/devices.txt", FILE_WRITE);
 
       serializeJson(doc, dataFile);
-      Serial.println("");
+      logInfo("");
       dataFile.close();
     }
   }
@@ -879,7 +925,7 @@ void ExitDevices() {
  * @param report Structural advertising data
  */
   void scan_callback(ble_gap_evt_adv_report_t * report) {
-    Serial.println("Found Device:");
+    logInfo("Found Device:");
     Serial.print("MAC: ");
     Serial.printBufferReverse(report->peer_addr.addr, 6, ':');
     Serial.print("\n");
@@ -891,7 +937,7 @@ void ExitDevices() {
       for (int i = 0; i < cscDevices.Count(); i++) {
         //check if the new found device matches any of the devices in the list
         if (compareMAC(cscDevices[i].getMac(), report->peer_addr.addr)) {
-          Serial.println("Match!");
+          logInfo("Match!");
           toConnectMAC[0] = report->peer_addr.addr[0];
           toConnectMAC[1] = report->peer_addr.addr[1];
           toConnectMAC[2] = report->peer_addr.addr[2];
@@ -1079,23 +1125,12 @@ void ExitDevices() {
     }
   }
 
-  /**
- * Callback invoked when a connection is dropped
- * @param conn_handle
- * @param reason is a BLE_HCI_STATUS_CODE which can be found in ble_hci.h
- */
-  void disconnect_callback(uint16_t conn_handle, uint8_t reason) {
-    csc::csc_static_disconnect_callback(conn_handle);
 
-    (void)conn_handle;
-    (void)reason;
-  }
-
-  void readIMU() {
-    f32_acc_x = myIMU.readFloatAccelX();
-    f32_acc_y = myIMU.readFloatAccelY();
-    f32_acc_z = myIMU.readFloatAccelZ();
-    f32_gyro_x = myIMU.readFloatGyroX();
-    f32_gyro_y = myIMU.readFloatGyroY();
-    f32_gyro_z = myIMU.readFloatGyroZ();
-  }
+void readIMU() {
+  f32_acc_x = myIMU.readFloatAccelX();
+  f32_acc_y = myIMU.readFloatAccelY();
+  f32_acc_z = myIMU.readFloatAccelZ();
+  f32_gyro_x = myIMU.readFloatGyroX();
+  f32_gyro_y = myIMU.readFloatGyroY();
+  f32_gyro_z = myIMU.readFloatGyroZ();
+}
