@@ -340,31 +340,31 @@ void loop() {
 
   bRight_RE = bRight && !bRight_Prev && !bSwitchOnDelay;
   bRight_FE = !bRight && bRight_Prev && !bSwitchOnDelay;
-  if(bRight_RE)
+  if (bRight_RE)
     nRightPress = nCurrentTimeMillis;
   bRight_long = bRight && ((nCurrentTimeMillis - nRightPress) > nHeldPressTime);
   bRight_Prev = bRight;
   bUp_RE = bUp && !bUp_Prev && !bSwitchOnDelay;
   bUp_FE = !bUp && bUp_Prev && !bSwitchOnDelay;
-  if(bUp_RE)
+  if (bUp_RE)
     nUpPress = nCurrentTimeMillis;
   bUp_long = bUp && ((nCurrentTimeMillis - nUpPress) > nHeldPressTime);
   bUp_Prev = bUp;
   bDown_RE = bDown && !bDown_Prev && !bSwitchOnDelay;
   bDown_FE = !bDown && bDown_Prev && !bSwitchOnDelay;
-  if(bDown_RE)
+  if (bDown_RE)
     nDownPress = nCurrentTimeMillis;
   bDown_long = bDown && ((nCurrentTimeMillis - nDownPress) > nHeldPressTime);
   bDown_Prev = bDown;
   bCenter_RE = bCenter && !bCenter_Prev && !bSwitchOnDelay;
   bCenter_FE = !bCenter && bCenter_Prev && !bSwitchOnDelay;
-  if(bCenter_RE)
+  if (bCenter_RE)
     nCenterPress = nCurrentTimeMillis;
   bCenter_long = bCenter && ((nCurrentTimeMillis - nCenterPress) > nHeldPressTime);
   bCenter_Prev = bCenter;
   bLeft_RE = bLeft && !bLeft_Prev && !bSwitchOnDelay;
   bLeft_FE = !bLeft && bLeft_Prev && !bSwitchOnDelay;
-  if(bLeft_RE)
+  if (bLeft_RE)
     nLeftPress = nCurrentTimeMillis;
   bLeft_long = bLeft && ((nCurrentTimeMillis - nLeftPress) > nHeldPressTime);
   bLeft_Prev = bLeft;
@@ -378,7 +378,7 @@ void loop() {
 
   //check if the device has timed out
   TimeSpan ts1 = nCurrentTime - nLastAction;
-  if ((ts1.totalseconds() > Timeout_Period && !b_Running) || bSysOff){
+  if ((ts1.totalseconds() > Timeout_Period && !b_Running) || bSysOff) {
     if (started) {
       display.clearDisplay();
       display.display();
@@ -399,8 +399,7 @@ void loop() {
       logInfo("SD card initialised");
     }
   }
-  if(bSD_Det_RE)
-  {
+  if (bSD_Det_RE) {
     debugLog.close();
   }
 
@@ -665,7 +664,7 @@ void GUI() {
             startScan |= !cscDevices[i].discovered();
           }
         }
-        if (startScan) {
+        if (startScan && !Bluefruit.Scanner.isRunning()) {
           Bluefruit.Scanner.setRxCallback(scan_callback);
           Bluefruit.Scanner.filterUuid(GATT_CSC_UUID, UUID16_SVC_HEART_RATE, GATT_CPS_UUID, GATT_BAT_UUID);
           Bluefruit.Scanner.useActiveScan(true);
@@ -723,7 +722,7 @@ void GUI() {
       break;
 
     case 4:  //nearby devices
-      if (bStateEntry) {
+      if (bStateEntry && !Bluefruit.Scanner.isRunning()) {
         Bluefruit.Scanner.setRxCallback(scan_discovery);
         Bluefruit.Scanner.filterUuid(GATT_CSC_UUID, UUID16_SVC_HEART_RATE, GATT_CPS_UUID);
         Bluefruit.Scanner.useActiveScan(1);
@@ -751,34 +750,31 @@ void deviceSelection() {
     if ((s16DeviceSel >> 4) < nearby_devices.Count())
       s16DeviceSel += 0x0010;
   }
-  
+
   index = s16DeviceSel >> 4;
-  if((s16DeviceSel >> 4) != nearby_devices.Count())
-  {
+  if ((s16DeviceSel >> 4) != nearby_devices.Count()) {
     if (bCenter_RE) {
       nearby_devices[index].stored = !nearby_devices[index].stored;
-    
+
 
       if (cscDevices.Count() > 0) {
         //iterate the list
         for (int i = 0; i < cscDevices.Count(); i++) {
           MacExists |= compareMAC(cscDevices[i].getMac(), nearby_devices[index].MAC);
-          if(nearby_devices[index].stored && MacExists)
-          {
+          if (nearby_devices[index].stored && MacExists) {
             cscDevices.Remove(i);
           }
         }
       }
       //if not stored and not already in the cscDevices list
-      if(nearby_devices[index].stored && !MacExists) 
-      {
-          cscDevices.Add(csc(nearby_devices[index].name, nearby_devices[index].MAC));
-          logInfo("Adding device:");
-          Serial.print("Name: ");
-          logInfo(nearby_devices[index].name);
-          Serial.print("MAC: ");
-          Serial.printBufferReverse(nearby_devices[index].MAC, 6, ':');
-          Serial.print("\n");
+      if (nearby_devices[index].stored && !MacExists) {
+        cscDevices.Add(csc(nearby_devices[index].name, nearby_devices[index].MAC));
+        logInfo("Adding device:");
+        Serial.print("Name: ");
+        logInfo(nearby_devices[index].name);
+        Serial.print("MAC: ");
+        Serial.printBufferReverse(nearby_devices[index].MAC, 6, ':');
+        Serial.print("\n");
       }
     }
   }
@@ -788,7 +784,7 @@ void deviceSelection() {
 }
 
 void showDevices() {
-  
+
   display.setTextColor(SH110X_WHITE);
   display.setCursor(0, 8);
   display.setTextSize(1);
@@ -803,12 +799,11 @@ void showDevices() {
       focus = s16DeviceSel >> 4 == i;
 
       csc* device = csc::getDeviceWithMAC(nearby_devices[i].MAC);
-      if(device!=NULL)
-      {
-        discovered=device->discovered();
+      if (device != NULL) {
+        discovered = device->discovered();
         batt = device->readBatt();
       }
-      DrawDevice(2, i * 28 + 20 + 2, nearby_devices[i], focus,  nearby_devices[i].stored, discovered, batt);
+      DrawDevice(2, i * 28 + 20 + 2, nearby_devices[i], focus, nearby_devices[i].stored, discovered, batt);
     }
   }
 
@@ -828,22 +823,22 @@ void DrawDevice(int x, int y, prph_info_t device, bool focus, bool stored, bool 
 
   display.setTextColor(SH110X_WHITE);
   if (focus)
-    display.drawRect(x - 2, y - 3, w+3, h + 4 + 18, 1);
+    display.drawRect(x - 2, y - 3, w + 3, h + 4 + 18, 1);
   display.setCursor(x, y);
   display.print(tempString);
-  display.drawBitmap(x, y+10, epd_bitmap_down_right, 16, 16, 1);
-  
-  if(device.stored)
-    display.drawBitmap(x+18, y+10, epd_bitmap_save, 16, 16, 1);
-  
-  if(discovered)
-    display.drawBitmap(x+34, y+10, epd_bitmap_Bluetooth, 16, 16, 1);
+  display.drawBitmap(x, y + 10, epd_bitmap_down_right, 16, 16, 1);
 
-  display.drawBitmap(x+50, y+10, epd_bitmap_battery, 32, 16, 1);
-  display.setCursor(x+57, y+15);
+  if (device.stored)
+  {
+    display.drawBitmap(x + 18, y + 10, epd_bitmap_save, 16, 16, 1);
+
+    if (discovered)
+      display.drawBitmap(x + 34, y + 10, epd_bitmap_Bluetooth, 16, 16, 1);
+
+    display.drawBitmap(x + 50, y + 10, epd_bitmap_battery, 32, 16, 1);
+    display.setCursor(x + 57, y + 15);
+  }
   display.print(batt);
-
-  
 }
 
 void ExitDevices() {
@@ -855,12 +850,12 @@ void ExitDevices() {
     if (nearby_devices.Count() > 0) {
       JsonDocument doc;
       JsonArray devices = doc["devices"].to<JsonArray>();
-      
+
       for (int i = 0; i < nearby_devices.Count(); i++) {
-        if(nearby_devices[i].stored)
-        {
+        if (nearby_devices[i].stored) {
           devices[i]["name"] = nearby_devices[i].name;
-          JsonArray device_MAC = devices[i]["MAC"].to<JsonArray>();;
+          JsonArray device_MAC = devices[i]["MAC"].to<JsonArray>();
+          ;
           device_MAC.add(nearby_devices[i].MAC[0]);
           device_MAC.add(nearby_devices[i].MAC[1]);
           device_MAC.add(nearby_devices[i].MAC[2]);
@@ -870,7 +865,7 @@ void ExitDevices() {
         }
       }
 
-      if (log_data.SD.exists("/devices.txt")) 
+      if (log_data.SD.exists("/devices.txt"))
         log_data.SD.remove("/devices.txt");
 
       File32 dataFile = log_data.SD.open("/devices.txt", FILE_WRITE);
@@ -882,248 +877,251 @@ void ExitDevices() {
   }
 }
 
-  /**
+/**
  * Callback invoked when scanner pick up an advertising data
  * @param report Structural advertising data
  */
-  void scan_discovery(ble_gap_evt_adv_report_t * report) {
-    prph_info_t newDevice;
-    //get the MAC
-    newDevice.MAC[0] = report->peer_addr.addr[0];
-    newDevice.MAC[1] = report->peer_addr.addr[1];
-    newDevice.MAC[2] = report->peer_addr.addr[2];
-    newDevice.MAC[3] = report->peer_addr.addr[3];
-    newDevice.MAC[4] = report->peer_addr.addr[4];
-    newDevice.MAC[5] = report->peer_addr.addr[5];
+void scan_discovery(ble_gap_evt_adv_report_t* report) {
+  prph_info_t newDevice;
+  //get the MAC
+  newDevice.MAC[0] = report->peer_addr.addr[0];
+  newDevice.MAC[1] = report->peer_addr.addr[1];
+  newDevice.MAC[2] = report->peer_addr.addr[2];
+  newDevice.MAC[3] = report->peer_addr.addr[3];
+  newDevice.MAC[4] = report->peer_addr.addr[4];
+  newDevice.MAC[5] = report->peer_addr.addr[5];
 
-    //Bluefruit.Scanner.parseReportByType(report, BLE_GAP_AD_TYPE_SHORT_LOCAL_NAME, (uint8_t*)newDevice.name, sizeof(newDevice.name));
-    Bluefruit.Scanner.parseReportByType(report, BLE_GAP_AD_TYPE_COMPLETE_LOCAL_NAME, (uint8_t*)newDevice.name, sizeof(newDevice.name));
+  memset(&newDevice.name,0,32);
 
-    bool bMatch = 0;
-    //check if the list contains anyhting
-    if (nearby_devices.Count() > 0) {
-      //iterate the list
-      for (int i = 0; i < nearby_devices.Count(); i++) {
-        //check if the new found device matches any of the devices in the list
-        if (compareMAC(nearby_devices[i].MAC, newDevice.MAC)) {
-          bMatch = 1;
-        }
+  //Bluefruit.Scanner.parseReportByType(report, BLE_GAP_AD_TYPE_SHORT_LOCAL_NAME, (uint8_t*)newDevice.name, sizeof(newDevice.name));
+  Bluefruit.Scanner.parseReportByType(report, BLE_GAP_AD_TYPE_COMPLETE_LOCAL_NAME, (uint8_t*)newDevice.name, sizeof(newDevice.name));
+
+  bool bMatch = 0;
+  //check if the list contains anyhting
+  if (nearby_devices.Count() > 0) {
+    //iterate the list
+    for (int i = 0; i < nearby_devices.Count(); i++) {
+      //check if the new found device matches any of the devices in the list
+      if (compareMAC(nearby_devices[i].MAC, newDevice.MAC)) {
+        bMatch = 1;
       }
     }
-    //if the new device is unique add it
-    if (!bMatch) {
-      nearby_devices.Add(newDevice);
-    }
-
-    // For Softdevice v6: after received a report, scanner will be paused
-    // We need to call Scanner resume() to continue scanning
-    Bluefruit.Scanner.resume();
+  }
+  //if the new device is unique add it
+  if (!bMatch) {
+    newDevice.stored=false;
+    nearby_devices.Add(newDevice);
   }
 
-  /**
+  // For Softdevice v6: after received a report, scanner will be paused
+  // We need to call Scanner resume() to continue scanning
+  Bluefruit.Scanner.resume();
+}
+
+/**
  * Callback invoked when scanner pick up an advertising data
  * @param report Structural advertising data
  */
-  void scan_callback(ble_gap_evt_adv_report_t * report) {
-    logInfo("Found Device:");
-    Serial.print("MAC: ");
-    Serial.printBufferReverse(report->peer_addr.addr, 6, ':');
-    Serial.print("\n");
-    // Since we configure the scanner with filterUuid()
-    // Scan callback only invoked for device with csc service advertised
-    // Connect to device with csc service in advertising
-    if (cscDevices.Count() > 0) {
-      //iterate the list
-      for (int i = 0; i < cscDevices.Count(); i++) {
-        //check if the new found device matches any of the devices in the list
-        if (compareMAC(cscDevices[i].getMac(), report->peer_addr.addr)) {
-          logInfo("Match!");
-          toConnectMAC[0] = report->peer_addr.addr[0];
-          toConnectMAC[1] = report->peer_addr.addr[1];
-          toConnectMAC[2] = report->peer_addr.addr[2];
-          toConnectMAC[3] = report->peer_addr.addr[3];
-          toConnectMAC[4] = report->peer_addr.addr[4];
-          toConnectMAC[5] = report->peer_addr.addr[5];
-          Bluefruit.Central.connect(report);
-        }
+void scan_callback(ble_gap_evt_adv_report_t* report) {
+  logInfo("Found Device:");
+  Serial.print("MAC: ");
+  Serial.printBufferReverse(report->peer_addr.addr, 6, ':');
+  Serial.print("\n");
+  // Since we configure the scanner with filterUuid()
+  // Scan callback only invoked for device with csc service advertised
+  // Connect to device with csc service in advertising
+  if (cscDevices.Count() > 0) {
+    //iterate the list
+    for (int i = 0; i < cscDevices.Count(); i++) {
+      //check if the new found device matches any of the devices in the list
+      if (compareMAC(cscDevices[i].getMac(), report->peer_addr.addr)) {
+        logInfo("Match!");
+        toConnectMAC[0] = report->peer_addr.addr[0];
+        toConnectMAC[1] = report->peer_addr.addr[1];
+        toConnectMAC[2] = report->peer_addr.addr[2];
+        toConnectMAC[3] = report->peer_addr.addr[3];
+        toConnectMAC[4] = report->peer_addr.addr[4];
+        toConnectMAC[5] = report->peer_addr.addr[5];
+        Bluefruit.Central.connect(report);
       }
     }
   }
+}
 
-  void stateTransition() {
+void stateTransition() {
+}
+
+DateTime updateTime(DateTime someTime) {
+  int8_t s8AddVal;
+  if (bUp_RE) {
+    s8AddVal = 1;
+  } else if (bDown_RE) {
+    s8AddVal = -1;
   }
 
-  DateTime updateTime(DateTime someTime) {
-    int8_t s8AddVal;
-    if (bUp_RE) {
-      s8AddVal = 1;
-    } else if (bDown_RE) {
-      s8AddVal = -1;
-    }
-
-    TimeSpan span;
-    if (bSecondSel) {
-      DateTime dt0(someTime.year(), someTime.month(), someTime.day(), someTime.hour(), someTime.minute(), someTime.second() + s8AddVal);
-      someTime = dt0;
-    } else if (bMinuteSel) {
-      DateTime dt0(someTime.year(), someTime.month(), someTime.day(), someTime.hour(), someTime.minute() + s8AddVal, someTime.second());
-      someTime = dt0;
-    } else if (bHourSel) {
-      DateTime dt0(someTime.year(), someTime.month(), someTime.day(), someTime.hour() + s8AddVal, someTime.minute(), someTime.second());
-      someTime = dt0;
-    } else if (bDaySel) {
-      DateTime dt0(someTime.year(), someTime.month(), someTime.day() + s8AddVal, someTime.hour(), someTime.minute(), someTime.second());
-      someTime = dt0;
-    } else if (bMonthSel) {
-      DateTime dt0(someTime.year(), someTime.month() + s8AddVal, someTime.day(), someTime.hour(), someTime.minute(), someTime.second());
-      someTime = dt0;
-    } else if (bYearSel) {
-      DateTime dt0(someTime.year() + s8AddVal, someTime.month(), someTime.day(), someTime.hour(), someTime.minute(), someTime.second());
-      someTime = dt0;
-    }
-
-    return someTime;
+  TimeSpan span;
+  if (bSecondSel) {
+    DateTime dt0(someTime.year(), someTime.month(), someTime.day(), someTime.hour(), someTime.minute(), someTime.second() + s8AddVal);
+    someTime = dt0;
+  } else if (bMinuteSel) {
+    DateTime dt0(someTime.year(), someTime.month(), someTime.day(), someTime.hour(), someTime.minute() + s8AddVal, someTime.second());
+    someTime = dt0;
+  } else if (bHourSel) {
+    DateTime dt0(someTime.year(), someTime.month(), someTime.day(), someTime.hour() + s8AddVal, someTime.minute(), someTime.second());
+    someTime = dt0;
+  } else if (bDaySel) {
+    DateTime dt0(someTime.year(), someTime.month(), someTime.day() + s8AddVal, someTime.hour(), someTime.minute(), someTime.second());
+    someTime = dt0;
+  } else if (bMonthSel) {
+    DateTime dt0(someTime.year(), someTime.month() + s8AddVal, someTime.day(), someTime.hour(), someTime.minute(), someTime.second());
+    someTime = dt0;
+  } else if (bYearSel) {
+    DateTime dt0(someTime.year() + s8AddVal, someTime.month(), someTime.day(), someTime.hour(), someTime.minute(), someTime.second());
+    someTime = dt0;
   }
 
-  /**
+  return someTime;
+}
+
+/**
  * Determines what value in the data time display is focused or slected
  */
-  void timeSelection() {
-    //button inputs
-    if (!(bHourSel | bMinuteSel | bSecondSel | bDaySel | bMonthSel | bYearSel)) {
-      if (bUp_RE) {
-        if ((s16timeSel & 0x0300) >= 0x0100)
-          s16timeSel -= 0x0100;
-        else
-          s16timeSel += 0x0200;
-      }
-
-      if (bDown_RE) {
-        if ((s16timeSel & 0x0200) < 0x0200)
-          s16timeSel += 0x100;
-        else
-          s16timeSel -= 0x0200;
-      }
-
-      if (bLeft_RE) {
-        if ((s16timeSel & 0x0030) >= 0x0010)
-          s16timeSel -= 0x0010;
-        else
-          s16timeSel += 0x0020;
-      }
-
-      if (bRight_RE) {
-        if ((s16timeSel & 0x0020) < 0x0020)
-          s16timeSel += 0x0010;
-        else
-          s16timeSel &= 0xFFCF;
-      }
+void timeSelection() {
+  //button inputs
+  if (!(bHourSel | bMinuteSel | bSecondSel | bDaySel | bMonthSel | bYearSel)) {
+    if (bUp_RE) {
+      if ((s16timeSel & 0x0300) >= 0x0100)
+        s16timeSel -= 0x0100;
+      else
+        s16timeSel += 0x0200;
     }
 
-    if (s16timeSel > 0x211) {
-      s16timeSel &= 0xFF0F;
+    if (bDown_RE) {
+      if ((s16timeSel & 0x0200) < 0x0200)
+        s16timeSel += 0x100;
+      else
+        s16timeSel -= 0x0200;
     }
 
-    if (bCenter_RE)
-      s16timeSel = s16timeSel ^ 1;
-
-    //calculate boolean values
-    bHourFoc = (s16timeSel == 0x000);
-    bHourSel = (s16timeSel == 0x001);
-    bMinuteFoc = (s16timeSel == 0x010);
-    bMinuteSel = (s16timeSel == 0x011);
-    bSecondFoc = (s16timeSel == 0x020);
-    bSecondSel = (s16timeSel == 0x021);
-
-    bDayFoc = (s16timeSel == 0x100);
-    bDaySel = (s16timeSel == 0x101);
-    bMonthFoc = (s16timeSel == 0x110);
-    bMonthSel = (s16timeSel == 0x111);
-    bYearFoc = (s16timeSel == 0x120);
-    bYearSel = (s16timeSel == 0x121);
-
-    bBackFoc = (s16timeSel == 0x200);
-    bBackSel = (s16timeSel == 0x201);
-    bSaveFoc = (s16timeSel == 0x210);
-    bSaveSel = (s16timeSel == 0x211);
-  }
-
-  void ExitTime() {
-    if (bSaveSel) {
-      rtc.adjust(dtTimeDisplay);
+    if (bLeft_RE) {
+      if ((s16timeSel & 0x0030) >= 0x0010)
+        s16timeSel -= 0x0010;
+      else
+        s16timeSel += 0x0020;
     }
-    if (bBackSel | bSaveSel) {
-      s16timeSel = 0;
-      u16_state = 0;
+
+    if (bRight_RE) {
+      if ((s16timeSel & 0x0020) < 0x0020)
+        s16timeSel += 0x0010;
+      else
+        s16timeSel &= 0xFFCF;
     }
   }
 
-  //draw the main screen
-  void drawMain() {
-    display.setTextSize(4);
-    display.setCursor(0, 0);
-    if (f32_kph < 10)
-      display.print(' ');
-    display.print(f32_kph, 1);
-    display.setTextSize(1);
-    display.println("  k/h");
-
-    display.setTextSize(4);
-    display.setCursor(0, 32);
-
-    if (f32_cadence < 10)
-      display.print("   ");
-    else if (f32_cadence < 100)
-      display.print("  ");
-    else
-      display.print(" ");
-    display.print(f32_cadence, 0);
-    display.setTextSize(1);
-    display.println("  rpm");
-
-    display.drawBitmap(95, 111, epd_bitmap_battery, 32, 16, 1);
-    display.setCursor(102, 116);
-    display.print(nBatteryPercentage);
-
-    if (b_Running) {
-      drawMenuRunning(64, 88);
-      display.setCursor(0, 112);
-      display.setTextSize(2);
-      display.print(log_data.elapsedString());
-    } else {
-      drawMenuStopped(64, 88);
-    }
+  if (s16timeSel > 0x211) {
+    s16timeSel &= 0xFF0F;
   }
 
-  /**
+  if (bCenter_RE)
+    s16timeSel = s16timeSel ^ 1;
+
+  //calculate boolean values
+  bHourFoc = (s16timeSel == 0x000);
+  bHourSel = (s16timeSel == 0x001);
+  bMinuteFoc = (s16timeSel == 0x010);
+  bMinuteSel = (s16timeSel == 0x011);
+  bSecondFoc = (s16timeSel == 0x020);
+  bSecondSel = (s16timeSel == 0x021);
+
+  bDayFoc = (s16timeSel == 0x100);
+  bDaySel = (s16timeSel == 0x101);
+  bMonthFoc = (s16timeSel == 0x110);
+  bMonthSel = (s16timeSel == 0x111);
+  bYearFoc = (s16timeSel == 0x120);
+  bYearSel = (s16timeSel == 0x121);
+
+  bBackFoc = (s16timeSel == 0x200);
+  bBackSel = (s16timeSel == 0x201);
+  bSaveFoc = (s16timeSel == 0x210);
+  bSaveSel = (s16timeSel == 0x211);
+}
+
+void ExitTime() {
+  if (bSaveSel) {
+    rtc.adjust(dtTimeDisplay);
+  }
+  if (bBackSel | bSaveSel) {
+    s16timeSel = 0;
+    u16_state = 0;
+  }
+}
+
+//draw the main screen
+void drawMain() {
+  display.setTextSize(4);
+  display.setCursor(0, 0);
+  if (f32_kph < 10)
+    display.print(' ');
+  display.print(f32_kph, 1);
+  display.setTextSize(1);
+  display.println("  k/h");
+
+  display.setTextSize(4);
+  display.setCursor(0, 32);
+
+  if (f32_cadence < 10)
+    display.print("   ");
+  else if (f32_cadence < 100)
+    display.print("  ");
+  else
+    display.print(" ");
+  display.print(f32_cadence, 0);
+  display.setTextSize(1);
+  display.println("  rpm");
+
+  display.drawBitmap(95, 111, epd_bitmap_battery, 32, 16, 1);
+  display.setCursor(102, 116);
+  display.print(nBatteryPercentage);
+
+  if (b_Running) {
+    drawMenuRunning(64, 88);
+    display.setCursor(0, 112);
+    display.setTextSize(2);
+    display.print(log_data.elapsedString());
+  } else {
+    drawMenuStopped(64, 88);
+  }
+}
+
+/**
  * Callback invoked when an connection is established
  * @param conn_handle
  */
-  void connect_callback(uint16_t conn_handle) {
-    if (cscDevices.Count() > 0) {
-      bool restartScan = false;
-      //iterate the list
-      for (int i = 0; i < cscDevices.Count(); i++) {
-        //check if the new found device matches any of the devices in the list
-        if (compareMAC(cscDevices[i].getMac(), toConnectMAC)) {
-          if (!cscDevices[i].discovered()) {
-            cscDevices[i].csc_discover(conn_handle);
-            if (cscDevices[i].b_speed_present) {
-              log_data.addSource(cscDevices[i].getName(), &cscDevices[i].f32_kph);
-            }
-            if (cscDevices[i].b_cadence_present) {
-              log_data.addSource(cscDevices[i].getName(), &cscDevices[i].f32_cadence);
-            }
+void connect_callback(uint16_t conn_handle) {
+  if (cscDevices.Count() > 0) {
+    bool restartScan = false;
+    //iterate the list
+    for (int i = 0; i < cscDevices.Count(); i++) {
+      //check if the new found device matches any of the devices in the list
+      if (compareMAC(cscDevices[i].getMac(), toConnectMAC)) {
+        if (!cscDevices[i].discovered()) {
+          cscDevices[i].csc_discover(conn_handle);
+          if (cscDevices[i].b_speed_present) {
+            log_data.addSource(cscDevices[i].getName(), &cscDevices[i].f32_kph);
           }
-        } else if (!cscDevices[i].discovered()) {
-          restartScan = true;
+          if (cscDevices[i].b_cadence_present) {
+            log_data.addSource(cscDevices[i].getName(), &cscDevices[i].f32_cadence);
+          }
         }
-      }
-      if (restartScan) {
-        Bluefruit.Scanner.start(0);  // // 0 = Don't stop scanning after n seconds
+      } else if (!cscDevices[i].discovered()) {
+        restartScan = true;
       }
     }
+    if (restartScan) {
+      Bluefruit.Scanner.start(0);  // // 0 = Don't stop scanning after n seconds
+    }
   }
+}
 
 
 void readIMU() {

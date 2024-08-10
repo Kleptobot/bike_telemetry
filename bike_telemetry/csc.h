@@ -87,6 +87,7 @@ class csc {
     String name;
     uint8_t MAC[6];
     bool _begun;
+    uint16_t _conn_handle;
 
     static csc* instantiated[];
     static int instances;

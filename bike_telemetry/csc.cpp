@@ -32,7 +32,7 @@ void csc::csc_static_disconnect_callback(uint16_t conn_handle, uint8_t reason)
 {
   for (int i=0; i < csc::instances; i++)
   {
-    if(false)
+    if(conn_handle == instantiated[i]->_conn_handle)
     {
       instantiated[i]->disconnect(conn_handle, reason);
     }
@@ -43,8 +43,9 @@ void csc::disconnect(uint16_t conn_handle, uint8_t reason)
 {
   (void) conn_handle;
   (void) reason;
-
-  //Serial.print("Disconnected, reason = 0x"); logInfo(reason, HEX);
+  
+  logInfo("Disconnected, reason = 0x"); 
+  logInfo(String(reason, HEX));
 }
 
 void csc::clearInstances()
@@ -104,7 +105,9 @@ void csc::csc_discover(uint16_t conn_handle)
   // If csc is not found, disconnect and return
   if (csc_serv.discover(conn_handle) )
   {
+    _conn_handle = conn_handle;
     logInfo("Found CSC");
+
     if ( !csc_meas.discover() )
     {
       // Measurement chr is mandatory, if it is not found (valid), then disconnect
@@ -141,23 +144,26 @@ void csc::csc_discover(uint16_t conn_handle)
     }else{
       logInfo("Couldn't enable notify for CSC Measurement");
     }
-  }
-  if(bat_serv.discover(conn_handle))
-  {
-    logInfo("Found bat");
-    
-    if (bat_meas.discover() )
+    if(bat_serv.discover(conn_handle))
     {
-      u8_batt = bat_meas.read8();
-      //Serial.print("Batt: "); logInfo(u8_batt);
+      logInfo("Found bat");
+      
+      if (bat_meas.discover() )
+      {
+        u8_batt = bat_meas.read8();
+        //Serial.print("Batt: "); logInfo(u8_batt);
+      }
+      if ( bat_meas.enableNotify() )
+      {
+        logInfo("Ready to receive BAT Measurement value");
+      }else
+      {
+        logInfo("Couldn't enable notify for BAT Measurement");
+      }
     }
-    if ( bat_meas.enableNotify() )
-    {
-      logInfo("Ready to receive BAT Measurement value");
-    }else
-    {
-      logInfo("Couldn't enable notify for BAT Measurement");
-    }
+  }else{
+    Bluefruit.disconnect(conn_handle);
+    Serial.println("Found NONE");
   }
 
 }

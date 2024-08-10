@@ -35,4 +35,12 @@ inline void logInfo(const char* text)
   debugLog.println(text);
 }
 
+inline void logInfo(String text)
+{
+  Serial.println(text);
+  if(!debugLog)
+    debugLog.open("/log.txt", FILE_WRITE);
+  debugLog.println(text);
+}
+
 #endif /* utils_H */
