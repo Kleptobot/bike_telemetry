@@ -50,6 +50,8 @@ Adafruit_SH1107 display = Adafruit_SH1107(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OL
 #define nDeviceScanDelay 1000
 #define nHeldPressTime 2000
 
+#define nDeviceWindowLen 2
+
 //Create a instance of class LSM6DS3
 LSM6DS3 myIMU(I2C_MODE, 0x6A);  //I2C device address 0x6A
 
@@ -67,7 +69,7 @@ List<csc> cscDevices;
 
 uint8_t toConnectMAC[6];
 
-int16_t s16DeviceSel;
+int16_t s16DeviceSel, s16DeviceWindowStart;
 bool bBackFocDev, bBackSelDev;
 
 float f32_RTC_Temp, f32_DSP_Temp, f32_DSP_Pa, f32_Alt, f32_acc_x, f32_acc_y, f32_acc_z, f32_gyro_x, f32_gyro_y, f32_gyro_z, f32_kph, f32_cadence, f32_speedSum, f32_max_speed, f32_avgSpeed, f32_cadSum, f32_max_cad, f32_avgCad;
@@ -149,7 +151,7 @@ void setup() {
 
   if (!mcp.begin_I2C()) {
 
-    logInfo("MCP init Error");
+    logInfoln("MCP init Error");
     while (1)
       ;
   }
@@ -162,14 +164,14 @@ void setup() {
   mcp.setupInterruptPin(GPIOB0, HIGH);
 
   if (!rtc.begin()) {
-    logInfo("Couldn't find RTC");
+    logInfoln("Couldn't find RTC");
     while (1) delay(500);
   } else {
-    logInfo("RTC initialised");
+    logInfoln("RTC initialised");
   }
 
   if (rtc.lostPower()) {
-    logInfo("RTC lost power, let's set the time!");
+    logInfoln("RTC lost power, let's set the time!");
     // When time needs to be set on a new device, or after a power loss, the
     // following line sets the RTC to the date & time this sketch was compiled
     rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
@@ -198,7 +200,7 @@ void init_devices() {
     display.println("IMU init error");
     while (1) delay(500);
   } else {
-    logInfo("IMU initialised");
+    logInfoln("IMU initialised");
   }
 
   Dps3xxPressureSensor.begin(Wire);
@@ -248,12 +250,12 @@ void init_devices() {
   started = true;
   delay(1000);
 
-  logInfo("Booted");
+  logInfoln("Booted");
 }
 
 void loadDevices() {
   if (log_data.SD.exists("devices.txt")) {
-    logInfo("Devices file found...");
+    logInfoln("Devices file found...");
     // Open file for reading
     File32 dataFile = log_data.SD.open("/devices.txt", FILE_READ);
     // Allocate the memory pool on the stack.
@@ -264,7 +266,7 @@ void loadDevices() {
 
     if (error) {
       Serial.print("deserializeJson() failed: ");
-      logInfo(error.c_str());
+      logInfoln(error.c_str());
       return;
     }
 
@@ -294,7 +296,7 @@ void loadDevices() {
 
       logInfo("Adding device:");
       Serial.print("Name: ");
-      logInfo(name);
+      logInfoln(name);
       Serial.print("MAC: ");
       Serial.printBufferReverse(MAC, 6, ':');
       Serial.print("\n");
@@ -392,11 +394,11 @@ void loop() {
   if (bSD_Det_FE || !started) {
     // initialise SD card
     if (!log_data.SD.begin(SD_CS)) {
-      logInfo("initialisation failed.");
+      logInfoln("initialisation failed.");
       delay(500);
     } else {
       debugLog.open("/log.txt", FILE_WRITE);
-      logInfo("SD card initialised");
+      logInfoln("SD card initialised");
     }
   }
   if (bSD_Det_RE) {
@@ -743,12 +745,18 @@ void deviceSelection() {
   int16_t index;
   if (bUp_RE) {
     if (s16DeviceSel >= 0x0010)
+    {
       s16DeviceSel -= 0x0010;
+      if((s16DeviceSel>>4) < s16DeviceWindowStart)
+        s16DeviceWindowStart --;
+    }
   }
 
   if (bDown_RE) {
     if ((s16DeviceSel >> 4) < nearby_devices.Count())
       s16DeviceSel += 0x0010;
+      if(((s16DeviceSel>>4) >= (s16DeviceWindowStart + nDeviceWindowLen)) && ((s16DeviceSel>>4) < nearby_devices.Count()))
+        s16DeviceWindowStart++;
   }
 
   index = s16DeviceSel >> 4;
@@ -769,9 +777,9 @@ void deviceSelection() {
       //if not stored and not already in the cscDevices list
       if (nearby_devices[index].stored && !MacExists) {
         cscDevices.Add(csc(nearby_devices[index].name, nearby_devices[index].MAC));
-        logInfo("Adding device:");
+        logInfoln("Adding device:");
         Serial.print("Name: ");
-        logInfo(nearby_devices[index].name);
+        logInfoln(nearby_devices[index].name);
         Serial.print("MAC: ");
         Serial.printBufferReverse(nearby_devices[index].MAC, 6, ':');
         Serial.print("\n");
@@ -792,18 +800,18 @@ void showDevices() {
 
   if (nearby_devices.Count() > 0) {
     //iterate the list
-    for (int i = 0; i < nearby_devices.Count(); i++) {
+    for (int i = 0; i < nDeviceWindowLen; i++) {
       bool selected, focus, discovered;
       uint8_t batt;
 
       focus = s16DeviceSel >> 4 == i;
 
-      csc* device = csc::getDeviceWithMAC(nearby_devices[i].MAC);
+      csc* device = csc::getDeviceWithMAC(nearby_devices[i+s16DeviceWindowStart].MAC);
       if (device != NULL) {
         discovered = device->discovered();
         batt = device->readBatt();
       }
-      DrawDevice(2, i * 28 + 20 + 2, nearby_devices[i], focus, nearby_devices[i].stored, discovered, batt);
+      DrawDevice(2, i * 28 + 20 + 2, nearby_devices[i+s16DeviceWindowStart], focus, nearby_devices[i+s16DeviceWindowStart].stored, discovered, batt);
     }
   }
 
@@ -823,7 +831,7 @@ void DrawDevice(int x, int y, prph_info_t device, bool focus, bool stored, bool 
 
   display.setTextColor(SH110X_WHITE);
   if (focus)
-    display.drawRect(x - 2, y - 3, w + 3, h + 4 + 18, 1);
+    display.drawRect(x - 2, y - 3, 127, 30, 1);
   display.setCursor(x, y);
   display.print(tempString);
   display.drawBitmap(x, y + 10, epd_bitmap_down_right, 16, 16, 1);
@@ -844,6 +852,7 @@ void DrawDevice(int x, int y, prph_info_t device, bool focus, bool stored, bool 
 void ExitDevices() {
   if (bBackSelDev) {
     s16DeviceSel = 0;
+    s16DeviceWindowStart = 0;
     u16_state = 0;
     Bluefruit.Scanner.stop();
 
@@ -871,7 +880,7 @@ void ExitDevices() {
       File32 dataFile = log_data.SD.open("/devices.txt", FILE_WRITE);
 
       serializeJson(doc, dataFile);
-      logInfo("");
+      logInfoln("");
       dataFile.close();
     }
   }
@@ -923,7 +932,7 @@ void scan_discovery(ble_gap_evt_adv_report_t* report) {
  * @param report Structural advertising data
  */
 void scan_callback(ble_gap_evt_adv_report_t* report) {
-  logInfo("Found Device:");
+  logInfoln("Found Device:");
   Serial.print("MAC: ");
   Serial.printBufferReverse(report->peer_addr.addr, 6, ':');
   Serial.print("\n");
