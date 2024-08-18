@@ -1,76 +1,33 @@
+#include <iterator>
 #include "csc.h"
-
-int csc::instances;
-csc* csc::instantiated[MAX_CSC];
 
 void csc::csc_notify_callback(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len)
 {
-  for (int i=0; i <= csc::instances; i++)
+  Serial.println("csc notify");
+  //itterate the members of the bt device base
+  for (auto it = btDevices.begin(); it != btDevices.end(); it++)
   {
-    if (chr->connHandle() == instantiated[i]->csc_serv.connHandle())
+    //check the type of the member
+    Serial.println("checking type of device");
+    if((*it)->getType() == E_Type_BT_Device::csc)
     {
-      instantiated[i]->csc_notify(chr, data, len);
-      return;
+      Serial.println("checking conn handle of device");
+      //compare the conn handle of the evt with the conn handle of the device servic (static cast to an hrm safe because we know the type)
+      if (chr->connHandle() == static_cast<csc*>((*it).get())->csc_serv.connHandle())
+      {
+        //call the underlying notify method for the instance (again static cast)
+        static_cast<csc*>((*it).get())->csc_notify(chr, data, len);
+        return;
+      }else{
+        Serial.println("not this one");
+      }
+    }else{
+      Serial.print("Not csc, got ");
+      Serial.print((*it)->getType());
+      Serial.print(" instead of ");
+      Serial.println(E_Type_BT_Device::csc);
     }
   }
-}
-
-void csc::bat_notify_callback(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len)
-{
-  for (int i=0; i <= csc::instances; i++)
-  {
-    if (chr->connHandle() == instantiated[i]->csc_serv.connHandle())
-    {
-      instantiated[i]->bat_notify(chr, data, len);
-      return;
-    }
-  }
-  uint8_t bat_value = *data;
-}
-
-void csc::csc_static_disconnect_callback(uint16_t conn_handle, uint8_t reason)
-{
-  for (int i=0; i < csc::instances; i++)
-  {
-    if(conn_handle == instantiated[i]->_conn_handle)
-    {
-      instantiated[i]->disconnect(conn_handle, reason);
-    }
-  }
-}
-
-void csc::disconnect(uint16_t conn_handle, uint8_t reason)
-{
-  (void) conn_handle;
-  (void) reason;
-  
-  logInfo("Disconnected, reason = 0x"); 
-  logInfo(String(reason, HEX));
-}
-
-void csc::clearInstances()
-{
-  if(instances>0)
-  {
-    for(int i=0;i<instances-1;i++)
-    {
-      instantiated[i]->b_cadence_present =0;
-      instantiated[i]->b_speed_present =0;
-      instantiated[i]->_begun=false;
-      instantiated[i]=0;
-    }
-  }
-    instances = 0;
-}
-
-csc* csc::getDeviceWithMAC(uint8_t* MAC)
-{
-  for (int i=0; i < csc::instances; i++)
-  {
-    if(compareMAC(instantiated[i]->getMac(),MAC))
-      return instantiated[i];
-  }
-  return NULL;
 }
 
 void csc::begin()
@@ -96,17 +53,17 @@ void csc::begin()
   b_speed_present =0;
 
   _begun = true;
-
+  logInfoln("csc bugun");
   return;
 };
 
-void csc::csc_discover(uint16_t conn_handle)
+void csc::discover(uint16_t conn_handle)
 {
   // If csc is not found, disconnect and return
   if (csc_serv.discover(conn_handle) )
   {
     _conn_handle = conn_handle;
-    logInfo("Found CSC");
+    logInfoln("Found CSC");
 
     if ( !csc_meas.discover() )
     {
@@ -140,32 +97,32 @@ void csc::csc_discover(uint16_t conn_handle)
     // Reaching here means we are ready to go, let's enable notification on measurement chr
     if ( csc_meas.enableNotify() )
     {
-      logInfo("Ready to receive CSC Measurement value");
+      logInfoln("Ready to receive CSC Measurement value");
     }else{
-      logInfo("Couldn't enable notify for CSC Measurement");
+      logInfoln("Couldn't enable notify for CSC Measurement");
     }
     if(bat_serv.discover(conn_handle))
     {
-      logInfo("Found bat");
+      logInfoln("Found bat");
       
       if (bat_meas.discover() )
       {
         u8_batt = bat_meas.read8();
-        //Serial.print("Batt: "); logInfo(u8_batt);
+        //Serial.print("Batt: "); logInfoln(u8_batt);
       }
       if ( bat_meas.enableNotify() )
       {
-        logInfo("Ready to receive BAT Measurement value");
+        logInfoln("Ready to receive BAT Measurement value");
       }else
       {
-        logInfo("Couldn't enable notify for BAT Measurement");
+        logInfoln("Couldn't enable notify for BAT Measurement");
       }
     }
   }else{
     Bluefruit.disconnect(conn_handle);
-    Serial.println("Found NONE");
+    logInfoln("Found NONE");
   }
-
+  return;
 }
 
 bool csc::discovered()
@@ -238,6 +195,8 @@ void csc::csc_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len)
         f32_rpm -= 0.1;
     }
     f32_kph = (f32_circ * 0.00006 * f32_rpm) * 0.3 + 0.7*f32_kph;
+    Serial.print("Speed: ");
+    Serial.println(f32_kph);
   }
   if ((data[0] & 0x02) == 2)
   {
@@ -298,15 +257,7 @@ void csc::csc_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len)
       f32_cadence_raw -= 0.1;
     }
     f32_cadence = f32_cadence * 0.7 + f32_cadence_raw*0.3;
+    Serial.print("Cadence: ");
+    Serial.println(f32_cadence);
   }
-}
-
-void csc::bat_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len)
-{
-  u8_batt = *data;
-}
-
-uint8_t csc::readBatt()
-{
-  return u8_batt;
 }

@@ -27,7 +27,7 @@ inline void copyMAC(uint8_t *dest_MAC, uint8_t *src_MAC)
   dest_MAC[5] = src_MAC[5];
 }
 
-inline void logInfo(const char* text)
+inline void logInfoln(const char* text)
 {
   Serial.println(text);
   if(!debugLog)
@@ -35,12 +35,26 @@ inline void logInfo(const char* text)
   debugLog.println(text);
 }
 
-inline void logInfo(String text)
+inline void logInfo(const char* text)
 {
-  Serial.println(text);
+  Serial.print(text);
   if(!debugLog)
     debugLog.open("/log.txt", FILE_WRITE);
   debugLog.println(text);
+}
+
+inline void logInfo(String text)
+{
+  char* buff;
+  text.toCharArray(buff, text.length());
+  logInfo(buff);
+}
+
+inline void logInfoln(String text)
+{
+  char* buff;
+  text.toCharArray(buff, text.length());
+  logInfoln(buff);
 }
 
 #endif /* utils_H */
