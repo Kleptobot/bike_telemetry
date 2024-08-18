@@ -1,4 +1,3 @@
-#pragma once
 #ifndef logger_H
 #define logger_H
 
@@ -24,7 +23,7 @@ typedef struct
 class logger {
 
   private:
-    File32 logFile;
+    File32 dataFile;
     data_source_t sources[MAX_SOURCES];
     uint16_t _num_sources;
     TimeSpan _interval, _elapsed_time, _totalTime, _PauseTime;

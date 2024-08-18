@@ -1,9 +1,14 @@
-#pragma once
 #ifndef csc_H
 #define csc_H
 
 #include <Arduino.h>
+#include <vector>
+#include <memory>
 #include <bluefruit.h>
+#include "Utils.h"
+#include <functional>
+
+#include "BT_Device.h"
 
 // Cycling Speed and Cadence configuration
 #define     GATT_CSC_UUID                           0x1816
@@ -61,66 +66,59 @@
 
 #define     MAX_CSC                                 2
 
+//typedef void (*csc_notify_callback) (BLEClientCharacteristic* chr, uint8_t* data, uint16_t len);
+//typedef void (*bat_notify_callback) (BLEClientCharacteristic* chr, uint8_t* data, uint16_t len);
+
 class csc;
 
-class csc {
+class csc : public BT_Device {
 
   private:
-    BLEClientService        csc_serv = BLEClientService(GATT_CSC_UUID);
-    BLEClientCharacteristic csc_meas = BLEClientCharacteristic(GATT_CSC_MEASUREMENT_UUID);
-    BLEClientCharacteristic csc_feat = BLEClientCharacteristic(GATT_CSC_FEATURE_UUID);
-    BLEClientCharacteristic csc_loc = BLEClientCharacteristic(GATT_SENSOR_LOCATION_UUID);
+    BLEClientService        csc_serv  = BLEClientService(GATT_CSC_UUID);
+    BLEClientCharacteristic csc_meas  = BLEClientCharacteristic(GATT_CSC_MEASUREMENT_UUID);
+    BLEClientCharacteristic csc_feat  = BLEClientCharacteristic(GATT_CSC_FEATURE_UUID);
+    BLEClientCharacteristic csc_loc   = BLEClientCharacteristic(GATT_SENSOR_LOCATION_UUID);
+    
+    csc()
+    {
+      Serial.println("creating new csc");
+      this->type = E_Type_BT_Device::csc;
+      Serial.print("setting device type to ");
+      Serial.println(this->type);
+    }
 
     // Body sensor location value is 8 bit
     const char* feat_str[4] = {"other", "Speed", "Cadence", "Speed & Cadence"};
     uint32_t u32_WheelCount_Prev;
     uint16_t u16_SpeedEvt_Prev, u16_CrankCount_Prev, u16_CrankEvt_Prev;
-    uint8_t u8_feature, u8_location;
-    String name;
-    uint8_t MAC[6];
-    bool _begun;
-
-    static csc* instantiated[];
-    static int instances;
+    uint8_t u8_feature, u8_location, u8_batt=100;
 
   public:
+    csc(String name, uint8_t* MAC){
+      csc();
+      this->name = name;
+      Serial.print("setting csc name to ");
+      Serial.println(name);
+      copyMAC(this->MAC, MAC);
+      this->begin();
+    }
 
     bool b_speed_present, b_cadence_present;
     float f32_rpm, f32_kph, f32_cadence;
     
-    csc()
+    static void create_csc(String name, uint8_t* MAC)
     {
-      instantiated[instances]=this;
-      instances++;
+      Serial.println("adding csc");
+      btDevices.emplace_back(std::unique_ptr<csc>(new csc(name, MAC)));
     };
 
-    csc(String name, uint8_t* MAC){
-      csc();
-      this->name = name;
-      this->MAC[0] = MAC[0];
-      this->MAC[1] = MAC[1];
-      this->MAC[2] = MAC[2];
-      this->MAC[3] = MAC[3];
-      this->MAC[4] = MAC[4];
-      this->MAC[5] = MAC[5];
-    }
-
-    static void csc_static_callback(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len);
-
-    static void csc_static_disconnect_callback(uint16_t conn_handle);
-
-    static void clearInstances();
+    static void csc_notify_callback(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len);
 
     void begin();
 
-    void csc_discover(uint16_t conn_handle);
+    void discover(uint16_t conn_handle);
 
-    void csc_notify_callback(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len);
-
-    uint8_t *getMac(){return MAC;}
-    String getName(){return (String)name;}
-
-    bool begun(){return _begun;}
+    void csc_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len);
     
     bool discovered();
 };

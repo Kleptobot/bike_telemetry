@@ -1,46 +1,33 @@
+#include <iterator>
 #include "csc.h"
 
-int csc::instances;
-csc* csc::instantiated[MAX_CSC];
-
-void csc::csc_static_callback(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len)
+void csc::csc_notify_callback(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len)
 {
-  for (int i=0; i <= csc::instances; i++)
+  Serial.println("csc notify");
+  //itterate the members of the bt device base
+  for (auto it = btDevices.begin(); it != btDevices.end(); it++)
   {
-    if (chr->connHandle() == instantiated[i]->csc_serv.connHandle())
+    //check the type of the member
+    Serial.println("checking type of device");
+    if((*it)->getType() == E_Type_BT_Device::csc)
     {
-      instantiated[i]->csc_notify_callback(chr, data, len);
-      return;
+      Serial.println("checking conn handle of device");
+      //compare the conn handle of the evt with the conn handle of the device servic (static cast to an hrm safe because we know the type)
+      if (chr->connHandle() == static_cast<csc*>((*it).get())->csc_serv.connHandle())
+      {
+        //call the underlying notify method for the instance (again static cast)
+        static_cast<csc*>((*it).get())->csc_notify(chr, data, len);
+        return;
+      }else{
+        Serial.println("not this one");
+      }
+    }else{
+      Serial.print("Not csc, got ");
+      Serial.print((*it)->getType());
+      Serial.print(" instead of ");
+      Serial.println(E_Type_BT_Device::csc);
     }
   }
-}
-
-void csc::csc_static_disconnect_callback(uint16_t conn_handle)
-{
-  for (int i=0; i < csc::instances; i++)
-  {
-    if (!instantiated[i]->discovered())
-    {
-      instantiated[i]->b_cadence_present =0;
-      instantiated[i]->b_speed_present =0;
-      return;
-    }
-  }
-}
-
-void csc::clearInstances()
-{
-  if(instances>0)
-  {
-    for(int i=0;i<instances-1;i++)
-    {
-      instantiated[i]->b_cadence_present =0;
-      instantiated[i]->b_speed_present =0;
-      instantiated[i]->_begun=false;
-      instantiated[i]=0;
-    }
-  }
-    instances = 0;
 }
 
 void csc::begin()
@@ -54,63 +41,88 @@ void csc::begin()
   csc_feat.begin();
 
   // set up callback for receiving measurement
-  csc_meas.setNotifyCallback(csc_static_callback);
+  csc_meas.setNotifyCallback(csc_notify_callback);
   csc_meas.begin();
+
+  bat_serv.begin();
+
+  bat_meas.setNotifyCallback(bat_notify_callback);
+  bat_meas.begin();
 
   b_cadence_present =0;
   b_speed_present =0;
 
   _begun = true;
-
+  logInfoln("csc bugun");
   return;
 };
 
-void csc::csc_discover(uint16_t conn_handle)
+void csc::discover(uint16_t conn_handle)
 {
   // If csc is not found, disconnect and return
-  if ( !csc_serv.discover(conn_handle) )
+  if (csc_serv.discover(conn_handle) )
   {
-    return;
-  }
+    _conn_handle = conn_handle;
+    logInfoln("Found CSC");
 
-  if ( !csc_meas.discover() )
-  {
-    // Measurement chr is mandatory, if it is not found (valid), then disconnect
-    return;
-  }
+    if ( !csc_meas.discover() )
+    {
+      // Measurement chr is mandatory, if it is not found (valid), then disconnect
+      return;
+    }
 
-  if ( csc_feat.discover() )
-  {
-    // Read 8-bit BSLC value from peripheral
+    if ( csc_feat.discover() )
+    {
+      // Read 8-bit BSLC value from peripheral
+      
+      u32_WheelCount_Prev = 0;
+      u16_SpeedEvt_Prev = 0;
+      u16_CrankCount_Prev = 0;
+      u16_CrankEvt_Prev = 0;
+      f32_rpm = 0;
+      f32_kph = 0;
+      f32_cadence = 0;
+
+      u8_feature = csc_feat.read8();
+      b_speed_present = ((u8_feature & 0x01) == 1);
+      b_cadence_present = ((u8_feature & 0x02) == 2);
+    }
     
-    u32_WheelCount_Prev = 0;
-    u16_SpeedEvt_Prev = 0;
-    u16_CrankCount_Prev = 0;
-    u16_CrankEvt_Prev = 0;
-    f32_rpm = 0;
-    f32_kph = 0;
-    f32_cadence = 0;
+    if ( csc_loc.discover() )
+    {
+      // Read 8-bit BSLC value from peripheral
+      u8_location = csc_loc.read8();
+    }
 
-    u8_feature = csc_feat.read8();
-    b_speed_present = ((u8_feature & 0x01) == 1);
-    b_cadence_present = ((u8_feature & 0x02) == 2);
-  }
-  
-  if ( csc_loc.discover() )
-  {
-    // Read 8-bit BSLC value from peripheral
-    u8_location = csc_loc.read8();
-  }
-
-  // Reaching here means we are ready to go, let's enable notification on measurement chr
-  if ( csc_meas.enableNotify() )
-  {
-    //Ready to receive CSC Measurement value
-    return;
+    // Reaching here means we are ready to go, let's enable notification on measurement chr
+    if ( csc_meas.enableNotify() )
+    {
+      logInfoln("Ready to receive CSC Measurement value");
+    }else{
+      logInfoln("Couldn't enable notify for CSC Measurement");
+    }
+    if(bat_serv.discover(conn_handle))
+    {
+      logInfoln("Found bat");
+      
+      if (bat_meas.discover() )
+      {
+        u8_batt = bat_meas.read8();
+        //Serial.print("Batt: "); logInfoln(u8_batt);
+      }
+      if ( bat_meas.enableNotify() )
+      {
+        logInfoln("Ready to receive BAT Measurement value");
+      }else
+      {
+        logInfoln("Couldn't enable notify for BAT Measurement");
+      }
+    }
   }else{
-    //Couldn't enable notify for csc Measurement. Increase DEBUG LEVEL for troubleshooting
-    return;
+    Bluefruit.disconnect(conn_handle);
+    logInfoln("Found NONE");
   }
+  return;
 }
 
 bool csc::discovered()
@@ -118,7 +130,7 @@ bool csc::discovered()
   return csc_meas.discovered();
 }
 
-void csc::csc_notify_callback(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len)
+void csc::csc_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len)
 {
   // https://github.com/oesmith/gatt-xml/blob/master/org.bluetooth.service.cycling_speed_and_cadence.xml
   
@@ -183,6 +195,8 @@ void csc::csc_notify_callback(BLEClientCharacteristic* chr, uint8_t* data, uint1
         f32_rpm -= 0.1;
     }
     f32_kph = (f32_circ * 0.00006 * f32_rpm) * 0.3 + 0.7*f32_kph;
+    Serial.print("Speed: ");
+    Serial.println(f32_kph);
   }
   if ((data[0] & 0x02) == 2)
   {
@@ -242,8 +256,8 @@ void csc::csc_notify_callback(BLEClientCharacteristic* chr, uint8_t* data, uint1
       if (f32_cadence_raw >0.1)
       f32_cadence_raw -= 0.1;
     }
+    f32_cadence = f32_cadence * 0.7 + f32_cadence_raw*0.3;
+    Serial.print("Cadence: ");
+    Serial.println(f32_cadence);
   }
-
-  f32_cadence = f32_cadence * 0.7 + f32_cadence_raw*0.3;
-
 }

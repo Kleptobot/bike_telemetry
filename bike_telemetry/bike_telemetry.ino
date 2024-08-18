@@ -15,7 +15,7 @@
 #include <Dps3xx.h>
 #include "ListLib.h"
 #include <ArduinoJson.h>
-#include "MAC_Tools.h"
+#include "Utils.h"
 
 #include "csc.h"
 #include "GFX.h"
@@ -42,12 +42,15 @@ Adafruit_SH1107 display = Adafruit_SH1107(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OL
 #define GPIOB4 12
 
 #define Battery_Read_Period 60
-#define Timeout_Period 25
+#define Timeout_Period 60
 #define nIMUReadPeriod 500
 #define nDSPReadPeriod 10000
 #define nStartDelayPeriod 3000
 #define nLoadDevicesDelay 3000
 #define nDeviceScanDelay 1000
+#define nHeldPressTime 2000
+
+#define nDeviceWindowLen 2
 
 //Create a instance of class LSM6DS3
 LSM6DS3 myIMU(I2C_MODE, 0x6A);  //I2C device address 0x6A
@@ -57,6 +60,8 @@ typedef struct
   char name[32];
   uint8_t MAC[6];
   bool stored;
+  uint16_t batt;
+  csc* device = NULL;
 } prph_info_t;
 List<prph_info_t> nearby_devices;
 
@@ -64,7 +69,7 @@ List<csc> cscDevices;
 
 uint8_t toConnectMAC[6];
 
-int16_t s16DeviceSel;
+int16_t s16DeviceSel, s16DeviceWindowStart;
 bool bBackFocDev, bBackSelDev;
 
 float f32_RTC_Temp, f32_DSP_Temp, f32_DSP_Pa, f32_Alt, f32_acc_x, f32_acc_y, f32_acc_z, f32_gyro_x, f32_gyro_y, f32_gyro_z, f32_kph, f32_cadence, f32_speedSum, f32_max_speed, f32_avgSpeed, f32_cadSum, f32_max_cad, f32_avgCad;
@@ -90,6 +95,9 @@ bool bUp, bDown, bLeft, bRight, bCenter, bSD_Det;
 bool bUp_Prev, bDown_Prev, bLeft_Prev, bRight_Prev, bCenter_Prev, bSD_Det_Prev;
 bool bUp_RE, bDown_RE, bLeft_RE, bRight_RE, bCenter_RE, bSD_Det_RE;
 bool bUp_FE, bDown_FE, bLeft_FE, bRight_FE, bCenter_FE, bSD_Det_FE;
+bool bUp_long, bDown_long, bLeft_long, bRight_long, bCenter_long;
+uint64_t nUpPress, nDownPress, nLeftPress, nRightPress, nCenterPress;
+bool bSysOff;
 
 uint16_t u16_state, u16_state_prev;
 bool bStateEntry = true;
@@ -99,7 +107,7 @@ logger log_data;
 //RTC
 RTC_DS3231 rtc;
 
-DateTime nCurrentTime, nCurrentTime_Prev, nLastBatteryRead, nLastAction;
+DateTime nCurrentTime, nCurrentTime_Prev, nLastAction, nLastBatteryRead;
 bool bSwitchOnDelay;
 bool started, bDevicesLoaded;
 
@@ -142,7 +150,8 @@ void setup() {
   Serial.begin(115200);
 
   if (!mcp.begin_I2C()) {
-    Serial.println("Error.");
+
+    logInfoln("MCP init Error");
     while (1)
       ;
   }
@@ -155,14 +164,14 @@ void setup() {
   mcp.setupInterruptPin(GPIOB0, HIGH);
 
   if (!rtc.begin()) {
-    Serial.println("Couldn't find RTC");
+    logInfoln("Couldn't find RTC");
     while (1) delay(500);
   } else {
-    Serial.println("RTC initialised");
+    logInfoln("RTC initialised");
   }
 
   if (rtc.lostPower()) {
-    Serial.println("RTC lost power, let's set the time!");
+    logInfoln("RTC lost power, let's set the time!");
     // When time needs to be set on a new device, or after a power loss, the
     // following line sets the RTC to the date & time this sketch was compiled
     rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
@@ -191,7 +200,7 @@ void init_devices() {
     display.println("IMU init error");
     while (1) delay(500);
   } else {
-    Serial.println("IMU initialised");
+    logInfoln("IMU initialised");
   }
 
   Dps3xxPressureSensor.begin(Wire);
@@ -221,7 +230,7 @@ void init_devices() {
   Bluefruit.setConnLedInterval(250);
 
   // Callbacks for Central
-  Bluefruit.Central.setDisconnectCallback(disconnect_callback);
+  Bluefruit.Central.setDisconnectCallback(csc::csc_static_disconnect_callback);
   Bluefruit.Central.setConnectCallback(connect_callback);
 
   /* Start Central Scanning
@@ -241,12 +250,12 @@ void init_devices() {
   started = true;
   delay(1000);
 
-  Serial.println("Booted");
+  logInfoln("Booted");
 }
 
 void loadDevices() {
   if (log_data.SD.exists("devices.txt")) {
-    Serial.println("Devices file found...");
+    logInfoln("Devices file found...");
     // Open file for reading
     File32 dataFile = log_data.SD.open("/devices.txt", FILE_READ);
     // Allocate the memory pool on the stack.
@@ -257,7 +266,7 @@ void loadDevices() {
 
     if (error) {
       Serial.print("deserializeJson() failed: ");
-      Serial.println(error.c_str());
+      logInfoln(error.c_str());
       return;
     }
 
@@ -283,9 +292,11 @@ void loadDevices() {
       newDevice.stored = true;
       nearby_devices.Add(newDevice);
 
-      Serial.println("Adding device:");
+
+
+      logInfo("Adding device:");
       Serial.print("Name: ");
-      Serial.println(name);
+      logInfoln(name);
       Serial.print("MAC: ");
       Serial.printBufferReverse(MAC, 6, ':');
       Serial.print("\n");
@@ -331,18 +342,33 @@ void loop() {
 
   bRight_RE = bRight && !bRight_Prev && !bSwitchOnDelay;
   bRight_FE = !bRight && bRight_Prev && !bSwitchOnDelay;
+  if (bRight_RE)
+    nRightPress = nCurrentTimeMillis;
+  bRight_long = bRight && ((nCurrentTimeMillis - nRightPress) > nHeldPressTime);
   bRight_Prev = bRight;
   bUp_RE = bUp && !bUp_Prev && !bSwitchOnDelay;
   bUp_FE = !bUp && bUp_Prev && !bSwitchOnDelay;
+  if (bUp_RE)
+    nUpPress = nCurrentTimeMillis;
+  bUp_long = bUp && ((nCurrentTimeMillis - nUpPress) > nHeldPressTime);
   bUp_Prev = bUp;
   bDown_RE = bDown && !bDown_Prev && !bSwitchOnDelay;
   bDown_FE = !bDown && bDown_Prev && !bSwitchOnDelay;
+  if (bDown_RE)
+    nDownPress = nCurrentTimeMillis;
+  bDown_long = bDown && ((nCurrentTimeMillis - nDownPress) > nHeldPressTime);
   bDown_Prev = bDown;
   bCenter_RE = bCenter && !bCenter_Prev && !bSwitchOnDelay;
   bCenter_FE = !bCenter && bCenter_Prev && !bSwitchOnDelay;
+  if (bCenter_RE)
+    nCenterPress = nCurrentTimeMillis;
+  bCenter_long = bCenter && ((nCurrentTimeMillis - nCenterPress) > nHeldPressTime);
   bCenter_Prev = bCenter;
   bLeft_RE = bLeft && !bLeft_Prev && !bSwitchOnDelay;
   bLeft_FE = !bLeft && bLeft_Prev && !bSwitchOnDelay;
+  if (bLeft_RE)
+    nLeftPress = nCurrentTimeMillis;
+  bLeft_long = bLeft && ((nCurrentTimeMillis - nLeftPress) > nHeldPressTime);
   bLeft_Prev = bLeft;
   bSD_Det_RE = bSD_Det && !bSD_Det_Prev && !bSwitchOnDelay;
   bSD_Det_FE = !bSD_Det && bSD_Det_Prev && !bSwitchOnDelay;
@@ -354,24 +380,29 @@ void loop() {
 
   //check if the device has timed out
   TimeSpan ts1 = nCurrentTime - nLastAction;
-  if (ts1.totalseconds() > Timeout_Period && !b_Running) {
+  if ((ts1.totalseconds() > Timeout_Period && !b_Running) || bSysOff) {
     if (started) {
       display.clearDisplay();
       display.display();
     }
     csc::clearInstances();
     cscDevices.Clear();
+    debugLog.close();
     NRF_POWER->SYSTEMOFF = 1;
   }
 
   if (bSD_Det_FE || !started) {
     // initialise SD card
     if (!log_data.SD.begin(SD_CS)) {
-      Serial.println("initialisation failed.");
+      logInfoln("initialisation failed.");
       delay(500);
     } else {
-      Serial.println("SD card initialised");
+      debugLog.open("/log.txt", FILE_WRITE);
+      logInfoln("SD card initialised");
     }
+  }
+  if (bSD_Det_RE) {
+    debugLog.close();
   }
 
   //run the rest of the init if it has not already been run
@@ -398,10 +429,10 @@ void loop() {
   //   //Dps3xxPressureSensor.measurePressureOnce(f32_DSP_Pa, 7);
   //   if (ret != 0)
   //   {
-  //     Serial.println();
-  //     Serial.println();
+  //     logInfo();
+  //     logInfo();
   //     Serial.print("FAIL! ret = ");
-  //     Serial.println(ret);
+  //     logInfo(ret);
   //   }
   //   else
   //   {
@@ -601,6 +632,7 @@ void drawMenuStopped(int x, int y) {
   display.drawBitmap(x - 32, y - 8, epd_bitmap_Bluetooth, 16, 16, 1);
   display.drawBitmap(x - 8, y - 8, epd_bitmap_play, 16, 16, 1);
   display.drawBitmap(x + 16, y - 8, epd_bitmap_clock, 16, 16, 1);
+  display.drawBitmap(x - 8, y + 16, epd_bitmap_power, 16, 16, 1);
 }
 
 /**
@@ -634,14 +666,16 @@ void GUI() {
             startScan |= !cscDevices[i].discovered();
           }
         }
-        if (startScan) {
+        if (startScan && !Bluefruit.Scanner.isRunning()) {
           Bluefruit.Scanner.setRxCallback(scan_callback);
-          Bluefruit.Scanner.filterUuid(GATT_CSC_UUID, UUID16_SVC_HEART_RATE, GATT_CPS_UUID);
+          Bluefruit.Scanner.filterUuid(GATT_CSC_UUID, UUID16_SVC_HEART_RATE, GATT_CPS_UUID, GATT_BAT_UUID);
           Bluefruit.Scanner.useActiveScan(true);
           Bluefruit.Scanner.start(0);
         }
         nLastScan = nCurrentTimeMillis;
       }
+
+      bSysOff = bDown_long && !b_Running;
 
       drawMain();
       if (b_Running) {
@@ -690,7 +724,7 @@ void GUI() {
       break;
 
     case 4:  //nearby devices
-      if (bStateEntry) {
+      if (bStateEntry && !Bluefruit.Scanner.isRunning()) {
         Bluefruit.Scanner.setRxCallback(scan_discovery);
         Bluefruit.Scanner.filterUuid(GATT_CSC_UUID, UUID16_SVC_HEART_RATE, GATT_CPS_UUID);
         Bluefruit.Scanner.useActiveScan(1);
@@ -711,41 +745,44 @@ void deviceSelection() {
   int16_t index;
   if (bUp_RE) {
     if (s16DeviceSel >= 0x0010)
+    {
       s16DeviceSel -= 0x0010;
+      if((s16DeviceSel>>4) < s16DeviceWindowStart)
+        s16DeviceWindowStart --;
+    }
   }
 
   if (bDown_RE) {
     if ((s16DeviceSel >> 4) < nearby_devices.Count())
       s16DeviceSel += 0x0010;
+      if(((s16DeviceSel>>4) >= (s16DeviceWindowStart + nDeviceWindowLen)) && ((s16DeviceSel>>4) < nearby_devices.Count()))
+        s16DeviceWindowStart++;
   }
-  
+
   index = s16DeviceSel >> 4;
-  if((s16DeviceSel >> 4) != nearby_devices.Count())
-  {
+  if ((s16DeviceSel >> 4) != nearby_devices.Count()) {
     if (bCenter_RE) {
       nearby_devices[index].stored = !nearby_devices[index].stored;
-    
+
 
       if (cscDevices.Count() > 0) {
         //iterate the list
         for (int i = 0; i < cscDevices.Count(); i++) {
           MacExists |= compareMAC(cscDevices[i].getMac(), nearby_devices[index].MAC);
-          if(nearby_devices[index].stored && MacExists)
-          {
+          if (nearby_devices[index].stored && MacExists) {
             cscDevices.Remove(i);
           }
         }
       }
       //if not stored and not already in the cscDevices list
-      if(nearby_devices[index].stored && !MacExists) 
-      {
-          cscDevices.Add(csc(nearby_devices[index].name, nearby_devices[index].MAC));
-          Serial.println("Adding device:");
-          Serial.print("Name: ");
-          Serial.println(nearby_devices[index].name);
-          Serial.print("MAC: ");
-          Serial.printBufferReverse(nearby_devices[index].MAC, 6, ':');
-          Serial.print("\n");
+      if (nearby_devices[index].stored && !MacExists) {
+        cscDevices.Add(csc(nearby_devices[index].name, nearby_devices[index].MAC));
+        logInfoln("Adding device:");
+        Serial.print("Name: ");
+        logInfoln(nearby_devices[index].name);
+        Serial.print("MAC: ");
+        Serial.printBufferReverse(nearby_devices[index].MAC, 6, ':');
+        Serial.print("\n");
       }
     }
   }
@@ -755,7 +792,7 @@ void deviceSelection() {
 }
 
 void showDevices() {
-  
+
   display.setTextColor(SH110X_WHITE);
   display.setCursor(0, 8);
   display.setTextSize(1);
@@ -763,12 +800,18 @@ void showDevices() {
 
   if (nearby_devices.Count() > 0) {
     //iterate the list
-    for (int i = 0; i < nearby_devices.Count(); i++) {
-      bool selected, focus;
+    for (int i = 0; i < nDeviceWindowLen; i++) {
+      bool selected, focus, discovered;
+      uint8_t batt;
 
       focus = s16DeviceSel >> 4 == i;
 
-      DrawDevice(2, i * 10 + 20 + 2, nearby_devices[i], focus, nearby_devices[i].stored);
+      csc* device = csc::getDeviceWithMAC(nearby_devices[i+s16DeviceWindowStart].MAC);
+      if (device != NULL) {
+        discovered = device->discovered();
+        batt = device->readBatt();
+      }
+      DrawDevice(2, i * 28 + 20 + 2, nearby_devices[i+s16DeviceWindowStart], focus, nearby_devices[i+s16DeviceWindowStart].stored, discovered, batt);
     }
   }
 
@@ -776,7 +819,7 @@ void showDevices() {
   drawSelectable(3, 95, epd_bitmap_left, "Back", bBackFocDev, bBackSelDev);
 };
 
-void DrawDevice(int x, int y, prph_info_t device, bool focus, bool selected) {
+void DrawDevice(int x, int y, prph_info_t device, bool focus, bool stored, bool discovered, uint16_t batt) {
   display.setTextSize(1);
   display.setCursor(x, y);
   String tempString = device.name;
@@ -786,35 +829,42 @@ void DrawDevice(int x, int y, prph_info_t device, bool focus, bool selected) {
 
   display.getTextBounds(tempString, x, y, &x1, &y1, &w, &h);
 
-  if (selected) {
-    display.setTextColor(SH110X_BLACK);
-    display.fillRect(x - 1, y - 1, w+1, h + 1, 1);
-    display.setCursor(x, y);
-    display.print(tempString);
-  } else {
-    display.setTextColor(SH110X_WHITE);
-    if (focus)
-      display.drawRect(x - 2, y - 3, w+3, h + 3, 1);
-    display.setCursor(x, y);
-    display.print(tempString);
+  display.setTextColor(SH110X_WHITE);
+  if (focus)
+    display.drawRect(x - 2, y - 3, 127, 30, 1);
+  display.setCursor(x, y);
+  display.print(tempString);
+  display.drawBitmap(x, y + 10, epd_bitmap_down_right, 16, 16, 1);
+
+  if (device.stored)
+  {
+    display.drawBitmap(x + 18, y + 10, epd_bitmap_save, 16, 16, 1);
+
+    if (discovered)
+      display.drawBitmap(x + 34, y + 10, epd_bitmap_Bluetooth, 16, 16, 1);
+
+    display.drawBitmap(x + 50, y + 10, epd_bitmap_battery, 32, 16, 1);
+    display.setCursor(x + 57, y + 15);
   }
+  display.print(batt);
 }
 
 void ExitDevices() {
   if (bBackSelDev) {
     s16DeviceSel = 0;
+    s16DeviceWindowStart = 0;
     u16_state = 0;
     Bluefruit.Scanner.stop();
 
     if (nearby_devices.Count() > 0) {
       JsonDocument doc;
       JsonArray devices = doc["devices"].to<JsonArray>();
-      
+
       for (int i = 0; i < nearby_devices.Count(); i++) {
-        if(nearby_devices[i].stored)
-        {
+        if (nearby_devices[i].stored) {
           devices[i]["name"] = nearby_devices[i].name;
-          JsonArray device_MAC = devices[i]["MAC"].to<JsonArray>();;
+          JsonArray device_MAC = devices[i]["MAC"].to<JsonArray>();
+          ;
           device_MAC.add(nearby_devices[i].MAC[0]);
           device_MAC.add(nearby_devices[i].MAC[1]);
           device_MAC.add(nearby_devices[i].MAC[2]);
@@ -824,278 +874,270 @@ void ExitDevices() {
         }
       }
 
-      if (log_data.SD.exists("/devices.txt")) 
+      if (log_data.SD.exists("/devices.txt"))
         log_data.SD.remove("/devices.txt");
 
       File32 dataFile = log_data.SD.open("/devices.txt", FILE_WRITE);
 
       serializeJson(doc, dataFile);
-      Serial.println("");
+      logInfoln("");
       dataFile.close();
     }
   }
 }
 
-  /**
+/**
  * Callback invoked when scanner pick up an advertising data
  * @param report Structural advertising data
  */
-  void scan_discovery(ble_gap_evt_adv_report_t * report) {
-    prph_info_t newDevice;
-    //get the MAC
-    newDevice.MAC[0] = report->peer_addr.addr[0];
-    newDevice.MAC[1] = report->peer_addr.addr[1];
-    newDevice.MAC[2] = report->peer_addr.addr[2];
-    newDevice.MAC[3] = report->peer_addr.addr[3];
-    newDevice.MAC[4] = report->peer_addr.addr[4];
-    newDevice.MAC[5] = report->peer_addr.addr[5];
+void scan_discovery(ble_gap_evt_adv_report_t* report) {
+  prph_info_t newDevice;
+  //get the MAC
+  newDevice.MAC[0] = report->peer_addr.addr[0];
+  newDevice.MAC[1] = report->peer_addr.addr[1];
+  newDevice.MAC[2] = report->peer_addr.addr[2];
+  newDevice.MAC[3] = report->peer_addr.addr[3];
+  newDevice.MAC[4] = report->peer_addr.addr[4];
+  newDevice.MAC[5] = report->peer_addr.addr[5];
 
-    //Bluefruit.Scanner.parseReportByType(report, BLE_GAP_AD_TYPE_SHORT_LOCAL_NAME, (uint8_t*)newDevice.name, sizeof(newDevice.name));
-    Bluefruit.Scanner.parseReportByType(report, BLE_GAP_AD_TYPE_COMPLETE_LOCAL_NAME, (uint8_t*)newDevice.name, sizeof(newDevice.name));
+  memset(&newDevice.name,0,32);
 
-    bool bMatch = 0;
-    //check if the list contains anyhting
-    if (nearby_devices.Count() > 0) {
-      //iterate the list
-      for (int i = 0; i < nearby_devices.Count(); i++) {
-        //check if the new found device matches any of the devices in the list
-        if (compareMAC(nearby_devices[i].MAC, newDevice.MAC)) {
-          bMatch = 1;
-        }
+  //Bluefruit.Scanner.parseReportByType(report, BLE_GAP_AD_TYPE_SHORT_LOCAL_NAME, (uint8_t*)newDevice.name, sizeof(newDevice.name));
+  Bluefruit.Scanner.parseReportByType(report, BLE_GAP_AD_TYPE_COMPLETE_LOCAL_NAME, (uint8_t*)newDevice.name, sizeof(newDevice.name));
+
+  bool bMatch = 0;
+  //check if the list contains anyhting
+  if (nearby_devices.Count() > 0) {
+    //iterate the list
+    for (int i = 0; i < nearby_devices.Count(); i++) {
+      //check if the new found device matches any of the devices in the list
+      if (compareMAC(nearby_devices[i].MAC, newDevice.MAC)) {
+        bMatch = 1;
       }
     }
-    //if the new device is unique add it
-    if (!bMatch) {
-      nearby_devices.Add(newDevice);
-    }
-
-    // For Softdevice v6: after received a report, scanner will be paused
-    // We need to call Scanner resume() to continue scanning
-    Bluefruit.Scanner.resume();
+  }
+  //if the new device is unique add it
+  if (!bMatch) {
+    newDevice.stored=false;
+    nearby_devices.Add(newDevice);
   }
 
-  /**
+  // For Softdevice v6: after received a report, scanner will be paused
+  // We need to call Scanner resume() to continue scanning
+  Bluefruit.Scanner.resume();
+}
+
+/**
  * Callback invoked when scanner pick up an advertising data
  * @param report Structural advertising data
  */
-  void scan_callback(ble_gap_evt_adv_report_t * report) {
-    Serial.println("Found Device:");
-    Serial.print("MAC: ");
-    Serial.printBufferReverse(report->peer_addr.addr, 6, ':');
-    Serial.print("\n");
-    // Since we configure the scanner with filterUuid()
-    // Scan callback only invoked for device with csc service advertised
-    // Connect to device with csc service in advertising
-    if (cscDevices.Count() > 0) {
-      //iterate the list
-      for (int i = 0; i < cscDevices.Count(); i++) {
-        //check if the new found device matches any of the devices in the list
-        if (compareMAC(cscDevices[i].getMac(), report->peer_addr.addr)) {
-          Serial.println("Match!");
-          toConnectMAC[0] = report->peer_addr.addr[0];
-          toConnectMAC[1] = report->peer_addr.addr[1];
-          toConnectMAC[2] = report->peer_addr.addr[2];
-          toConnectMAC[3] = report->peer_addr.addr[3];
-          toConnectMAC[4] = report->peer_addr.addr[4];
-          toConnectMAC[5] = report->peer_addr.addr[5];
-          Bluefruit.Central.connect(report);
-        }
+void scan_callback(ble_gap_evt_adv_report_t* report) {
+  logInfoln("Found Device:");
+  Serial.print("MAC: ");
+  Serial.printBufferReverse(report->peer_addr.addr, 6, ':');
+  Serial.print("\n");
+  // Since we configure the scanner with filterUuid()
+  // Scan callback only invoked for device with csc service advertised
+  // Connect to device with csc service in advertising
+  if (cscDevices.Count() > 0) {
+    //iterate the list
+    for (int i = 0; i < cscDevices.Count(); i++) {
+      //check if the new found device matches any of the devices in the list
+      if (compareMAC(cscDevices[i].getMac(), report->peer_addr.addr)) {
+        logInfo("Match!");
+        toConnectMAC[0] = report->peer_addr.addr[0];
+        toConnectMAC[1] = report->peer_addr.addr[1];
+        toConnectMAC[2] = report->peer_addr.addr[2];
+        toConnectMAC[3] = report->peer_addr.addr[3];
+        toConnectMAC[4] = report->peer_addr.addr[4];
+        toConnectMAC[5] = report->peer_addr.addr[5];
+        Bluefruit.Central.connect(report);
       }
     }
   }
+}
 
-  void stateTransition() {
+void stateTransition() {
+}
+
+DateTime updateTime(DateTime someTime) {
+  int8_t s8AddVal;
+  if (bUp_RE) {
+    s8AddVal = 1;
+  } else if (bDown_RE) {
+    s8AddVal = -1;
   }
 
-  DateTime updateTime(DateTime someTime) {
-    int8_t s8AddVal;
-    if (bUp_RE) {
-      s8AddVal = 1;
-    } else if (bDown_RE) {
-      s8AddVal = -1;
-    }
-
-    TimeSpan span;
-    if (bSecondSel) {
-      DateTime dt0(someTime.year(), someTime.month(), someTime.day(), someTime.hour(), someTime.minute(), someTime.second() + s8AddVal);
-      someTime = dt0;
-    } else if (bMinuteSel) {
-      DateTime dt0(someTime.year(), someTime.month(), someTime.day(), someTime.hour(), someTime.minute() + s8AddVal, someTime.second());
-      someTime = dt0;
-    } else if (bHourSel) {
-      DateTime dt0(someTime.year(), someTime.month(), someTime.day(), someTime.hour() + s8AddVal, someTime.minute(), someTime.second());
-      someTime = dt0;
-    } else if (bDaySel) {
-      DateTime dt0(someTime.year(), someTime.month(), someTime.day() + s8AddVal, someTime.hour(), someTime.minute(), someTime.second());
-      someTime = dt0;
-    } else if (bMonthSel) {
-      DateTime dt0(someTime.year(), someTime.month() + s8AddVal, someTime.day(), someTime.hour(), someTime.minute(), someTime.second());
-      someTime = dt0;
-    } else if (bYearSel) {
-      DateTime dt0(someTime.year() + s8AddVal, someTime.month(), someTime.day(), someTime.hour(), someTime.minute(), someTime.second());
-      someTime = dt0;
-    }
-
-    return someTime;
+  TimeSpan span;
+  if (bSecondSel) {
+    DateTime dt0(someTime.year(), someTime.month(), someTime.day(), someTime.hour(), someTime.minute(), someTime.second() + s8AddVal);
+    someTime = dt0;
+  } else if (bMinuteSel) {
+    DateTime dt0(someTime.year(), someTime.month(), someTime.day(), someTime.hour(), someTime.minute() + s8AddVal, someTime.second());
+    someTime = dt0;
+  } else if (bHourSel) {
+    DateTime dt0(someTime.year(), someTime.month(), someTime.day(), someTime.hour() + s8AddVal, someTime.minute(), someTime.second());
+    someTime = dt0;
+  } else if (bDaySel) {
+    DateTime dt0(someTime.year(), someTime.month(), someTime.day() + s8AddVal, someTime.hour(), someTime.minute(), someTime.second());
+    someTime = dt0;
+  } else if (bMonthSel) {
+    DateTime dt0(someTime.year(), someTime.month() + s8AddVal, someTime.day(), someTime.hour(), someTime.minute(), someTime.second());
+    someTime = dt0;
+  } else if (bYearSel) {
+    DateTime dt0(someTime.year() + s8AddVal, someTime.month(), someTime.day(), someTime.hour(), someTime.minute(), someTime.second());
+    someTime = dt0;
   }
 
-  /**
+  return someTime;
+}
+
+/**
  * Determines what value in the data time display is focused or slected
  */
-  void timeSelection() {
-    //button inputs
-    if (!(bHourSel | bMinuteSel | bSecondSel | bDaySel | bMonthSel | bYearSel)) {
-      if (bUp_RE) {
-        if ((s16timeSel & 0x0300) >= 0x0100)
-          s16timeSel -= 0x0100;
-        else
-          s16timeSel += 0x0200;
-      }
-
-      if (bDown_RE) {
-        if ((s16timeSel & 0x0200) < 0x0200)
-          s16timeSel += 0x100;
-        else
-          s16timeSel -= 0x0200;
-      }
-
-      if (bLeft_RE) {
-        if ((s16timeSel & 0x0030) >= 0x0010)
-          s16timeSel -= 0x0010;
-        else
-          s16timeSel += 0x0020;
-      }
-
-      if (bRight_RE) {
-        if ((s16timeSel & 0x0020) < 0x0020)
-          s16timeSel += 0x0010;
-        else
-          s16timeSel &= 0xFFCF;
-      }
+void timeSelection() {
+  //button inputs
+  if (!(bHourSel | bMinuteSel | bSecondSel | bDaySel | bMonthSel | bYearSel)) {
+    if (bUp_RE) {
+      if ((s16timeSel & 0x0300) >= 0x0100)
+        s16timeSel -= 0x0100;
+      else
+        s16timeSel += 0x0200;
     }
 
-    if (s16timeSel > 0x211) {
-      s16timeSel &= 0xFF0F;
+    if (bDown_RE) {
+      if ((s16timeSel & 0x0200) < 0x0200)
+        s16timeSel += 0x100;
+      else
+        s16timeSel -= 0x0200;
     }
 
-    if (bCenter_RE)
-      s16timeSel = s16timeSel ^ 1;
-
-    //calculate boolean values
-    bHourFoc = (s16timeSel == 0x000);
-    bHourSel = (s16timeSel == 0x001);
-    bMinuteFoc = (s16timeSel == 0x010);
-    bMinuteSel = (s16timeSel == 0x011);
-    bSecondFoc = (s16timeSel == 0x020);
-    bSecondSel = (s16timeSel == 0x021);
-
-    bDayFoc = (s16timeSel == 0x100);
-    bDaySel = (s16timeSel == 0x101);
-    bMonthFoc = (s16timeSel == 0x110);
-    bMonthSel = (s16timeSel == 0x111);
-    bYearFoc = (s16timeSel == 0x120);
-    bYearSel = (s16timeSel == 0x121);
-
-    bBackFoc = (s16timeSel == 0x200);
-    bBackSel = (s16timeSel == 0x201);
-    bSaveFoc = (s16timeSel == 0x210);
-    bSaveSel = (s16timeSel == 0x211);
-  }
-
-  void ExitTime() {
-    if (bSaveSel) {
-      rtc.adjust(dtTimeDisplay);
+    if (bLeft_RE) {
+      if ((s16timeSel & 0x0030) >= 0x0010)
+        s16timeSel -= 0x0010;
+      else
+        s16timeSel += 0x0020;
     }
-    if (bBackSel | bSaveSel) {
-      s16timeSel = 0;
-      u16_state = 0;
+
+    if (bRight_RE) {
+      if ((s16timeSel & 0x0020) < 0x0020)
+        s16timeSel += 0x0010;
+      else
+        s16timeSel &= 0xFFCF;
     }
   }
 
-  //draw the main screen
-  void drawMain() {
-    display.setTextSize(4);
-    display.setCursor(0, 0);
-    if (f32_kph < 10)
-      display.print(' ');
-    display.print(f32_kph, 1);
-    display.setTextSize(1);
-    display.println("  k/h");
-
-    display.setTextSize(4);
-    display.setCursor(0, 32);
-
-    if (f32_cadence < 10)
-      display.print("   ");
-    else if (f32_cadence < 100)
-      display.print("  ");
-    else
-      display.print(" ");
-    display.print(f32_cadence, 0);
-    display.setTextSize(1);
-    display.println("  rpm");
-
-    display.drawBitmap(95, 111, epd_bitmap_battery, 32, 16, 1);
-    display.setCursor(102, 116);
-    display.print(nBatteryPercentage);
-
-    if (b_Running) {
-      drawMenuRunning(64, 88);
-      display.setCursor(0, 112);
-      display.setTextSize(2);
-      display.print(log_data.elapsedString());
-    } else {
-      drawMenuStopped(64, 88);
-    }
+  if (s16timeSel > 0x211) {
+    s16timeSel &= 0xFF0F;
   }
 
-  /**
+  if (bCenter_RE)
+    s16timeSel = s16timeSel ^ 1;
+
+  //calculate boolean values
+  bHourFoc = (s16timeSel == 0x000);
+  bHourSel = (s16timeSel == 0x001);
+  bMinuteFoc = (s16timeSel == 0x010);
+  bMinuteSel = (s16timeSel == 0x011);
+  bSecondFoc = (s16timeSel == 0x020);
+  bSecondSel = (s16timeSel == 0x021);
+
+  bDayFoc = (s16timeSel == 0x100);
+  bDaySel = (s16timeSel == 0x101);
+  bMonthFoc = (s16timeSel == 0x110);
+  bMonthSel = (s16timeSel == 0x111);
+  bYearFoc = (s16timeSel == 0x120);
+  bYearSel = (s16timeSel == 0x121);
+
+  bBackFoc = (s16timeSel == 0x200);
+  bBackSel = (s16timeSel == 0x201);
+  bSaveFoc = (s16timeSel == 0x210);
+  bSaveSel = (s16timeSel == 0x211);
+}
+
+void ExitTime() {
+  if (bSaveSel) {
+    rtc.adjust(dtTimeDisplay);
+  }
+  if (bBackSel | bSaveSel) {
+    s16timeSel = 0;
+    u16_state = 0;
+  }
+}
+
+//draw the main screen
+void drawMain() {
+  display.setTextSize(4);
+  display.setCursor(0, 0);
+  if (f32_kph < 10)
+    display.print(' ');
+  display.print(f32_kph, 1);
+  display.setTextSize(1);
+  display.println("  k/h");
+
+  display.setTextSize(4);
+  display.setCursor(0, 32);
+
+  if (f32_cadence < 10)
+    display.print("   ");
+  else if (f32_cadence < 100)
+    display.print("  ");
+  else
+    display.print(" ");
+  display.print(f32_cadence, 0);
+  display.setTextSize(1);
+  display.println("  rpm");
+
+  display.drawBitmap(95, 111, epd_bitmap_battery, 32, 16, 1);
+  display.setCursor(102, 116);
+  display.print(nBatteryPercentage);
+
+  if (b_Running) {
+    drawMenuRunning(64, 88);
+    display.setCursor(0, 112);
+    display.setTextSize(2);
+    display.print(log_data.elapsedString());
+  } else {
+    drawMenuStopped(64, 88);
+  }
+}
+
+/**
  * Callback invoked when an connection is established
  * @param conn_handle
  */
-  void connect_callback(uint16_t conn_handle) {
-    if (cscDevices.Count() > 0) {
-      bool restartScan = false;
-      //iterate the list
-      for (int i = 0; i < cscDevices.Count(); i++) {
-        //check if the new found device matches any of the devices in the list
-        if (compareMAC(cscDevices[i].getMac(), toConnectMAC)) {
-          if (!cscDevices[i].discovered()) {
-            cscDevices[i].csc_discover(conn_handle);
-            if (cscDevices[i].b_speed_present) {
-              log_data.addSource(cscDevices[i].getName(), &cscDevices[i].f32_kph);
-            }
-            if (cscDevices[i].b_cadence_present) {
-              log_data.addSource(cscDevices[i].getName(), &cscDevices[i].f32_cadence);
-            }
+void connect_callback(uint16_t conn_handle) {
+  if (cscDevices.Count() > 0) {
+    bool restartScan = false;
+    //iterate the list
+    for (int i = 0; i < cscDevices.Count(); i++) {
+      //check if the new found device matches any of the devices in the list
+      if (compareMAC(cscDevices[i].getMac(), toConnectMAC)) {
+        if (!cscDevices[i].discovered()) {
+          cscDevices[i].csc_discover(conn_handle);
+          if (cscDevices[i].b_speed_present) {
+            log_data.addSource(cscDevices[i].getName(), &cscDevices[i].f32_kph);
           }
-        } else if (!cscDevices[i].discovered()) {
-          restartScan = true;
+          if (cscDevices[i].b_cadence_present) {
+            log_data.addSource(cscDevices[i].getName(), &cscDevices[i].f32_cadence);
+          }
         }
-      }
-      if (restartScan) {
-        Bluefruit.Scanner.start(0);  // // 0 = Don't stop scanning after n seconds
+      } else if (!cscDevices[i].discovered()) {
+        restartScan = true;
       }
     }
+    if (restartScan) {
+      Bluefruit.Scanner.start(0);  // // 0 = Don't stop scanning after n seconds
+    }
   }
+}
 
-  /**
- * Callback invoked when a connection is dropped
- * @param conn_handle
- * @param reason is a BLE_HCI_STATUS_CODE which can be found in ble_hci.h
- */
-  void disconnect_callback(uint16_t conn_handle, uint8_t reason) {
-    csc::csc_static_disconnect_callback(conn_handle);
 
-    (void)conn_handle;
-    (void)reason;
-  }
-
-  void readIMU() {
-    f32_acc_x = myIMU.readFloatAccelX();
-    f32_acc_y = myIMU.readFloatAccelY();
-    f32_acc_z = myIMU.readFloatAccelZ();
-    f32_gyro_x = myIMU.readFloatGyroX();
-    f32_gyro_y = myIMU.readFloatGyroY();
-    f32_gyro_z = myIMU.readFloatGyroZ();
-  }
+void readIMU() {
+  f32_acc_x = myIMU.readFloatAccelX();
+  f32_acc_y = myIMU.readFloatAccelY();
+  f32_acc_z = myIMU.readFloatAccelZ();
+  f32_gyro_x = myIMU.readFloatGyroX();
+  f32_gyro_y = myIMU.readFloatGyroY();
+  f32_gyro_z = myIMU.readFloatGyroZ();
+}
