@@ -22,14 +22,19 @@ class hrm : public BT_Device {
     static void hrm_static_disconnect_callback(uint16_t conn_handle, uint8_t reason);
 
   protected:
-    hrm(){this->type = E_Type_BT_Device::hrm;};
+    hrm(){
+      this->bt_type = E_Type_BT_Device::bt_hrm;
+    };
 
   public:
     uint16_t u16_bpm;
+    float f32_bpm;
+    
     hrm(String name, uint8_t* MAC){
-      hrm();
+      this->bt_type = E_Type_BT_Device::bt_hrm;
       this->name = name;
       copyMAC(this->MAC, MAC);
+      this->begin();
     };
     
     static void create_hrm(String name, uint8_t* MAC)

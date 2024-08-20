@@ -6,7 +6,7 @@ void hrm::hrm_notify_callback(BLEClientCharacteristic* chr, uint8_t* data, uint1
   for (auto it = btDevices.begin(); it != btDevices.end(); it++)
   {
     //check the type of the member
-    if((*it).get()->getType() == E_Type_BT_Device::hrm)
+    if((*it).get()->getType() == E_Type_BT_Device::bt_hrm)
     {
       //compare the conn handle of the evt with the conn handle of the device servic (static cast to an hrm safe because we know the type)
       if (chr->connHandle() == static_cast<hrm*>((*it).get())->hrm_serv.connHandle())
@@ -29,6 +29,7 @@ void hrm::hrm_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len)
   {
     u16_bpm = data[1];
   }
+  f32_bpm = 0.7 * f32_bpm + 0.3 * u16_bpm;
 }
 
 void hrm::begin()

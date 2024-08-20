@@ -66,5 +66,15 @@ void BT_Device::bat_notify_callback(BLEClientCharacteristic* chr, uint8_t* data,
 
 void BT_Device::bat_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len)
 {
-  u16Batt = *data;
+  u8_Batt = *data;
+}
+
+bool BT_Device::all_devices_discovered()
+{
+  for (auto it = btDevices.begin(); it != btDevices.end(); it++)
+  {
+    if (!(*it)->discovered())
+      return false;
+  }
+  return true;
 }

@@ -6,7 +6,6 @@
 #include <SPI.h>
 #include "SdFat.h"
 #include "sdios.h"
-#include <Wire.h>
 #include <bluefruit.h>
 #include <RTClib.h>
 #include <xiaobattery.h>
@@ -15,9 +14,12 @@
 #include <Dps3xx.h>
 #include "ListLib.h"
 #include <ArduinoJson.h>
-#include "Utils.h"
 
+#include "Utils.h"
+#include "BT_Device.h"
 #include "csc.h"
+#include "hrm.h"
+#include "cps.h"
 #include "GFX.h"
 #include "logger.h"
 
@@ -61,11 +63,9 @@ typedef struct
   uint8_t MAC[6];
   bool stored;
   uint16_t batt;
-  csc* device = NULL;
+  E_Type_BT_Device type;
 } prph_info_t;
 List<prph_info_t> nearby_devices;
-
-List<csc> cscDevices;
 
 uint8_t toConnectMAC[6];
 
@@ -141,7 +141,7 @@ void disconnectPin(uint32_t ulPin) {
 void setup() {
   // Initialize Bluefruit with maximum connections as Peripheral = 0, Central = 4
   // SRAM usage required by SoftDevice will increase dramatically with number of connections
-  Bluefruit.begin(0, 2);
+  Bluefruit.begin(0, 5);
 
   // Set up the sense mechanism to generate the DETECT signal to wake from system_off
   pinMode(WAKEUP_PIN, INPUT_PULLDOWN_SENSE);  // this pin (WAKE_HIGH_PIN) is pulled down and wakes up the feather when externally connected to 3.3v.
@@ -230,7 +230,7 @@ void init_devices() {
   Bluefruit.setConnLedInterval(250);
 
   // Callbacks for Central
-  Bluefruit.Central.setDisconnectCallback(csc::csc_static_disconnect_callback);
+  Bluefruit.Central.setDisconnectCallback(BT_Device::disconnect_callback);
   Bluefruit.Central.setConnectCallback(connect_callback);
 
   /* Start Central Scanning
@@ -290,9 +290,8 @@ void loadDevices() {
       //memcpy(newDevice.name,device_name,strlen(device_name));
       copyMAC(newDevice.MAC, MAC);
       newDevice.stored = true;
+      newDevice.type = device["type"];
       nearby_devices.Add(newDevice);
-
-
 
       logInfo("Adding device:");
       Serial.print("Name: ");
@@ -300,7 +299,18 @@ void loadDevices() {
       Serial.print("MAC: ");
       Serial.printBufferReverse(MAC, 6, ':');
       Serial.print("\n");
-      cscDevices.Add(csc(name, MAC));
+      switch(newDevice.type)
+      {
+        case E_Type_BT_Device::bt_csc:
+          csc::create_csc(newDevice.name, newDevice.MAC);
+          break;
+        case E_Type_BT_Device::bt_hrm:
+          hrm::create_hrm(newDevice.name, newDevice.MAC);
+          break;
+        case E_Type_BT_Device::bt_cps:
+          cps::create_cps(newDevice.name, newDevice.MAC);
+          break;
+      }
     }
     dataFile.close();
   }
@@ -385,8 +395,6 @@ void loop() {
       display.clearDisplay();
       display.display();
     }
-    csc::clearInstances();
-    cscDevices.Clear();
     debugLog.close();
     NRF_POWER->SYSTEMOFF = 1;
   }
@@ -469,27 +477,21 @@ void loop() {
     nLastBatteryRead = nCurrentTime;
   }
 
-  //if there are csc devices
-  if (cscDevices.Count() > 0) {
-    //iterate the list
-    for (int i = 0; i < cscDevices.Count(); i++) {
-      if (!cscDevices[i].begun()) {
-        cscDevices[i].begin();
-      } else {
-        if (cscDevices[i].b_speed_present) {
-          f32_kph = cscDevices[i].f32_kph;
-          if (f32_kph > f32_max_speed)
-            f32_max_speed = f32_kph;
-        }
-
-        if (cscDevices[i].b_cadence_present) {
-          f32_cadence = cscDevices[i].f32_cadence;
-          if (f32_cadence > f32_max_cad)
-            f32_max_cad = f32_cadence;
-        }
-      }
-    }
+  std::vector<float> speed = csc::getSpeed();
+  f32_kph = 0;
+  for (auto it = speed.begin(); it != speed.end(); it++){
+    f32_kph += (*it);
   }
+  if(speed.size()>0)
+    f32_kph = f32_kph/speed.size();
+
+  std::vector<float> cadence = csc::getCadence();
+  f32_cadence = 0;
+  for (auto it = cadence.begin(); it != cadence.end(); it++){
+    f32_cadence += (*it);
+  }
+  if(cadence.size()>0)
+    f32_cadence = f32_cadence/cadence.size();
 
   display.clearDisplay();
 
@@ -658,15 +660,7 @@ void GUI() {
   switch (u16_state) {
     case 0:  //main screen
       if (nDeviceScanDelay < (nCurrentTimeMillis - nLastScan)) {
-        bool startScan;
-
-        if (cscDevices.Count() > 0) {
-          //iterate the list
-          for (int i = 0; i < cscDevices.Count(); i++) {
-            startScan |= !cscDevices[i].discovered();
-          }
-        }
-        if (startScan && !Bluefruit.Scanner.isRunning()) {
+        if (!BT_Device::all_devices_discovered() && !Bluefruit.Scanner.isRunning()) {
           Bluefruit.Scanner.setRxCallback(scan_callback);
           Bluefruit.Scanner.filterUuid(GATT_CSC_UUID, UUID16_SVC_HEART_RATE, GATT_CPS_UUID, GATT_BAT_UUID);
           Bluefruit.Scanner.useActiveScan(true);
@@ -741,7 +735,6 @@ void GUI() {
 }
 
 void deviceSelection() {
-  bool MacExists = false;
   int16_t index;
   if (bUp_RE) {
     if (s16DeviceSel >= 0x0010)
@@ -764,25 +757,27 @@ void deviceSelection() {
     if (bCenter_RE) {
       nearby_devices[index].stored = !nearby_devices[index].stored;
 
-
-      if (cscDevices.Count() > 0) {
-        //iterate the list
-        for (int i = 0; i < cscDevices.Count(); i++) {
-          MacExists |= compareMAC(cscDevices[i].getMac(), nearby_devices[index].MAC);
-          if (nearby_devices[index].stored && MacExists) {
-            cscDevices.Remove(i);
+      if (nearby_devices[index].stored){
+        BT_Device* device = BT_Device::getDeviceWithMAC(nearby_devices[index].MAC);
+        if (device != NULL) {
+            BT_Device::removeDeviceWithMAC(nearby_devices[index].MAC);
+        }else{
+          logInfoln("Adding device:");
+          Serial.print("Name: ");
+          logInfoln(nearby_devices[index].name);
+          Serial.print("MAC: ");
+          Serial.printBufferReverse(nearby_devices[index].MAC, 6, ':');
+          Serial.print("\n");
+          switch(nearby_devices[index].type)
+          {
+            case E_Type_BT_Device::bt_csc:
+              csc::create_csc(nearby_devices[index].name, nearby_devices[index].MAC);
+              break;
+            case E_Type_BT_Device::bt_hrm:
+              hrm::create_hrm(nearby_devices[index].name, nearby_devices[index].MAC);
+              break;
           }
         }
-      }
-      //if not stored and not already in the cscDevices list
-      if (nearby_devices[index].stored && !MacExists) {
-        cscDevices.Add(csc(nearby_devices[index].name, nearby_devices[index].MAC));
-        logInfoln("Adding device:");
-        Serial.print("Name: ");
-        logInfoln(nearby_devices[index].name);
-        Serial.print("MAC: ");
-        Serial.printBufferReverse(nearby_devices[index].MAC, 6, ':');
-        Serial.print("\n");
       }
     }
   }
@@ -806,7 +801,7 @@ void showDevices() {
 
       focus = s16DeviceSel >> 4 == i;
 
-      csc* device = csc::getDeviceWithMAC(nearby_devices[i+s16DeviceWindowStart].MAC);
+      BT_Device* device = BT_Device::getDeviceWithMAC(nearby_devices[i+s16DeviceWindowStart].MAC);
       if (device != NULL) {
         discovered = device->discovered();
         batt = device->readBatt();
@@ -863,6 +858,7 @@ void ExitDevices() {
       for (int i = 0; i < nearby_devices.Count(); i++) {
         if (nearby_devices[i].stored) {
           devices[i]["name"] = nearby_devices[i].name;
+          devices[i]["type"] = nearby_devices[i].type;
           JsonArray device_MAC = devices[i]["MAC"].to<JsonArray>();
           ;
           device_MAC.add(nearby_devices[i].MAC[0]);
@@ -893,13 +889,7 @@ void ExitDevices() {
 void scan_discovery(ble_gap_evt_adv_report_t* report) {
   prph_info_t newDevice;
   //get the MAC
-  newDevice.MAC[0] = report->peer_addr.addr[0];
-  newDevice.MAC[1] = report->peer_addr.addr[1];
-  newDevice.MAC[2] = report->peer_addr.addr[2];
-  newDevice.MAC[3] = report->peer_addr.addr[3];
-  newDevice.MAC[4] = report->peer_addr.addr[4];
-  newDevice.MAC[5] = report->peer_addr.addr[5];
-
+  copyMAC(newDevice.MAC, report->peer_addr.addr);
   memset(&newDevice.name,0,32);
 
   //Bluefruit.Scanner.parseReportByType(report, BLE_GAP_AD_TYPE_SHORT_LOCAL_NAME, (uint8_t*)newDevice.name, sizeof(newDevice.name));
@@ -939,21 +929,12 @@ void scan_callback(ble_gap_evt_adv_report_t* report) {
   // Since we configure the scanner with filterUuid()
   // Scan callback only invoked for device with csc service advertised
   // Connect to device with csc service in advertising
-  if (cscDevices.Count() > 0) {
-    //iterate the list
-    for (int i = 0; i < cscDevices.Count(); i++) {
-      //check if the new found device matches any of the devices in the list
-      if (compareMAC(cscDevices[i].getMac(), report->peer_addr.addr)) {
-        logInfo("Match!");
-        toConnectMAC[0] = report->peer_addr.addr[0];
-        toConnectMAC[1] = report->peer_addr.addr[1];
-        toConnectMAC[2] = report->peer_addr.addr[2];
-        toConnectMAC[3] = report->peer_addr.addr[3];
-        toConnectMAC[4] = report->peer_addr.addr[4];
-        toConnectMAC[5] = report->peer_addr.addr[5];
-        Bluefruit.Central.connect(report);
-      }
-    }
+  
+  BT_Device* device = BT_Device::getDeviceWithMAC(report->peer_addr.addr);
+  if (device != NULL) {
+    logInfo("Match!");
+    copyMAC(toConnectMAC, report->peer_addr.addr);
+    Bluefruit.Central.connect(report);
   }
 }
 
@@ -1107,28 +1088,48 @@ void drawMain() {
  * @param conn_handle
  */
 void connect_callback(uint16_t conn_handle) {
-  if (cscDevices.Count() > 0) {
-    bool restartScan = false;
-    //iterate the list
-    for (int i = 0; i < cscDevices.Count(); i++) {
-      //check if the new found device matches any of the devices in the list
-      if (compareMAC(cscDevices[i].getMac(), toConnectMAC)) {
-        if (!cscDevices[i].discovered()) {
-          cscDevices[i].csc_discover(conn_handle);
-          if (cscDevices[i].b_speed_present) {
-            log_data.addSource(cscDevices[i].getName(), &cscDevices[i].f32_kph);
+  bool restartScan = false;
+  
+  BT_Device* device = BT_Device::getDeviceWithMAC(toConnectMAC);
+  if (device != NULL) {
+    if(!device->discovered()){
+      device->discover(conn_handle);
+      E_Type_BT_Device device_type = device->getType();
+      Serial.print("device is of type ");
+      Serial.println(device_type);
+      switch(device_type)
+      {
+        case E_Type_BT_Device::bt_csc:
+        {
+          csc* temp_csc = static_cast<csc*>(device);
+          if(temp_csc->b_speed_present){
+            log_data.addSource(temp_csc->getName(), &temp_csc->f32_kph);
           }
-          if (cscDevices[i].b_cadence_present) {
-            log_data.addSource(cscDevices[i].getName(), &cscDevices[i].f32_cadence);
+          if(temp_csc->b_cadence_present){
+            log_data.addSource(temp_csc->getName(), &temp_csc->f32_cadence);
           }
+          break;
         }
-      } else if (!cscDevices[i].discovered()) {
-        restartScan = true;
+
+        case E_Type_BT_Device::bt_hrm:
+        {
+          hrm* temp_hrm = static_cast<hrm*>(device);
+          log_data.addSource(temp_hrm->getName(), &temp_hrm->f32_bpm);
+          break;
+        }
+
+        case E_Type_BT_Device::bt_cps:
+        {
+          cps* temp_cps = static_cast<cps*>(device);
+          log_data.addSource(temp_cps->getName(), &temp_cps->f32_power);
+          break;
+        }
+
       }
     }
-    if (restartScan) {
-      Bluefruit.Scanner.start(0);  // // 0 = Don't stop scanning after n seconds
-    }
+  }
+  if (!BT_Device::all_devices_discovered()) {
+    Bluefruit.Scanner.resume();
   }
 }
 

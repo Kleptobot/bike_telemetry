@@ -3,29 +3,19 @@
 
 void csc::csc_notify_callback(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len)
 {
-  Serial.println("csc notify");
   //itterate the members of the bt device base
   for (auto it = btDevices.begin(); it != btDevices.end(); it++)
   {
     //check the type of the member
-    Serial.println("checking type of device");
-    if((*it)->getType() == E_Type_BT_Device::csc)
+    if((*it)->getType() == E_Type_BT_Device::bt_csc)
     {
-      Serial.println("checking conn handle of device");
       //compare the conn handle of the evt with the conn handle of the device servic (static cast to an hrm safe because we know the type)
       if (chr->connHandle() == static_cast<csc*>((*it).get())->csc_serv.connHandle())
       {
         //call the underlying notify method for the instance (again static cast)
         static_cast<csc*>((*it).get())->csc_notify(chr, data, len);
         return;
-      }else{
-        Serial.println("not this one");
       }
-    }else{
-      Serial.print("Not csc, got ");
-      Serial.print((*it)->getType());
-      Serial.print(" instead of ");
-      Serial.println(E_Type_BT_Device::csc);
     }
   }
 }
@@ -53,7 +43,6 @@ void csc::begin()
   b_speed_present =0;
 
   _begun = true;
-  logInfoln("csc bugun");
   return;
 };
 
@@ -107,7 +96,7 @@ void csc::discover(uint16_t conn_handle)
       
       if (bat_meas.discover() )
       {
-        u8_batt = bat_meas.read8();
+        u8_Batt = bat_meas.read8();
         //Serial.print("Batt: "); logInfoln(u8_batt);
       }
       if ( bat_meas.enableNotify() )
@@ -195,8 +184,6 @@ void csc::csc_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len)
         f32_rpm -= 0.1;
     }
     f32_kph = (f32_circ * 0.00006 * f32_rpm) * 0.3 + 0.7*f32_kph;
-    Serial.print("Speed: ");
-    Serial.println(f32_kph);
   }
   if ((data[0] & 0x02) == 2)
   {
@@ -257,7 +244,35 @@ void csc::csc_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len)
       f32_cadence_raw -= 0.1;
     }
     f32_cadence = f32_cadence * 0.7 + f32_cadence_raw*0.3;
-    Serial.print("Cadence: ");
-    Serial.println(f32_cadence);
   }
+}
+
+std::vector<float> csc::getSpeed()
+{
+  std::vector<float> speeds;
+  for (auto it = btDevices.begin(); it != btDevices.end(); it++)
+  {
+    if((*it)->getType() == E_Type_BT_Device::bt_csc)
+    {
+      csc* temp_csc = static_cast<csc*>((*it).get());
+      if(temp_csc->b_speed_present)
+        speeds.push_back(temp_csc->f32_kph);
+    }
+  }
+  return speeds;
+}
+
+std::vector<float> csc::getCadence()
+{
+  std::vector<float> cadences;
+  for (auto it = btDevices.begin(); it != btDevices.end(); it++)
+  {
+    if((*it)->getType() == E_Type_BT_Device::bt_csc)
+    {
+      csc* temp_csc = static_cast<csc*>((*it).get());
+      if(temp_csc->b_cadence_present)
+        cadences.push_back(temp_csc->f32_cadence);
+    }
+  }
+  return cadences;
 }
