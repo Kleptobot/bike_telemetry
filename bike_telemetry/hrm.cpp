@@ -45,6 +45,11 @@ void hrm::begin()
   hrm_meas.setNotifyCallback(hrm_notify_callback);
   hrm_meas.begin();
 
+  bat_serv.begin();
+
+  bat_meas.setNotifyCallback(bat_notify_callback);
+  bat_meas.begin();
+
   _begun = true;
 
   return;

@@ -695,7 +695,7 @@ void GUI() {
           Bluefruit.Scanner.setRxCallback(scan_callback);
           Bluefruit.Scanner.filterUuid(GATT_CSC_UUID, UUID16_SVC_HEART_RATE, GATT_CPS_UUID, GATT_BAT_UUID);
           Bluefruit.Scanner.useActiveScan(true);
-          //Bluefruit.Scanner.start(0);
+          Bluefruit.Scanner.start(0);
         }
         nLastScan = nCurrentTimeMillis;
       }
@@ -961,6 +961,13 @@ void scan_discovery(ble_gap_evt_adv_report_t* report) {
   //if the new device is unique add it
   if (!bMatch) {
     newDevice.stored=false;
+    if(Bluefruit.Scanner.checkReportForUuid(report, GATT_CSC_UUID))
+      newDevice.type = E_Type_BT_Device::bt_csc;
+    if(Bluefruit.Scanner.checkReportForUuid(report, UUID16_SVC_HEART_RATE))
+      newDevice.type = E_Type_BT_Device::bt_hrm;
+    if(Bluefruit.Scanner.checkReportForUuid(report, GATT_CPS_UUID))
+      newDevice.type = E_Type_BT_Device::bt_cps;
+
     nearby_devices.Add(newDevice);
   }
 
@@ -984,7 +991,7 @@ void scan_callback(ble_gap_evt_adv_report_t* report) {
   
   BT_Device* device = BT_Device::getDeviceWithMAC(report->peer_addr.addr);
   if (device != NULL) {
-    logInfo("Match!");
+    logInfoln("Match!");
     copyMAC(toConnectMAC, report->peer_addr.addr);
     Bluefruit.Central.connect(report);
   }
