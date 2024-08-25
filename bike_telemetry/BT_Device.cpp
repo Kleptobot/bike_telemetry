@@ -13,22 +13,28 @@ BT_Device* BT_Device::getDeviceWithMAC(uint8_t* MAC)
   return NULL;
 }
 
-void BT_Device::removeDeviceWithMAC(uint8_t* MAC){
+std::unique_ptr<BT_Device> BT_Device::removeDeviceWithMAC(uint8_t* MAC){
   for (auto it = btDevices.begin(); it != btDevices.end(); it++)
   {
-    if(compareMAC((*it)->getMac(),MAC))
+    if(compareMAC((*it)->getMac(),MAC)){
+      auto retVal = std::move(*it);
       btDevices.erase(it);
+      return std::move(retVal);
+    }
   }
-  return;
+  return {};
 }
 
-void BT_Device::removeDevice(std::unique_ptr<BT_Device> device)
+std::unique_ptr<BT_Device> BT_Device::removeDevice(std::unique_ptr<BT_Device> device)
 {
   auto it = std::find(btDevices.begin(), btDevices.end(), device); 
   //If element is found found, erase it 
-  if (it != btDevices.end()) { 
-      btDevices.erase(it); 
-  } 
+  if (it != btDevices.end()) {
+      auto retVal = std::move(*it);
+      btDevices.erase(it);
+      return std::move(retVal);
+  }
+  return {};
 }
 
 void BT_Device::disconnect_callback(uint16_t conn_handle, uint8_t reason)

@@ -8,7 +8,7 @@
 #include <Wire.h>
 #include <RTClib.h>
 
-#define MAX_SOURCES 10
+#define MAX_SOURCES 20
 #define SD_CS       D3      // SD CS
 
 // Struct containing peripheral info
@@ -26,7 +26,8 @@ class logger {
     File32 dataFile;
     data_source_t sources[MAX_SOURCES];
     uint16_t _num_sources;
-    TimeSpan _interval, _elapsed_time, _totalTime, _PauseTime;
+    uint32_t _interval = 500;
+    TimeSpan _elapsed_time, _totalTime, _PauseTime;
     DateTime _last_log, _startLog, _lastPause;
     uint32_t _last_millis, _elapsed_millis;
     bool _logging;
@@ -36,31 +37,18 @@ class logger {
   public:
     SdFat32 SD;
 
-    logger()
-    {
-      logger(500);
-    };
+    logger(){};
 
-    logger(uint16_t interval)
+    logger(uint32_t interval)
     {
       set_log_interval(interval);
-
-      // initialise SD card
-      //if (!SD.begin(SD_CS)) {
-      //  //SD card did not init
-      //  _SD_OK = 0;
-      //} else {
-      //  _SD_OK = 1;
-      //}
-//
     };
 
     void addSource(String name, float* data);
 
-    void set_log_interval(uint16_t interval)
+    void set_log_interval(uint32_t interval)
     {
-      //_interval = interval;
-      ;
+      _interval = interval;
     };
 
     void start_logging(DateTime current_time);

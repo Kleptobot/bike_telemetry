@@ -4,7 +4,6 @@ void logger::addSource(String name, float* data)
 {
   if(!_logging)
   {
-    //memcpy(sources[_num_sources].name, name, 16);
     sources[_num_sources].name=name;
     sources[_num_sources].data=data;
     _num_sources++;
@@ -63,7 +62,7 @@ void logger::log(DateTime current_time, uint32_t milliseconds)
   _elapsed_millis = _elapsed_time.totalseconds()*1000 + (milliseconds - _last_millis);
   _totalTime = current_time - _startLog;
   if(_logging){
-    if(_elapsed_millis >=500)
+    if(_elapsed_millis >=_interval)
     {
       log_data(current_time, milliseconds);
       _last_log = current_time;

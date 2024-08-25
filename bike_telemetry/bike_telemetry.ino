@@ -72,7 +72,8 @@ uint8_t toConnectMAC[6];
 int16_t s16DeviceSel, s16DeviceWindowStart;
 bool bBackFocDev, bBackSelDev;
 
-float f32_RTC_Temp, f32_DSP_Temp, f32_DSP_Pa, f32_Alt, f32_acc_x, f32_acc_y, f32_acc_z, f32_gyro_x, f32_gyro_y, f32_gyro_z, f32_kph, f32_cadence, f32_speedSum, f32_max_speed, f32_avgSpeed, f32_cadSum, f32_max_cad, f32_avgCad;
+float f32_RTC_Temp, f32_DSP_Temp, f32_DSP_Pa, f32_Alt, f32_acc_x, f32_acc_y, f32_acc_z, f32_gyro_x, f32_gyro_y, f32_gyro_z, f32_kph, f32_cadence, f32_bpm;
+float f32_speedSum, f32_max_speed, f32_avgSpeed, f32_cadSum, f32_max_cad, f32_avgCad, f32_bpmSum, f32_max_bpm, f32_avg_bpm;
 
 bool b_Running, b_Running_Prev;
 
@@ -141,7 +142,7 @@ void disconnectPin(uint32_t ulPin) {
 void setup() {
   // Initialize Bluefruit with maximum connections as Peripheral = 0, Central = 4
   // SRAM usage required by SoftDevice will increase dramatically with number of connections
-  Bluefruit.begin(0, 5);
+  Bluefruit.begin(0, 10);
 
   // Set up the sense mechanism to generate the DETECT signal to wake from system_off
   pinMode(WAKEUP_PIN, INPUT_PULLDOWN_SENSE);  // this pin (WAKE_HIGH_PIN) is pulled down and wakes up the feather when externally connected to 3.3v.
@@ -213,9 +214,9 @@ void init_devices() {
   display.setTextColor(SH110X_WHITE);
 
   log_data.addSource((char*)"Temp1", &f32_RTC_Temp);
-  // log_data.addSource((char*)"Temp2", &f32_DSP_Temp);
-  // log_data.addSource((char*)"Pres", &f32_DSP_Pa);
-  // log_data.addSource((char*)"Alt", &f32_Alt);
+  log_data.addSource((char*)"Temp2", &f32_DSP_Temp);
+  log_data.addSource((char*)"Pres", &f32_DSP_Pa);
+  log_data.addSource((char*)"Alt", &f32_Alt);
   log_data.addSource((char*)"X Acc", &f32_acc_x);
   log_data.addSource((char*)"Y Acc", &f32_acc_y);
   log_data.addSource((char*)"Z Acc", &f32_acc_z);
@@ -223,6 +224,9 @@ void init_devices() {
   log_data.addSource((char*)"Y Gyro", &f32_gyro_y);
   log_data.addSource((char*)"Z Gyro", &f32_gyro_z);
   log_data.addSource((char*)"Batt", &fBatteryVoltage);
+  log_data.addSource((char*)"Speed", &f32_kph);
+  log_data.addSource((char*)"Cadence", &f32_cadence);
+  log_data.addSource((char*)"Heart", &f32_bpm);
 
   Bluefruit.setName("OBike");
 
@@ -302,13 +306,13 @@ void loadDevices() {
       switch(newDevice.type)
       {
         case E_Type_BT_Device::bt_csc:
-          csc::create_csc(newDevice.name, newDevice.MAC);
+          csc::create_csc(newDevice.name, 32, newDevice.MAC);
           break;
         case E_Type_BT_Device::bt_hrm:
-          hrm::create_hrm(newDevice.name, newDevice.MAC);
+          hrm::create_hrm(newDevice.name, 32, newDevice.MAC);
           break;
         case E_Type_BT_Device::bt_cps:
-          cps::create_cps(newDevice.name, newDevice.MAC);
+          cps::create_cps(newDevice.name, 32, newDevice.MAC);
           break;
       }
     }
@@ -493,6 +497,15 @@ void loop() {
   if(cadence.size()>0)
     f32_cadence = f32_cadence/cadence.size();
 
+  std::vector<float> heartrates = hrm::getHRM();
+  f32_bpm = 0;
+  for (auto it = heartrates.begin(); it != heartrates.end(); it++){
+    f32_bpm += (*it);
+  }
+  if(heartrates.size()>0)
+    f32_bpm = f32_bpm/heartrates.size();
+
+
   display.clearDisplay();
 
   GUI();
@@ -501,14 +514,32 @@ void loop() {
     if (nCurrentTime.secondstime() > nLastSecond) {
       f32_speedSum += f32_kph;
       f32_cadSum += f32_cadence;
+      f32_bpmSum += f32_bpm;
       nLastSecond = nCurrentTime.secondstime();
     }
   } else {
     f32_speedSum = 0;
     f32_cadSum = 0;
+    f32_bpmSum = 0;
   }
   f32_avgSpeed = f32_speedSum / log_data.elapsed().totalseconds();
   f32_avgCad = f32_cadSum / log_data.elapsed().totalseconds();
+  f32_avg_bpm = f32_bpmSum / log_data.elapsed().totalseconds();
+
+  //get the current max
+  if(!b_Running){
+    f32_max_speed = 0;
+    f32_max_cad = 0;
+    f32_max_bpm = 0;
+  }else{
+    if(f32_kph>f32_max_speed)
+      f32_max_speed = f32_kph;
+    if(f32_cadence>f32_max_cad)
+      f32_max_cad = f32_cadence;
+    if(f32_bpm>f32_max_bpm)
+      f32_max_bpm = f32_bpm;
+  }
+
 
   display.display();
 }
@@ -664,7 +695,7 @@ void GUI() {
           Bluefruit.Scanner.setRxCallback(scan_callback);
           Bluefruit.Scanner.filterUuid(GATT_CSC_UUID, UUID16_SVC_HEART_RATE, GATT_CPS_UUID, GATT_BAT_UUID);
           Bluefruit.Scanner.useActiveScan(true);
-          Bluefruit.Scanner.start(0);
+          //Bluefruit.Scanner.start(0);
         }
         nLastScan = nCurrentTimeMillis;
       }
@@ -684,15 +715,20 @@ void GUI() {
         } else if (bRight_RE) {
           dtTimeDisplay = nCurrentTime;
           u16_state = 2;
-          Bluefruit.Scanner.stop();
+          if(Bluefruit.Scanner.isRunning())
+            Bluefruit.Scanner.stop();
 
         } else if (bLeft_RE) {
           u16_state = 4;
-          Bluefruit.Scanner.stop();
+          if(Bluefruit.Scanner.isRunning())
+            Bluefruit.Scanner.stop();
         }
       }
 
       if (b_Running && !b_Running_Prev) {
+        if(Bluefruit.Scanner.isRunning())
+          Bluefruit.Scanner.stop();
+        logInfoln("start logger");
         log_data.start_logging(nCurrentTime);
         log_data.play_logging();
       } else if (!b_Running && b_Running_Prev) {
@@ -735,54 +771,62 @@ void GUI() {
 }
 
 void deviceSelection() {
-  int16_t index;
   if (bUp_RE) {
-    if (s16DeviceSel >= 0x0010)
+    if (s16DeviceSel >= 1)
     {
-      s16DeviceSel -= 0x0010;
-      if((s16DeviceSel>>4) < s16DeviceWindowStart)
+      s16DeviceSel --;
+      if(s16DeviceSel < s16DeviceWindowStart)
         s16DeviceWindowStart --;
     }
+    Serial.print("s16DeviceSel = ");
+    Serial.println(s16DeviceSel);
+    Serial.print("s16DeviceWindowStart = ");
+    Serial.println(s16DeviceWindowStart);
   }
 
   if (bDown_RE) {
-    if ((s16DeviceSel >> 4) < nearby_devices.Count())
-      s16DeviceSel += 0x0010;
-      if(((s16DeviceSel>>4) >= (s16DeviceWindowStart + nDeviceWindowLen)) && ((s16DeviceSel>>4) < nearby_devices.Count()))
+    if (s16DeviceSel < nearby_devices.Count())
+      s16DeviceSel ++;
+      if((s16DeviceSel >= (s16DeviceWindowStart + nDeviceWindowLen)) && (s16DeviceSel < nearby_devices.Count()))
         s16DeviceWindowStart++;
+    Serial.print("s16DeviceSel = ");
+    Serial.println(s16DeviceSel);
+    Serial.print("s16DeviceWindowStart = ");
+    Serial.println(s16DeviceWindowStart);
   }
 
-  index = s16DeviceSel >> 4;
-  if ((s16DeviceSel >> 4) != nearby_devices.Count()) {
+  if (s16DeviceSel != nearby_devices.Count()) {
     if (bCenter_RE) {
-      nearby_devices[index].stored = !nearby_devices[index].stored;
+      nearby_devices[s16DeviceSel].stored = !nearby_devices[s16DeviceSel].stored;
 
-      if (nearby_devices[index].stored){
-        BT_Device* device = BT_Device::getDeviceWithMAC(nearby_devices[index].MAC);
-        if (device != NULL) {
-            BT_Device::removeDeviceWithMAC(nearby_devices[index].MAC);
-        }else{
-          logInfoln("Adding device:");
-          Serial.print("Name: ");
-          logInfoln(nearby_devices[index].name);
-          Serial.print("MAC: ");
-          Serial.printBufferReverse(nearby_devices[index].MAC, 6, ':');
-          Serial.print("\n");
-          switch(nearby_devices[index].type)
-          {
-            case E_Type_BT_Device::bt_csc:
-              csc::create_csc(nearby_devices[index].name, nearby_devices[index].MAC);
-              break;
-            case E_Type_BT_Device::bt_hrm:
-              hrm::create_hrm(nearby_devices[index].name, nearby_devices[index].MAC);
-              break;
-          }
+      BT_Device* device = BT_Device::getDeviceWithMAC(nearby_devices[s16DeviceSel].MAC);
+      if (device != NULL && !nearby_devices[s16DeviceSel].stored) {
+          Bluefruit.disconnect(device->getConnHandle());
+          BT_Device::removeDeviceWithMAC(nearby_devices[s16DeviceSel].MAC);
+      }else if (device == NULL && nearby_devices[s16DeviceSel].stored){
+        logInfoln("Adding device:");
+        Serial.print("Name: ");
+        logInfoln(nearby_devices[s16DeviceSel].name);
+        Serial.print("MAC: ");
+        Serial.printBufferReverse(nearby_devices[s16DeviceSel].MAC, 6, ':');
+        Serial.print("\n");
+        switch(nearby_devices[s16DeviceSel].type)
+        {
+          case E_Type_BT_Device::bt_csc:
+            csc::create_csc(nearby_devices[s16DeviceSel].name, 32, nearby_devices[s16DeviceSel].MAC);
+            break;
+          case E_Type_BT_Device::bt_hrm:
+            hrm::create_hrm(nearby_devices[s16DeviceSel].name, 32, nearby_devices[s16DeviceSel].MAC);
+            break;
+          case E_Type_BT_Device::bt_cps:
+            cps::create_cps(nearby_devices[s16DeviceSel].name, 32, nearby_devices[s16DeviceSel].MAC);
+            break;
         }
       }
     }
   }
 
-  bBackFocDev = (s16DeviceSel >> 4) == nearby_devices.Count();
+  bBackFocDev = s16DeviceSel == nearby_devices.Count();
   bBackSelDev = bCenter_RE && bBackFocDev;
 }
 
@@ -793,13 +837,19 @@ void showDevices() {
   display.setTextSize(1);
   display.print("Bluetooth Devices");
 
+  int devicesToShow = nDeviceWindowLen;
+  if(nearby_devices.Count() < nDeviceWindowLen)
+    devicesToShow = nearby_devices.Count();
+  else if(s16DeviceSel>(nearby_devices.Count()+nDeviceWindowLen))
+    s16DeviceSel--;
+
   if (nearby_devices.Count() > 0) {
     //iterate the list
-    for (int i = 0; i < nDeviceWindowLen; i++) {
+    for (int i = 0; i < devicesToShow; i++) {
       bool selected, focus, discovered;
       uint8_t batt;
 
-      focus = s16DeviceSel >> 4 == i;
+      focus = s16DeviceSel == i+s16DeviceWindowStart;
 
       BT_Device* device = BT_Device::getDeviceWithMAC(nearby_devices[i+s16DeviceWindowStart].MAC);
       if (device != NULL) {
@@ -849,6 +899,7 @@ void ExitDevices() {
     s16DeviceSel = 0;
     s16DeviceWindowStart = 0;
     u16_state = 0;
+    int j = 0;
     Bluefruit.Scanner.stop();
 
     if (nearby_devices.Count() > 0) {
@@ -857,9 +908,9 @@ void ExitDevices() {
 
       for (int i = 0; i < nearby_devices.Count(); i++) {
         if (nearby_devices[i].stored) {
-          devices[i]["name"] = nearby_devices[i].name;
-          devices[i]["type"] = nearby_devices[i].type;
-          JsonArray device_MAC = devices[i]["MAC"].to<JsonArray>();
+          devices[j]["name"] = nearby_devices[i].name;
+          devices[j]["type"] = nearby_devices[i].type;
+          JsonArray device_MAC = devices[j]["MAC"].to<JsonArray>();
           ;
           device_MAC.add(nearby_devices[i].MAC[0]);
           device_MAC.add(nearby_devices[i].MAC[1]);
@@ -867,6 +918,7 @@ void ExitDevices() {
           device_MAC.add(nearby_devices[i].MAC[3]);
           device_MAC.add(nearby_devices[i].MAC[4]);
           device_MAC.add(nearby_devices[i].MAC[5]);
+          j++;
         }
       }
 
@@ -1054,6 +1106,7 @@ void drawMain() {
     display.print(' ');
   display.print(f32_kph, 1);
   display.setTextSize(1);
+  display.setCursor(96, 0);
   display.println("  k/h");
 
   display.setTextSize(4);
@@ -1067,7 +1120,19 @@ void drawMain() {
     display.print(" ");
   display.print(f32_cadence, 0);
   display.setTextSize(1);
-  display.println("  rpm");
+  display.setCursor(96, 32);
+  display.print("  rpm");
+
+  display.drawBitmap(60, 62, epd_bitmap_heart, 16, 16, 1);
+  display.setCursor(79, 66);
+  display.setTextSize(1);
+  if(f32_bpm<10)
+    display.print("  ");
+  else if (f32_bpm < 100)
+    display.print(" ");
+  display.print(f32_bpm, 0);
+  display.setCursor(96, 66);
+  display.print("  bpm");
 
   display.drawBitmap(95, 111, epd_bitmap_battery, 32, 16, 1);
   display.setCursor(102, 116);
@@ -1092,47 +1157,13 @@ void connect_callback(uint16_t conn_handle) {
   
   BT_Device* device = BT_Device::getDeviceWithMAC(toConnectMAC);
   if (device != NULL) {
-    if(!device->discovered()){
+    if(!device->discovered())
       device->discover(conn_handle);
-      E_Type_BT_Device device_type = device->getType();
-      Serial.print("device is of type ");
-      Serial.println(device_type);
-      switch(device_type)
-      {
-        case E_Type_BT_Device::bt_csc:
-        {
-          csc* temp_csc = static_cast<csc*>(device);
-          if(temp_csc->b_speed_present){
-            log_data.addSource(temp_csc->getName(), &temp_csc->f32_kph);
-          }
-          if(temp_csc->b_cadence_present){
-            log_data.addSource(temp_csc->getName(), &temp_csc->f32_cadence);
-          }
-          break;
-        }
-
-        case E_Type_BT_Device::bt_hrm:
-        {
-          hrm* temp_hrm = static_cast<hrm*>(device);
-          log_data.addSource(temp_hrm->getName(), &temp_hrm->f32_bpm);
-          break;
-        }
-
-        case E_Type_BT_Device::bt_cps:
-        {
-          cps* temp_cps = static_cast<cps*>(device);
-          log_data.addSource(temp_cps->getName(), &temp_cps->f32_power);
-          break;
-        }
-
-      }
-    }
   }
   if (!BT_Device::all_devices_discovered()) {
     Bluefruit.Scanner.resume();
   }
 }
-
 
 void readIMU() {
   f32_acc_x = myIMU.readFloatAccelX();

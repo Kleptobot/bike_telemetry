@@ -24,25 +24,25 @@ class cps : public BT_Device {
     BLEClientCharacteristic cps_meas  = BLEClientCharacteristic(GATT_CPS_MEASUREMENT_UUID);
     BLEClientCharacteristic cps_feat  = BLEClientCharacteristic(GATT_CPS_FEATURE_UUID);
 
-    
     cps(){
       this->bt_type = E_Type_BT_Device::bt_cps;
     }
 
   protected:
-    cps(String name, uint8_t* MAC){
+    cps(char* name, size_t nameLen, uint8_t* MAC){
       this->bt_type = E_Type_BT_Device::bt_cps;
-      this->name = name;
+      memcpy(this->name, name, nameLen);
       copyMAC(this->MAC, MAC);
       this->begin();
     }
 
   public:
     float f32_power;
+    virtual ~cps(){};
     
-    static void create_cps(String name, uint8_t* MAC)
+    static void create_cps(char* name, size_t nameLen, uint8_t* MAC)
     {
-      btDevices.push_back(std::unique_ptr<cps>(new cps(name, MAC)));
+      btDevices.push_back(std::unique_ptr<cps>(new cps(name, nameLen, MAC)));
     };
 
     static void cps_notify_callback(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len);

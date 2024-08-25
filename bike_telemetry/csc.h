@@ -82,21 +82,21 @@ class csc : public BT_Device {
     }
 
   protected:
-    csc(String name, uint8_t* MAC){
+    csc(char* name, size_t nameLen, uint8_t* MAC){
       this->bt_type = E_Type_BT_Device::bt_csc;
-      this->name = name;
+      memcpy(this->name, name, nameLen);
       copyMAC(this->MAC, MAC);
       this->begin();
     }
 
   public:
-
     bool b_speed_present, b_cadence_present;
     float f32_rpm, f32_kph, f32_cadence;
+    virtual ~csc(){};
     
-    static void create_csc(String name, uint8_t* MAC)
+    static void create_csc(char* name, size_t nameLen, uint8_t* MAC)
     {
-      btDevices.push_back(std::unique_ptr<csc>(new csc(name, MAC)));
+      btDevices.push_back(std::unique_ptr<csc>(new csc(name, nameLen, MAC)));
     };
 
     static void csc_notify_callback(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len);

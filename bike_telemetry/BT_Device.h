@@ -26,7 +26,7 @@ class BT_Device {
     BLEClientService        bat_serv  = BLEClientService(GATT_BAT_UUID);
     BLEClientCharacteristic bat_meas  = BLEClientCharacteristic(GATT_BAT_MEASUREMENT_UUID);
     
-    String name;
+    char name[32];
     uint8_t MAC[6];
     uint8_t u8_Batt = 100;
     bool _begun;
@@ -36,12 +36,13 @@ class BT_Device {
     BT_Device(){};
 
   public:
+    virtual ~BT_Device(){Serial.println("deleteing BT_Device");};
     
     static BT_Device* getDeviceWithMAC(uint8_t* MAC);
 
-    static void removeDeviceWithMAC(uint8_t* MAC);
+    static std::unique_ptr<BT_Device> removeDeviceWithMAC(uint8_t* MAC);
 
-    static void removeDevice(std::unique_ptr<BT_Device> device);
+    static std::unique_ptr<BT_Device> removeDevice(std::unique_ptr<BT_Device> device);
 
     static void disconnect_callback(uint16_t conn_handle, uint8_t reason);
     
@@ -57,6 +58,7 @@ class BT_Device {
     bool begun(){return _begun;}
     uint8_t readBatt(){return u8_Batt;}
     void disconnect(uint16_t conn_handle, uint8_t reason);
+    uint16_t getConnHandle(){return _conn_handle;};
     virtual void discover(uint16_t conn_handle){};
     virtual bool discovered(){return false;};
     virtual void begin(){};

@@ -29,7 +29,7 @@ void hrm::hrm_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len)
   {
     u16_bpm = data[1];
   }
-  f32_bpm = 0.7 * f32_bpm + 0.3 * u16_bpm;
+  f32_bpm = 0.7 * f32_bpm + 0.3 * (float)u16_bpm;
 }
 
 void hrm::begin()
@@ -109,4 +109,36 @@ void hrm::discover(uint16_t conn_handle)
   {
     logInfoln("Couldn't enable notify for HRM Measurement. Increase DEBUG LEVEL for troubleshooting");
   }
+  if(bat_serv.discover(conn_handle))
+  {
+    logInfoln("Found bat");
+    
+    if (bat_meas.discover() )
+    {
+      u8_Batt = bat_meas.read8();
+      //Serial.print("Batt: "); logInfoln(u8_batt);
+    }
+    if ( bat_meas.enableNotify() )
+    {
+      logInfoln("Ready to receive BAT Measurement value");
+    }else
+    {
+      logInfoln("Couldn't enable notify for BAT Measurement");
+    }
+  }
+  f32_bpm=0;
+}
+
+std::vector<float> hrm::getHRM()
+{
+  std::vector<float> heartrates;
+  for (auto it = btDevices.begin(); it != btDevices.end(); it++)
+  {
+    if((*it)->getType() == E_Type_BT_Device::bt_hrm)
+    {
+      hrm* temp_hrm = static_cast<hrm*>((*it).get());
+      heartrates.push_back(temp_hrm->f32_bpm);
+    }
+  }
+  return heartrates;
 }
