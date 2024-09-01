@@ -103,7 +103,8 @@ bool bSysOff;
 uint16_t u16_state, u16_state_prev;
 bool bStateEntry = true;
 
-logger log_data;
+SdFat32 SD;
+logger log_data = logger(500, &SD);
 
 //RTC
 RTC_DS3231 rtc;
@@ -152,7 +153,7 @@ void setup() {
 
   if (!mcp.begin_I2C()) {
 
-    logInfoln("MCP init Error");
+    Serial.println("MCP init Error");
     while (1)
       ;
   }
@@ -165,14 +166,14 @@ void setup() {
   mcp.setupInterruptPin(GPIOB0, HIGH);
 
   if (!rtc.begin()) {
-    logInfoln("Couldn't find RTC");
+    Serial.println("Couldn't find RTC");
     while (1) delay(500);
   } else {
-    logInfoln("RTC initialised");
+    Serial.println("RTC initialised");
   }
 
   if (rtc.lostPower()) {
-    logInfoln("RTC lost power, let's set the time!");
+    Serial.println("RTC lost power, let's set the time!");
     // When time needs to be set on a new device, or after a power loss, the
     // following line sets the RTC to the date & time this sketch was compiled
     rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
@@ -201,7 +202,7 @@ void init_devices() {
     display.println("IMU init error");
     while (1) delay(500);
   } else {
-    logInfoln("IMU initialised");
+    Serial.println("IMU initialised");
   }
 
   Dps3xxPressureSensor.begin(Wire);
@@ -254,14 +255,14 @@ void init_devices() {
   started = true;
   delay(1000);
 
-  logInfoln("Booted");
+  Serial.println("Booted");
 }
 
 void loadDevices() {
-  if (log_data.SD.exists("devices.txt")) {
-    logInfoln("Devices file found...");
+  if (SD.exists("devices.txt")) {
+    Serial.println("Devices file found...");
     // Open file for reading
-    File32 dataFile = log_data.SD.open("/devices.txt", FILE_READ);
+    File32 dataFile = SD.open("/devices.txt", FILE_READ);
     // Allocate the memory pool on the stack.
     JsonDocument jsonBuffer;
     // Parse the root object
@@ -270,7 +271,7 @@ void loadDevices() {
 
     if (error) {
       Serial.print("deserializeJson() failed: ");
-      logInfoln(error.c_str());
+      Serial.println(error.c_str());
       return;
     }
 
@@ -299,7 +300,7 @@ void loadDevices() {
 
       logInfo("Adding device:");
       Serial.print("Name: ");
-      logInfoln(name);
+      Serial.println(name);
       Serial.print("MAC: ");
       Serial.printBufferReverse(MAC, 6, ':');
       Serial.print("\n");
@@ -405,12 +406,12 @@ void loop() {
 
   if (bSD_Det_FE || !started) {
     // initialise SD card
-    if (!log_data.SD.begin(SD_CS)) {
-      logInfoln("initialisation failed.");
+    if (!SD.begin(SD_CS)) {
+      Serial.println("initialisation failed.");
       delay(500);
     } else {
       debugLog.open("/log.txt", FILE_WRITE);
-      logInfoln("SD card initialised");
+      Serial.println("SD card initialised");
     }
   }
   if (bSD_Det_RE) {
@@ -522,9 +523,16 @@ void loop() {
     f32_cadSum = 0;
     f32_bpmSum = 0;
   }
-  f32_avgSpeed = f32_speedSum / log_data.elapsed().totalseconds();
-  f32_avgCad = f32_cadSum / log_data.elapsed().totalseconds();
-  f32_avg_bpm = f32_bpmSum / log_data.elapsed().totalseconds();
+  int32_t elapsedSeconds = log_data.elapsed().totalseconds();
+  if(elapsedSeconds>0){
+    f32_avgSpeed = f32_speedSum / elapsedSeconds;
+    f32_avgCad = f32_cadSum / elapsedSeconds;
+    f32_avg_bpm = f32_bpmSum / elapsedSeconds;
+  }else{
+    f32_avgSpeed = 0;
+    f32_avgCad = 0;
+    f32_avg_bpm = 0;
+  }
 
   //get the current max
   if(!b_Running){
@@ -728,7 +736,7 @@ void GUI() {
       if (b_Running && !b_Running_Prev) {
         if(Bluefruit.Scanner.isRunning())
           Bluefruit.Scanner.stop();
-        logInfoln("start logger");
+        Serial.println("start logger");
         log_data.start_logging(nCurrentTime);
         log_data.play_logging();
       } else if (!b_Running && b_Running_Prev) {
@@ -804,9 +812,9 @@ void deviceSelection() {
           Bluefruit.disconnect(device->getConnHandle());
           BT_Device::removeDeviceWithMAC(nearby_devices[s16DeviceSel].MAC);
       }else if (device == NULL && nearby_devices[s16DeviceSel].stored){
-        logInfoln("Adding device:");
+        Serial.println("Adding device:");
         Serial.print("Name: ");
-        logInfoln(nearby_devices[s16DeviceSel].name);
+        Serial.println(nearby_devices[s16DeviceSel].name);
         Serial.print("MAC: ");
         Serial.printBufferReverse(nearby_devices[s16DeviceSel].MAC, 6, ':');
         Serial.print("\n");
@@ -922,13 +930,13 @@ void ExitDevices() {
         }
       }
 
-      if (log_data.SD.exists("/devices.txt"))
-        log_data.SD.remove("/devices.txt");
+      if (SD.exists("/devices.txt"))
+        SD.remove("/devices.txt");
 
-      File32 dataFile = log_data.SD.open("/devices.txt", FILE_WRITE);
+      File32 dataFile = SD.open("/devices.txt", FILE_WRITE);
 
       serializeJson(doc, dataFile);
-      logInfoln("");
+      Serial.println("");
       dataFile.close();
     }
   }
@@ -981,7 +989,7 @@ void scan_discovery(ble_gap_evt_adv_report_t* report) {
  * @param report Structural advertising data
  */
 void scan_callback(ble_gap_evt_adv_report_t* report) {
-  logInfoln("Found Device:");
+  Serial.println("Found Device:");
   Serial.print("MAC: ");
   Serial.printBufferReverse(report->peer_addr.addr, 6, ':');
   Serial.print("\n");
@@ -991,7 +999,7 @@ void scan_callback(ble_gap_evt_adv_report_t* report) {
   
   BT_Device* device = BT_Device::getDeviceWithMAC(report->peer_addr.addr);
   if (device != NULL) {
-    logInfoln("Match!");
+    Serial.println("Match!");
     copyMAC(toConnectMAC, report->peer_addr.addr);
     Bluefruit.Central.connect(report);
   }

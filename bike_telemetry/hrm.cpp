@@ -57,13 +57,13 @@ void hrm::begin()
 
 void hrm::discover(uint16_t conn_handle)
 {
-  logInfoln("Connected");
-  logInfo("Discovering HRM Service ... ");
+  Serial.println("Connected");
+  Serial.print("Discovering HRM Service ... ");
 
   // If HRM is not found, disconnect and return
   if ( !hrm_serv.discover(conn_handle) )
   {
-    logInfoln("Found NONE");
+    Serial.println("Found NONE");
 
     // disconnect since we couldn't find HRM service
     Bluefruit.disconnect(conn_handle);
@@ -72,26 +72,26 @@ void hrm::discover(uint16_t conn_handle)
   }
 
   // Once HRM service is found, we continue to discover its characteristic
-  logInfoln("Found it");
+  Serial.println("Found it");
   
-  logInfo("Discovering Measurement characteristic ... ");
+  Serial.print("Discovering Measurement characteristic ... ");
   if ( !hrm_meas.discover() )
   {
     // Measurement chr is mandatory, if it is not found (valid), then disconnect
-    logInfoln("not found !!!");  
-    logInfoln("Measurement characteristic is mandatory but not found");
+    Serial.println("not found !!!");  
+    Serial.println("Measurement characteristic is mandatory but not found");
     Bluefruit.disconnect(conn_handle);
     return;
   }
-  logInfoln("Found it");
+  Serial.println("Found it");
 
   // Measurement is found, continue to look for option Body Sensor Location
   // https://www.bluetooth.com/specifications/gatt/viewer?attributeXmlFile=org.bluetooth.characteristic.body_sensor_location.xml
   // Body Sensor Location is optional, print out the location in text if present
-  logInfo("Discovering Body Sensor Location characteristic ... ");
+  Serial.print("Discovering Body Sensor Location characteristic ... ");
   if ( hrm_loc.discover() )
   {
-    logInfoln("Found it");
+    Serial.println("Found it");
     
     // Body sensor location value is 8 bit
     const char* body_str[] = { "Other", "Chest", "Wrist", "Finger", "Hand", "Ear Lobe", "Foot" };
@@ -99,36 +99,36 @@ void hrm::discover(uint16_t conn_handle)
     // Read 8-bit hrm_loc value from peripheral
     uint8_t loc_value = hrm_loc.read8();
     
-    logInfo("Body Location Sensor: ");
-    logInfoln(body_str[loc_value]);
+    Serial.print("Body Location Sensor: ");
+    Serial.println(body_str[loc_value]);
   }else
   {
-    logInfoln("Found NONE");
+    Serial.println("Found NONE");
   }
 
   // Reaching here means we are ready to go, let's enable notification on measurement chr
   if ( hrm_meas.enableNotify() )
   {
-    logInfoln("Ready to receive HRM Measurement value");
+    Serial.println("Ready to receive HRM Measurement value");
   }else
   {
-    logInfoln("Couldn't enable notify for HRM Measurement. Increase DEBUG LEVEL for troubleshooting");
+    Serial.println("Couldn't enable notify for HRM Measurement. Increase DEBUG LEVEL for troubleshooting");
   }
   if(bat_serv.discover(conn_handle))
   {
-    logInfoln("Found bat");
+    Serial.println("Found bat");
     
     if (bat_meas.discover() )
     {
       u8_Batt = bat_meas.read8();
-      //Serial.print("Batt: "); logInfoln(u8_batt);
+      //Serial.print("Batt: "); Serial.println(u8_batt);
     }
     if ( bat_meas.enableNotify() )
     {
-      logInfoln("Ready to receive BAT Measurement value");
+      Serial.println("Ready to receive BAT Measurement value");
     }else
     {
-      logInfoln("Couldn't enable notify for BAT Measurement");
+      Serial.println("Couldn't enable notify for BAT Measurement");
     }
   }
   f32_bpm=0;

@@ -52,7 +52,7 @@ void csc::discover(uint16_t conn_handle)
   if (csc_serv.discover(conn_handle) )
   {
     _conn_handle = conn_handle;
-    logInfoln("Found CSC");
+    Serial.println("Found CSC");
 
     if ( !csc_meas.discover() )
     {
@@ -86,30 +86,30 @@ void csc::discover(uint16_t conn_handle)
     // Reaching here means we are ready to go, let's enable notification on measurement chr
     if ( csc_meas.enableNotify() )
     {
-      logInfoln("Ready to receive CSC Measurement value");
+      Serial.println("Ready to receive CSC Measurement value");
     }else{
-      logInfoln("Couldn't enable notify for CSC Measurement");
+      Serial.println("Couldn't enable notify for CSC Measurement");
     }
     if(bat_serv.discover(conn_handle))
     {
-      logInfoln("Found bat");
+      Serial.println("Found bat");
       
       if (bat_meas.discover() )
       {
         u8_Batt = bat_meas.read8();
-        //Serial.print("Batt: "); logInfoln(u8_batt);
+        //Serial.print("Batt: "); Serial.println(u8_batt);
       }
       if ( bat_meas.enableNotify() )
       {
-        logInfoln("Ready to receive BAT Measurement value");
+        Serial.println("Ready to receive BAT Measurement value");
       }else
       {
-        logInfoln("Couldn't enable notify for BAT Measurement");
+        Serial.println("Couldn't enable notify for BAT Measurement");
       }
     }
   }else{
     Bluefruit.disconnect(conn_handle);
-    logInfoln("Found NONE");
+    Serial.println("Found NONE");
   }
   return;
 }

@@ -53,8 +53,8 @@ void BT_Device::disconnect(uint16_t conn_handle, uint8_t reason)
   (void) conn_handle;
   (void) reason;
   
-  logInfo("Disconnected, reason = 0x"); 
-  logInfoln(String(reason, HEX));
+  Serial.print("Disconnected, reason = 0x"); 
+  Serial.println(String(reason, HEX));
 }
 
 void BT_Device::bat_notify_callback(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len)

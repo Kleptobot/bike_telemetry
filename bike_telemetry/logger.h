@@ -33,14 +33,15 @@ class logger {
     bool _logging;
     void log_data(DateTime current_time, uint32_t milliseconds);
     char _filename[32];
+    SdFat32* SD;
 
   public:
-    SdFat32 SD;
 
     logger(){};
 
-    logger(uint32_t interval)
+    logger(uint32_t interval, SdFat32* sd_ptr)
     {
+      SD = sd_ptr;
       set_log_interval(interval);
     };
 
