@@ -14,6 +14,7 @@
 #include <Dps3xx.h>
 #include "ListLib.h"
 #include <ArduinoJson.h>
+#include <TinyGPSPlus.h>
 
 #include "Utils.h"
 #include "BT_Device.h"
@@ -44,6 +45,7 @@ Adafruit_SH1107 display = Adafruit_SH1107(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OL
 #define GPIOB4 12
 
 #define Battery_Read_Period 60
+#define GPS_Read_Period 2
 #define Timeout_Period 60
 #define nIMUReadPeriod 500
 #define nDSPReadPeriod 10000
@@ -53,6 +55,10 @@ Adafruit_SH1107 display = Adafruit_SH1107(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OL
 #define nHeldPressTime 2000
 
 #define nDeviceWindowLen 2
+
+#define GPSSerial Serial1
+static const uint32_t GPSBaud = 9600;
+TinyGPSPlus gps;
 
 //Create a instance of class LSM6DS3
 LSM6DS3 myIMU(I2C_MODE, 0x6A);  //I2C device address 0x6A
@@ -74,6 +80,7 @@ bool bBackFocDev, bBackSelDev;
 
 float f32_RTC_Temp, f32_DSP_Temp, f32_DSP_Pa, f32_Alt, f32_acc_x, f32_acc_y, f32_acc_z, f32_gyro_x, f32_gyro_y, f32_gyro_z, f32_kph, f32_cadence, f32_bpm;
 float f32_speedSum, f32_max_speed, f32_avgSpeed, f32_cadSum, f32_max_cad, f32_avgCad, f32_bpmSum, f32_max_bpm, f32_avg_bpm;
+float f32_GPS_speed, f32_GPS_angle, f32_GPS_Alt, f32_GPS_long, f32_GPS_lat;
 
 bool b_Running, b_Running_Prev;
 
@@ -109,7 +116,7 @@ logger log_data = logger(500, &SD);
 //RTC
 RTC_DS3231 rtc;
 
-DateTime nCurrentTime, nCurrentTime_Prev, nLastAction, nLastBatteryRead;
+DateTime nCurrentTime, nCurrentTime_Prev, nLastAction, nLastBatteryRead, nlastGPSUpdate;
 bool bSwitchOnDelay;
 bool started, bDevicesLoaded;
 
@@ -150,6 +157,7 @@ void setup() {
   pinMode(D2, INPUT);
 
   Serial.begin(115200);
+  GPSSerial.begin(GPSBaud);
 
   if (!mcp.begin_I2C()) {
 
@@ -253,7 +261,7 @@ void init_devices() {
   //NRF_POWER->DCDCEN = 1;
 
   started = true;
-  delay(1000);
+  delay(500);
 
   Serial.println("Booted");
 }
@@ -331,6 +339,10 @@ void loop() {
   uint8_t temperatureCount = 20;
   float temperature[temperatureCount];
   int16_t ret;
+
+  //read any serial info into the gps class
+  while (GPSSerial.available())
+    gps.encode(GPSSerial.read());
 
   //read the current time
   nCurrentTime = rtc.now();
@@ -471,6 +483,35 @@ void loop() {
   //   }
   //   nLastDSPRead = nCurrentTimeMillis;
   // }
+
+  //gps update
+  ts1 = nCurrentTime - nlastGPSUpdate;
+  if (ts1.totalseconds() >= GPS_Read_Period) {
+    if(gps.speed.isValid()) {
+      f32_GPS_speed = gps.speed.kmph();
+      Serial.print("GPS speed: ");
+      Serial.println(f32_GPS_speed);
+    }
+    if(gps.altitude.isValid()){
+      f32_GPS_Alt = gps.altitude.meters();
+      Serial.print("GPS alt: ");
+      Serial.println(f32_GPS_Alt);
+    }
+    if(gps.course.isValid()){
+      f32_GPS_angle = gps.course.deg();
+      Serial.print("GPS heading: ");
+      Serial.println(TinyGPSPlus::cardinal(f32_GPS_angle));
+    }
+    if(gps.location.isValid()){
+      f32_GPS_long = gps.location.lng();
+      f32_GPS_lat = gps.location.lat();
+      Serial.print("GPS location: ");
+      Serial.print(f32_GPS_lat);
+      Serial.print(", ");
+      Serial.println(f32_GPS_long);
+    }
+    nlastGPSUpdate = nCurrentTime;
+  }
 
 
   //battery voltage period check
