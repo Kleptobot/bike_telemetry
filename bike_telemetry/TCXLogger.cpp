@@ -174,7 +174,7 @@ bool TCXLogger::finaliseLogging() {
     // Open the source file for reading
     if (!data_tmp.open("data.tmp", O_READ)) {
       Serial.println("Error opening source file.");
-      return false;
+      return true;
     }
 
     // Open the destination file for appending
@@ -182,7 +182,7 @@ bool TCXLogger::finaliseLogging() {
       Serial.println("Error opening : ");
       Serial.println(_filename);
       data_tmp.close();
-      return false;
+      return true;
     }
     bFinalise_Started = true;
     bReading = true;

@@ -411,7 +411,7 @@ void loop() {
 
   //check if the device has timed out
   TimeSpan ts1 = nCurrentTime - nLastAction;
-  if (((ts1.totalseconds() > Timeout_Period && !b_Running) || bSysOff) && !b_WriteTcx){
+  if (((ts1.totalseconds() > Timeout_Period && !b_Running) || bSysOff) && !bWriteTCX){
     if (started) {
       display.clearDisplay();
       display.display();
@@ -574,8 +574,12 @@ void loop() {
   }
 
   if(bWriteTCX){
-    if(tcxLog.finaliseLogging())
+    if(tcxLog.finaliseLogging()){
+      if (SD.remove("data.tmp")) {
+        Serial.println("Deleted data.tmp");
+      }
       bWriteTCX = false;
+    }
   }
 
   //get the current max

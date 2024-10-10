@@ -25,7 +25,7 @@ class TCXLogger {
     
     bool bFinalise_Started = false;
     bool bReading, bWriting;
-    uint8_t buffer[1024];  // Buffer for reading data
+    uint8_t buffer[512];  // Buffer for reading data
     size_t bytesRead = 0;
 
     char _filename[32];
