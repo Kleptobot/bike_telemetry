@@ -23,6 +23,7 @@
 #include "cps.h"
 #include "GFX.h"
 #include "logger.h"
+#include "TCXLogger.h"
 
 #define MCP23017_ADDR 0x20
 Adafruit_MCP23X17 mcp;
@@ -112,6 +113,9 @@ bool bStateEntry = true;
 
 SdFat32 SD;
 logger log_data = logger(500, &SD);
+
+TCXLogger tcxLog;
+bool bWriteTCX= false;
 
 //RTC
 RTC_DS3231 rtc;
@@ -407,7 +411,7 @@ void loop() {
 
   //check if the device has timed out
   TimeSpan ts1 = nCurrentTime - nLastAction;
-  if ((ts1.totalseconds() > Timeout_Period && !b_Running) || bSysOff) {
+  if (((ts1.totalseconds() > Timeout_Period && !b_Running) || bSysOff) && !b_WriteTcx){
     if (started) {
       display.clearDisplay();
       display.display();
@@ -489,26 +493,16 @@ void loop() {
   if (ts1.totalseconds() >= GPS_Read_Period) {
     if(gps.speed.isValid()) {
       f32_GPS_speed = gps.speed.kmph();
-      Serial.print("GPS speed: ");
-      Serial.println(f32_GPS_speed);
     }
     if(gps.altitude.isValid()){
       f32_GPS_Alt = gps.altitude.meters();
-      Serial.print("GPS alt: ");
-      Serial.println(f32_GPS_Alt);
     }
     if(gps.course.isValid()){
       f32_GPS_angle = gps.course.deg();
-      Serial.print("GPS heading: ");
-      Serial.println(TinyGPSPlus::cardinal(f32_GPS_angle));
     }
     if(gps.location.isValid()){
       f32_GPS_long = gps.location.lng();
       f32_GPS_lat = gps.location.lat();
-      Serial.print("GPS location: ");
-      Serial.print(f32_GPS_lat);
-      Serial.print(", ");
-      Serial.println(f32_GPS_long);
     }
     nlastGPSUpdate = nCurrentTime;
   }
@@ -557,6 +551,10 @@ void loop() {
       f32_speedSum += f32_kph;
       f32_cadSum += f32_cadence;
       f32_bpmSum += f32_bpm;
+
+      tcxLog.addTrackpoint({nCurrentTime,gps.location.lat(),gps.location.lng(),gps.altitude.meters(),f32_bpm,0,f32_cadence,f32_kph,f32_speedSum});
+
+
       nLastSecond = nCurrentTime.secondstime();
     }
   } else {
@@ -573,6 +571,11 @@ void loop() {
     f32_avgSpeed = 0;
     f32_avgCad = 0;
     f32_avg_bpm = 0;
+  }
+
+  if(bWriteTCX){
+    if(tcxLog.finaliseLogging())
+      bWriteTCX = false;
   }
 
   //get the current max
@@ -780,11 +783,14 @@ void GUI() {
         Serial.println("start logger");
         log_data.start_logging(nCurrentTime);
         log_data.play_logging();
+        tcxLog.startLogging(nCurrentTime);
       } else if (!b_Running && b_Running_Prev) {
         log_data.pause_logging();
         log_data.write_tail(f32_avgSpeed, f32_max_speed, f32_avgCad, f32_max_cad);
+        bWriteTCX = true;
       }
       b_Running_Prev = b_Running;
+
       break;
 
     case 1:  //settings menu
