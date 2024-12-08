@@ -1,6 +1,5 @@
 #include <LSM6DS3.h>
 #include <Wire.h>
-//#include <Adafruit_SH110X.h>
 //#include <Adafruit_ST7789.h> // Hardware-specific library for ST7789
 #include <Adafruit_SH110X.h>
 #include <SPI.h>
@@ -46,7 +45,7 @@ Adafruit_SH1107 display = Adafruit_SH1107(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OL
 #define GPIOB4 12
 
 #define Battery_Read_Period 60
-#define GPS_Read_Period 2
+#define GPS_Read_Period 1
 #define Timeout_Period 60
 #define nIMUReadPeriod 500
 #define nDSPReadPeriod 10000
@@ -79,7 +78,7 @@ uint8_t toConnectMAC[6];
 int16_t s16DeviceSel, s16DeviceWindowStart;
 bool bBackFocDev, bBackSelDev;
 
-float f32_RTC_Temp, f32_DSP_Temp, f32_DSP_Pa, f32_Alt, f32_acc_x, f32_acc_y, f32_acc_z, f32_gyro_x, f32_gyro_y, f32_gyro_z, f32_kph, f32_cadence, f32_bpm;
+float f32_RTC_Temp, f32_DSP_Temp, f32_DSP_Pa, f32_Alt, f32_acc_x, f32_acc_y, f32_acc_z, f32_gyro_x, f32_gyro_y, f32_gyro_z, f32_kph, f32_cadence, f32_bpm, f32_kph_last, f32_distance;
 float f32_speedSum, f32_max_speed, f32_avgSpeed, f32_cadSum, f32_max_cad, f32_avgCad, f32_bpmSum, f32_max_bpm, f32_avg_bpm;
 float f32_GPS_speed, f32_GPS_angle, f32_GPS_Alt, f32_GPS_long, f32_GPS_lat;
 
@@ -336,6 +335,10 @@ void loadDevices() {
 }
 
 int count = 0;
+uint8_t char_buffer[2048];
+uint16_t u16_buffIndex = 0;
+uint32_t nCurrentMillis, nLastMillis;
+
 void loop() {
   uint8_t currentB;
   uint8_t pressureCount = 20;
@@ -343,10 +346,6 @@ void loop() {
   uint8_t temperatureCount = 20;
   float temperature[temperatureCount];
   int16_t ret;
-
-  //read any serial info into the gps class
-  while (GPSSerial.available())
-    gps.encode(GPSSerial.read());
 
   //read the current time
   nCurrentTime = rtc.now();
@@ -488,23 +487,18 @@ void loop() {
   //   nLastDSPRead = nCurrentTimeMillis;
   // }
 
-  //gps update
-  ts1 = nCurrentTime - nlastGPSUpdate;
-  if (ts1.totalseconds() >= GPS_Read_Period) {
-    if(gps.speed.isValid()) {
-      f32_GPS_speed = gps.speed.kmph();
-    }
-    if(gps.altitude.isValid()){
-      f32_GPS_Alt = gps.altitude.meters();
-    }
-    if(gps.course.isValid()){
-      f32_GPS_angle = gps.course.deg();
-    }
-    if(gps.location.isValid()){
-      f32_GPS_long = gps.location.lng();
-      f32_GPS_lat = gps.location.lat();
-    }
-    nlastGPSUpdate = nCurrentTime;
+  if(gps.speed.isValid()) {
+    f32_GPS_speed = gps.speed.kmph();
+  }
+  if(gps.altitude.isValid()){
+    f32_GPS_Alt = gps.altitude.meters();
+  }
+  if(gps.course.isValid()){
+    f32_GPS_angle = gps.course.deg();
+  }
+  if(gps.location.isValid()){
+    f32_GPS_long = gps.location.lng();
+    f32_GPS_lat = gps.location.lat();
   }
 
 
@@ -549,11 +543,12 @@ void loop() {
   if (log_data.logging()) {
     if (nCurrentTime.secondstime() > nLastSecond) {
       f32_speedSum += f32_kph;
+      f32_distance += (f32_kph + f32_kph_last)*(0.5/3.6);
       f32_cadSum += f32_cadence;
       f32_bpmSum += f32_bpm;
+      f32_kph_last = f32_kph;
 
-      tcxLog.addTrackpoint({nCurrentTime,gps.location.lat(),gps.location.lng(),gps.altitude.meters(),f32_bpm,0,f32_cadence,f32_kph,f32_speedSum});
-
+      tcxLog.addTrackpoint({nCurrentTime,f32_GPS_lat,f32_GPS_long,f32_GPS_Alt,f32_bpm,0,f32_cadence,30,f32_distance});
 
       nLastSecond = nCurrentTime.secondstime();
     }
@@ -561,6 +556,7 @@ void loop() {
     f32_speedSum = 0;
     f32_cadSum = 0;
     f32_bpmSum = 0;
+    f32_kph_last = 0;
   }
   int32_t elapsedSeconds = log_data.elapsed().totalseconds();
   if(elapsedSeconds>0){
@@ -571,6 +567,7 @@ void loop() {
     f32_avgSpeed = 0;
     f32_avgCad = 0;
     f32_avg_bpm = 0;
+    f32_distance = 0;
   }
 
   if(bWriteTCX){
@@ -598,6 +595,11 @@ void loop() {
 
 
   display.display();
+
+  while (GPSSerial.available()){
+    gps.encode(GPSSerial.read());
+    //Serial.print(GPSSerial.read());
+  }
 }
 
 void drawSelectable(int16_t x, int16_t y, const uint8_t* bitmap, const char* text, bool focus, bool selected) {
