@@ -338,6 +338,7 @@ int count = 0;
 uint8_t char_buffer[2048];
 uint16_t u16_buffIndex = 0;
 uint32_t nCurrentMillis, nLastMillis;
+uint8_t nDetThresh;
 
 void loop() {
   uint8_t currentB;
@@ -419,7 +420,13 @@ void loop() {
     NRF_POWER->SYSTEMOFF = 1;
   }
 
-  if (bSD_Det_FE || !started) {
+  if (!bSD_Det && nDetThresh<20){
+    nDetThresh ++;
+  }else{
+    nDetThresh =0;
+  }
+
+  if ((nDetThresh==20) || !started) {
     // initialise SD card
     if (!SD.begin(SD_CS)) {
       Serial.println("initialisation failed.");
