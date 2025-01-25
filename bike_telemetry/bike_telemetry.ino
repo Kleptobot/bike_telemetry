@@ -45,7 +45,7 @@ Adafruit_SH1107 display = Adafruit_SH1107(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OL
 #define GPIOB4 12
 
 #define Battery_Read_Period 60
-#define GPS_Read_Period 1
+#define GPS_Read_Period 1000
 #define Timeout_Period 60
 #define nIMUReadPeriod 500
 #define nDSPReadPeriod 10000
@@ -81,6 +81,7 @@ bool bBackFocDev, bBackSelDev;
 float f32_RTC_Temp, f32_DSP_Temp, f32_DSP_Pa, f32_Alt, f32_acc_x, f32_acc_y, f32_acc_z, f32_gyro_x, f32_gyro_y, f32_gyro_z, f32_kph, f32_cadence, f32_bpm, f32_kph_last, f32_distance;
 float f32_speedSum, f32_max_speed, f32_avgSpeed, f32_cadSum, f32_max_cad, f32_avgCad, f32_bpmSum, f32_max_bpm, f32_avg_bpm;
 float f32_GPS_speed, f32_GPS_angle, f32_GPS_Alt, f32_GPS_long, f32_GPS_lat;
+uint32_t nGPS_Hrs, nGPS_Min, nGPS_Sec;
 
 bool b_Running, b_Running_Prev;
 
@@ -119,11 +120,11 @@ bool bWriteTCX= false;
 //RTC
 RTC_DS3231 rtc;
 
-DateTime nCurrentTime, nCurrentTime_Prev, nLastAction, nLastBatteryRead, nlastGPSUpdate;
+DateTime nCurrentTime, nCurrentTime_Prev, nLastAction, nLastBatteryRead;
 bool bSwitchOnDelay;
 bool started, bDevicesLoaded;
 
-uint32_t nMillisAtTick, nMillisAtTick_Prev, millisNow, nLastSecond;
+uint32_t nMillisAtTick, nMillisAtTick_Prev, millisNow, nLastSecond, lastMillis, nStartGPS, nMillisDiff, nlastGPSUpdate;
 uint64_t nCurrentTimeMillis, nStartTimeMillis, nLastIMURead, nLastDSPRead, nLastScan;
 
 // Dps3xx Object
@@ -371,40 +372,6 @@ void loop() {
 
   mcp.clearInterrupts();
 
-  bRight_RE = bRight && !bRight_Prev && !bSwitchOnDelay;
-  bRight_FE = !bRight && bRight_Prev && !bSwitchOnDelay;
-  if (bRight_RE)
-    nRightPress = nCurrentTimeMillis;
-  bRight_long = bRight && ((nCurrentTimeMillis - nRightPress) > nHeldPressTime);
-  bRight_Prev = bRight;
-  bUp_RE = bUp && !bUp_Prev && !bSwitchOnDelay;
-  bUp_FE = !bUp && bUp_Prev && !bSwitchOnDelay;
-  if (bUp_RE)
-    nUpPress = nCurrentTimeMillis;
-  bUp_long = bUp && ((nCurrentTimeMillis - nUpPress) > nHeldPressTime);
-  bUp_Prev = bUp;
-  bDown_RE = bDown && !bDown_Prev && !bSwitchOnDelay;
-  bDown_FE = !bDown && bDown_Prev && !bSwitchOnDelay;
-  if (bDown_RE)
-    nDownPress = nCurrentTimeMillis;
-  bDown_long = bDown && ((nCurrentTimeMillis - nDownPress) > nHeldPressTime);
-  bDown_Prev = bDown;
-  bCenter_RE = bCenter && !bCenter_Prev && !bSwitchOnDelay;
-  bCenter_FE = !bCenter && bCenter_Prev && !bSwitchOnDelay;
-  if (bCenter_RE)
-    nCenterPress = nCurrentTimeMillis;
-  bCenter_long = bCenter && ((nCurrentTimeMillis - nCenterPress) > nHeldPressTime);
-  bCenter_Prev = bCenter;
-  bLeft_RE = bLeft && !bLeft_Prev && !bSwitchOnDelay;
-  bLeft_FE = !bLeft && bLeft_Prev && !bSwitchOnDelay;
-  if (bLeft_RE)
-    nLeftPress = nCurrentTimeMillis;
-  bLeft_long = bLeft && ((nCurrentTimeMillis - nLeftPress) > nHeldPressTime);
-  bLeft_Prev = bLeft;
-  bSD_Det_RE = bSD_Det && !bSD_Det_Prev && !bSwitchOnDelay;
-  bSD_Det_FE = !bSD_Det && bSD_Det_Prev && !bSwitchOnDelay;
-  bSD_Det_Prev = bSD_Det;
-
   if (bRight | bUp | bDown | bCenter | bLeft) {
     nLastAction = nCurrentTime;
   }
@@ -420,8 +387,10 @@ void loop() {
     NRF_POWER->SYSTEMOFF = 1;
   }
 
-  if (!bSD_Det && nDetThresh<20){
-    nDetThresh ++;
+  if (!bSD_Det){
+    if(nDetThresh<20){
+      nDetThresh ++;
+    }
   }else{
     nDetThresh =0;
   }
@@ -435,18 +404,23 @@ void loop() {
       debugLog.open("/log.txt", FILE_WRITE);
       Serial.println("SD card initialised");
     }
+    nDetThresh ++;
   }
   if (bSD_Det_RE) {
     debugLog.close();
   }
 
   //run the rest of the init if it has not already been run
-  if (!started)
+  if (!started){
     init_devices();
+    Serial.println("starting");
+  }
 
   if (!bDevicesLoaded && !bSD_Det) {
-    if (nLoadDevicesDelay < (nCurrentTimeMillis - nStartTimeMillis))
+    if (nLoadDevicesDelay < (nCurrentTimeMillis - nStartTimeMillis)){
       loadDevices();
+      Serial.println("loading devices");
+    }
   }
 
   //imu read period check
@@ -494,19 +468,22 @@ void loop() {
   //   nLastDSPRead = nCurrentTimeMillis;
   // }
 
-  if(gps.speed.isValid()) {
-    f32_GPS_speed = gps.speed.kmph();
-  }
-  if(gps.altitude.isValid()){
-    f32_GPS_Alt = gps.altitude.meters();
-  }
-  if(gps.course.isValid()){
-    f32_GPS_angle = gps.course.deg();
-  }
-  if(gps.location.isValid()){
-    f32_GPS_long = gps.location.lng();
-    f32_GPS_lat = gps.location.lat();
-  }
+  
+    if(gps.speed.isValid()) 
+      f32_GPS_speed = gps.speed.kmph();
+    if(gps.altitude.isValid())
+      f32_GPS_Alt = gps.altitude.meters();
+    if(gps.course.isValid())
+      f32_GPS_angle = gps.course.deg();
+    if(gps.location.isValid()){
+        f32_GPS_long = gps.location.lng();
+        f32_GPS_lat = gps.location.lat();
+    }
+    if(gps.time.isValid()){
+      nGPS_Hrs = gps.time.hour();
+      nGPS_Min = gps.time.minute();
+      nGPS_Sec = gps.time.second();
+    }
 
 
   //battery voltage period check
@@ -542,10 +519,71 @@ void loop() {
   if(heartrates.size()>0)
     f32_bpm = f32_bpm/heartrates.size();
 
+  //draw the display
+  millisNow = millis();
+  uint32_t millisDiff = millisNow - lastMillis;
+  if (millisDiff > 100) {
+    
+    display.clearDisplay();
 
-  display.clearDisplay();
+    bRight_RE = bRight && !bRight_Prev && !bSwitchOnDelay;
+    bRight_FE = !bRight && bRight_Prev && !bSwitchOnDelay;
+    if (bRight_RE)
+      nRightPress = nCurrentTimeMillis;
+    bRight_long = bRight && ((nCurrentTimeMillis - nRightPress) > nHeldPressTime);
+    bRight_Prev = bRight;
+    bUp_RE = bUp && !bUp_Prev && !bSwitchOnDelay;
+    bUp_FE = !bUp && bUp_Prev && !bSwitchOnDelay;
+    if (bUp_RE)
+      nUpPress = nCurrentTimeMillis;
+    bUp_long = bUp && ((nCurrentTimeMillis - nUpPress) > nHeldPressTime);
+    bUp_Prev = bUp;
+    bDown_RE = bDown && !bDown_Prev && !bSwitchOnDelay;
+    bDown_FE = !bDown && bDown_Prev && !bSwitchOnDelay;
+    if (bDown_RE)
+      nDownPress = nCurrentTimeMillis;
+    bDown_long = bDown && ((nCurrentTimeMillis - nDownPress) > nHeldPressTime);
+    bDown_Prev = bDown;
+    bCenter_RE = bCenter && !bCenter_Prev && !bSwitchOnDelay;
+    bCenter_FE = !bCenter && bCenter_Prev && !bSwitchOnDelay;
+    if (bCenter_RE)
+      nCenterPress = nCurrentTimeMillis;
+    bCenter_long = bCenter && ((nCurrentTimeMillis - nCenterPress) > nHeldPressTime);
+    bCenter_Prev = bCenter;
+    bLeft_RE = bLeft && !bLeft_Prev && !bSwitchOnDelay;
+    bLeft_FE = !bLeft && bLeft_Prev && !bSwitchOnDelay;
+    if (bLeft_RE)
+      nLeftPress = nCurrentTimeMillis;
+    bLeft_long = bLeft && ((nCurrentTimeMillis - nLeftPress) > nHeldPressTime);
+    bLeft_Prev = bLeft;
+    bSD_Det_RE = bSD_Det && !bSD_Det_Prev && !bSwitchOnDelay;
+    bSD_Det_FE = !bSD_Det && bSD_Det_Prev && !bSwitchOnDelay;
+    bSD_Det_Prev = bSD_Det;
+    GUI();
+    display.display();
 
-  GUI();
+
+    Serial.print("GPS (lat,lng): ");
+    Serial.print(f32_GPS_lat); Serial.print(", "); Serial.println(f32_GPS_long);
+    Serial.print("speed: ");  Serial.print(f32_GPS_speed); Serial.println("km/h");
+    Serial.print("alt: ");  Serial.print(f32_GPS_Alt); Serial.println("m");
+    Serial.print("time: ");  Serial.print((nGPS_Hrs+11)%12); Serial.print(":"); Serial.print(nGPS_Min); Serial.print(":"); Serial.println(nGPS_Sec);
+    Serial.print("\n");
+
+    lastMillis = millisNow;
+  }
+
+  nStartGPS = millis();
+  nMillisDiff = 0;
+  // if(GPS_Read_Period < (nStartGPS - nlastGPSUpdate)){
+    while (GPSSerial.available() && (nMillisDiff<500)){
+      gps.encode(GPSSerial.read());
+      nMillisDiff = millis()-nStartGPS;
+    }
+  //   nlastGPSUpdate = millis();
+  // }
+
+  //data logging
   log_data.log(nCurrentTime, millisNow - nMillisAtTick);
   if (log_data.logging()) {
     if (nCurrentTime.secondstime() > nLastSecond) {
@@ -601,12 +639,7 @@ void loop() {
   }
 
 
-  display.display();
 
-  while (GPSSerial.available()){
-    gps.encode(GPSSerial.read());
-    //Serial.print(GPSSerial.read());
-  }
 }
 
 void drawSelectable(int16_t x, int16_t y, const uint8_t* bitmap, const char* text, bool focus, bool selected) {
