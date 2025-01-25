@@ -83,10 +83,10 @@ void TCXLogger::addTrackpoint(const Trackpoint& tp){
   file.println("</Time>");
   file.println("            <Position>");
   file.print("              <LatitudeDegrees>");
-  file.print(tp.latitude);
+  file.print(tp.latitude,6);
   file.println("</LatitudeDegrees>");
   file.print("              <LongitudeDegrees>");
-  file.print(tp.longitude);
+  file.print(tp.longitude,6);
   file.println("</LongitudeDegrees>");
   file.println("            </Position>");
   file.print("            <AltitudeMeters>");
@@ -190,7 +190,8 @@ bool TCXLogger::finaliseLogging() {
 
 
   if (bReading) {
-    bytesRead = data_tmp.read(buffer, sizeof(buffer));
+    memset(buffer, 0, sizeof(buffer)); // Clear buffer
+    bytesRead = data_tmp.read(buffer, sizeof(buffer)-1); // Leave space for null-terminator
     if (bytesRead > 0) {
       bWriting = true; // Data is available to write
     } else {

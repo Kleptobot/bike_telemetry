@@ -56,6 +56,7 @@ Adafruit_SH1107 display = Adafruit_SH1107(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OL
 
 #define nDeviceWindowLen 2
 
+#define bGPS_debug false
 #define GPSSerial Serial1
 static const uint32_t GPSBaud = 9600;
 TinyGPSPlus gps;
@@ -80,7 +81,8 @@ bool bBackFocDev, bBackSelDev;
 
 float f32_RTC_Temp, f32_DSP_Temp, f32_DSP_Pa, f32_Alt, f32_acc_x, f32_acc_y, f32_acc_z, f32_gyro_x, f32_gyro_y, f32_gyro_z, f32_kph, f32_cadence, f32_bpm, f32_kph_last, f32_distance;
 float f32_speedSum, f32_max_speed, f32_avgSpeed, f32_cadSum, f32_max_cad, f32_avgCad, f32_bpmSum, f32_max_bpm, f32_avg_bpm;
-float f32_GPS_speed, f32_GPS_angle, f32_GPS_Alt, f32_GPS_long, f32_GPS_lat;
+float f32_GPS_speed, f32_GPS_angle, f32_GPS_Alt;
+double f32_GPS_long, f32_GPS_lat;
 uint32_t nGPS_Hrs, nGPS_Min, nGPS_Sec;
 
 bool b_Running, b_Running_Prev;
@@ -562,13 +564,17 @@ void loop() {
     GUI();
     display.display();
 
+    //GPS debugging
+    if (bGPS_debug) {
+      display.setCursor(0, 32);
+      display.setTextSize(1);
+      display.println(f32_GPS_long,6);
+      display.println(f32_GPS_lat,6);
+      display.println(f32_GPS_Alt);
+      display.println(f32_GPS_speed);
+    }
 
-    Serial.print("GPS (lat,lng): ");
-    Serial.print(f32_GPS_lat); Serial.print(", "); Serial.println(f32_GPS_long);
-    Serial.print("speed: ");  Serial.print(f32_GPS_speed); Serial.println("km/h");
-    Serial.print("alt: ");  Serial.print(f32_GPS_Alt); Serial.println("m");
-    Serial.print("time: ");  Serial.print((nGPS_Hrs+11)%12); Serial.print(":"); Serial.print(nGPS_Min); Serial.print(":"); Serial.println(nGPS_Sec);
-    Serial.print("\n");
+    display.display();
 
     lastMillis = millisNow;
   }
