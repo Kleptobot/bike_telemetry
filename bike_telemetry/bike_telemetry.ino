@@ -581,13 +581,10 @@ void loop() {
 
   nStartGPS = millis();
   nMillisDiff = 0;
-  // if(GPS_Read_Period < (nStartGPS - nlastGPSUpdate)){
-    while (GPSSerial.available() && (nMillisDiff<500)){
-      gps.encode(GPSSerial.read());
-      nMillisDiff = millis()-nStartGPS;
-    }
-  //   nlastGPSUpdate = millis();
-  // }
+  while (GPSSerial.available() && (nMillisDiff<500)){
+    gps.encode(GPSSerial.read());
+    nMillisDiff = millis()-nStartGPS;
+  }
 
   //data logging
   log_data.log(nCurrentTime, millisNow - nMillisAtTick);
