@@ -155,10 +155,7 @@ void TCXLogger::updateTotals(const Trackpoint& tp) {
   
   TimeSpan totalTime = (tp.currentTime - _startTime);
 
-  float mass = 75;
-  float age = 34;
-
-  Calories = ((age * 0.2017) - (mass * 0.09036) + (avgHRM * 0.6309) - 55.0969) * totalTime.totalseconds() / 4.184;
+  Calories = ((_age * 0.2017) - (_mass * 0.09036) + (avgHRM * 0.6309) - 55.0969) * totalTime.totalseconds() / 4.184;
   if(Calories<0)
     Calories=0;
 }

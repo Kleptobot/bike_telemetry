@@ -34,6 +34,7 @@ class BT_Device {
     E_Type_BT_Device bt_type;
     static std::vector<std::unique_ptr<BT_Device>> btDevices;
     BT_Device(){};
+    bool _disconnected;
 
   public:
     virtual ~BT_Device(){Serial.println("deleteing BT_Device");};

@@ -27,6 +27,8 @@ class TCXLogger {
     bool bReading, bWriting;
     uint8_t buffer[512];  // Buffer for reading data
     size_t bytesRead = 0;
+    int _age = 34;
+    int _mass = 75;
 
     char _filename[32];
     DateTime _startTime;
@@ -50,6 +52,10 @@ class TCXLogger {
     void startLogging(DateTime currentTime);
     void addTrackpoint(const Trackpoint& tp);
     bool finaliseLogging();
+    void setMass(int mass) {_mass = mass;};
+    int getMass(){return _mass;};
+    void setAge(int age) {_age = age;};
+    int getAge(){return _age;};
 
 };
 

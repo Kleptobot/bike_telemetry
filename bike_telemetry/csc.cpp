@@ -136,6 +136,16 @@ void csc::csc_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len)
     offset += 4;
     memcpy(&u16_SpeedEvt, data+offset, 2);
     offset += 2;
+
+    //check for disconnect
+    if(_disconnected)
+    {
+      u16_SpeedEvt_Prev=u16_SpeedEvt;
+      u32_WheelCount_Prev=u32_WheelCount;
+      u16_CrankEvt_Prev = u16_CrankEvt;
+      u16_CrankCount_Prev = u16_CrankCount;
+      _disconnected=false;
+    }
   
     //check for overflow of speed evt
     if (u16_SpeedEvt>u16_SpeedEvt_Prev)

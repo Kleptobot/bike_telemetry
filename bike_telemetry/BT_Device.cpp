@@ -52,6 +52,7 @@ void BT_Device::disconnect(uint16_t conn_handle, uint8_t reason)
 {
   (void) conn_handle;
   (void) reason;
+  _disconnected = true;
   
   Serial.print("Disconnected, reason = 0x"); 
   Serial.println(String(reason, HEX));

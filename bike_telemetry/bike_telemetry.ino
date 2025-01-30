@@ -53,8 +53,11 @@ Adafruit_SH1107 display = Adafruit_SH1107(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OL
 #define nLoadDevicesDelay 3000
 #define nDeviceScanDelay 1000
 #define nHeldPressTime 2000
+#define nShortPressTime 500
 
 #define nDeviceWindowLen 2
+
+#define s16NumSettings 4
 
 #define bGPS_debug false
 #define GPSSerial Serial1
@@ -78,6 +81,8 @@ uint8_t toConnectMAC[6];
 
 int16_t s16DeviceSel, s16DeviceWindowStart;
 bool bBackFocDev, bBackSelDev;
+
+int16_t s16SettingsSel;
 
 float f32_RTC_Temp, f32_DSP_Temp, f32_DSP_Pa, f32_Alt, f32_acc_x, f32_acc_y, f32_acc_z, f32_gyro_x, f32_gyro_y, f32_gyro_z, f32_kph, f32_cadence, f32_bpm, f32_kph_last, f32_distance;
 float f32_speedSum, f32_max_speed, f32_avgSpeed, f32_cadSum, f32_max_cad, f32_avgCad, f32_bpmSum, f32_max_bpm, f32_avg_bpm;
@@ -107,6 +112,8 @@ bool bUp_Prev, bDown_Prev, bLeft_Prev, bRight_Prev, bCenter_Prev, bSD_Det_Prev;
 bool bUp_RE, bDown_RE, bLeft_RE, bRight_RE, bCenter_RE, bSD_Det_RE;
 bool bUp_FE, bDown_FE, bLeft_FE, bRight_FE, bCenter_FE, bSD_Det_FE;
 bool bUp_long, bDown_long, bLeft_long, bRight_long, bCenter_long;
+bool bUp_short, bDown_short, bLeft_short, bRight_short, bCenter_short;
+bool bUp_Seen, bDown_Seen, bLeft_Seen, bRight_Seen, bCenter_Seen;
 uint64_t nUpPress, nDownPress, nLeftPress, nRightPress, nCenterPress;
 bool bSysOff;
 
@@ -128,6 +135,9 @@ bool started, bDevicesLoaded;
 
 uint32_t nMillisAtTick, nMillisAtTick_Prev, millisNow, nLastSecond, lastMillis, nStartGPS, nMillisDiff, nlastGPSUpdate;
 uint64_t nCurrentTimeMillis, nStartTimeMillis, nLastIMURead, nLastDSPRead, nLastScan;
+
+int nAgeDisplay, nMassDisplay;
+bool bMassSel, bMassFoc, bAgeFoc, bAgeSel;
 
 // Dps3xx Object
 Dps3xx Dps3xxPressureSensor = Dps3xx();
@@ -197,6 +207,10 @@ void setup() {
   nLastIMURead = nStartTimeMillis;
   nLastDSPRead = nStartTimeMillis;
   nLastScan = nStartTimeMillis;
+
+  nMillisAtTick = 0;
+  nCurrentTimeMillis = nStartTimeMillis;
+  bSysOff = false;
 }
 
 void init_devices() {
@@ -331,6 +345,8 @@ void loadDevices() {
           break;
       }
     }
+    tcxLog.setAge(jsonBuffer["age"]);
+    tcxLog.setMass(jsonBuffer["mass"]);
     dataFile.close();
   }
   nLastScan = nCurrentTimeMillis;
@@ -381,6 +397,8 @@ void loop() {
   //check if the device has timed out
   TimeSpan ts1 = nCurrentTime - nLastAction;
   if (((ts1.totalseconds() > Timeout_Period && !b_Running) || bSysOff) && !bWriteTCX){
+  //if (bSysOff){
+  //if (ts1.totalseconds() > Timeout_Period){
     if (started) {
       display.clearDisplay();
       display.display();
@@ -433,42 +451,39 @@ void loop() {
     nLastIMURead = nCurrentTimeMillis;
   }
 
-  // if (nDSPReadPeriod < (nCurrentTimeMillis - nLastDSPRead)){
+  if (nDSPReadPeriod < (nCurrentTimeMillis - nLastDSPRead)){
 
-  //   ret = Dps3xxPressureSensor.getContResults(temperature, temperatureCount, pressure, pressureCount);
-  //   //Dps3xxPressureSensor.measureTempOnce(f32_DSP_Temp, 7);
-  //   //Dps3xxPressureSensor.measurePressureOnce(f32_DSP_Pa, 7);
-  //   if (ret != 0)
-  //   {
-  //     logInfo();
-  //     logInfo();
-  //     Serial.print("FAIL! ret = ");
-  //     logInfo(ret);
-  //   }
-  //   else
-  //   {
-  //     f32_DSP_Temp=0;
-  //     for (int16_t i = 0; i < temperatureCount; i++)
-  //     {
-  //       f32_DSP_Temp+=temperature[i];
-  //     }
-  //     f32_DSP_Temp = f32_DSP_Temp/(float)temperatureCount;
+    ret = Dps3xxPressureSensor.getContResults(temperature, temperatureCount, pressure, pressureCount);
+    //Dps3xxPressureSensor.measureTempOnce(f32_DSP_Temp, 7);
+    //Dps3xxPressureSensor.measurePressureOnce(f32_DSP_Pa, 7);
+    if (ret != 0)
+    {
+      Serial.print("FAIL! ret = ");
+    }
+    else
+    {
+      f32_DSP_Temp=0;
+      for (int16_t i = 0; i < temperatureCount; i++)
+      {
+        f32_DSP_Temp+=temperature[i];
+      }
+      f32_DSP_Temp = f32_DSP_Temp/(float)temperatureCount;
 
-  //     f32_DSP_Pa=0;
-  //     for (int16_t i = 0; i < pressureCount; i++)
-  //     {
-  //       f32_DSP_Pa+=pressure[i];
-  //     }
-  //     f32_DSP_Pa = f32_DSP_Pa/(float)pressureCount;
+      f32_DSP_Pa=0;
+      for (int16_t i = 0; i < pressureCount; i++)
+      {
+        f32_DSP_Pa+=pressure[i];
+      }
+      f32_DSP_Pa = f32_DSP_Pa/(float)pressureCount;
 
-  //     //estimate altitude from pressure and temperature
-  //     float Tb = 273.15+f32_DSP_Temp;
-  //     float P_Pb = pow(f32_DSP_Pa/101325,-0.1902663539);
-  //     float Lb = 0.0065;
-  //     f32_Alt = (Tb*P_Pb-Tb)/(Lb*P_Pb);
-  //   }
-  //   nLastDSPRead = nCurrentTimeMillis;
-  // }
+      //estimate altitude from pressure and temperature
+      float Tb = 273.15+f32_DSP_Temp;
+      float P_Pb = pow(f32_DSP_Pa/101325,-0.1902663539);
+      float Lb = 0.0065;
+      f32_Alt = (Tb*P_Pb-Tb)/(Lb*P_Pb);
+    }
+    nLastDSPRead = nCurrentTimeMillis;
+  }
 
   
     if(gps.speed.isValid()) 
@@ -498,6 +513,9 @@ void loop() {
   }
 
   std::vector<float> speed = csc::getSpeed();
+  if(gps.speed.isValid()){
+    speed.push_back(f32_GPS_speed);
+  }
   f32_kph = 0;
   for (auto it = speed.begin(); it != speed.end(); it++){
     f32_kph += (*it);
@@ -534,34 +552,49 @@ void loop() {
       nRightPress = nCurrentTimeMillis;
     bRight_long = bRight && ((nCurrentTimeMillis - nRightPress) > nHeldPressTime);
     bRight_Prev = bRight;
+
     bUp_RE = bUp && !bUp_Prev && !bSwitchOnDelay;
     bUp_FE = !bUp && bUp_Prev && !bSwitchOnDelay;
     if (bUp_RE)
       nUpPress = nCurrentTimeMillis;
     bUp_long = bUp && ((nCurrentTimeMillis - nUpPress) > nHeldPressTime);
     bUp_Prev = bUp;
+
     bDown_RE = bDown && !bDown_Prev && !bSwitchOnDelay;
     bDown_FE = !bDown && bDown_Prev && !bSwitchOnDelay;
     if (bDown_RE)
       nDownPress = nCurrentTimeMillis;
     bDown_long = bDown && ((nCurrentTimeMillis - nDownPress) > nHeldPressTime);
     bDown_Prev = bDown;
+
     bCenter_RE = bCenter && !bCenter_Prev && !bSwitchOnDelay;
     bCenter_FE = !bCenter && bCenter_Prev && !bSwitchOnDelay;
-    if (bCenter_RE)
+    if (bCenter_RE){
       nCenterPress = nCurrentTimeMillis;
+      bCenter_Seen = true;
+    }
     bCenter_long = bCenter && ((nCurrentTimeMillis - nCenterPress) > nHeldPressTime);
+    if(bCenter_short)
+      bCenter_short=false;
+    bCenter_short = bCenter_FE && ((nCurrentTimeMillis - nCenterPress) < 400) && bCenter_Seen;
+    if(!bCenter)
+      bCenter_Seen = false;
     bCenter_Prev = bCenter;
+
     bLeft_RE = bLeft && !bLeft_Prev && !bSwitchOnDelay;
     bLeft_FE = !bLeft && bLeft_Prev && !bSwitchOnDelay;
     if (bLeft_RE)
       nLeftPress = nCurrentTimeMillis;
     bLeft_long = bLeft && ((nCurrentTimeMillis - nLeftPress) > nHeldPressTime);
     bLeft_Prev = bLeft;
+
     bSD_Det_RE = bSD_Det && !bSD_Det_Prev && !bSwitchOnDelay;
     bSD_Det_FE = !bSD_Det && bSD_Det_Prev && !bSwitchOnDelay;
     bSD_Det_Prev = bSD_Det;
     GUI();
+
+    //gps connection
+
     display.display();
 
     //GPS debugging
@@ -596,7 +629,7 @@ void loop() {
       f32_bpmSum += f32_bpm;
       f32_kph_last = f32_kph;
 
-      tcxLog.addTrackpoint({nCurrentTime,f32_GPS_lat,f32_GPS_long,f32_GPS_Alt,f32_bpm,0,f32_cadence,30,f32_distance});
+      tcxLog.addTrackpoint({nCurrentTime,f32_GPS_lat,f32_GPS_long,f32_GPS_Alt,f32_bpm,0,f32_cadence,f32_kph,f32_distance});
 
       nLastSecond = nCurrentTime.secondstime();
     }
@@ -716,6 +749,63 @@ void drawSelectable(int16_t x, int16_t y, int num, bool focus, bool selected) {
   }
 }
 
+void drawStats(int x, int y){
+  display.setTextColor(SH110X_WHITE);
+  display.setTextSize(2);
+  display.setCursor(x, y);
+
+  display.print("Age: ");
+  drawSelectable(64, display.getCursorY(), nAgeDisplay, bAgeFoc, bAgeSel);
+  display.setTextSize(2);
+  display.setCursor(x, y+16);
+  display.print("Mass: ");
+  drawSelectable(64, display.getCursorY(), nMassDisplay, bMassFoc, bMassSel);
+  drawSelectable(x, display.getCursorY(), epd_bitmap_left, "Back", bBackFoc, bBackSel);
+}
+
+void ExitStats(){
+
+}
+
+void statSelection(){
+  if(bDown_FE){
+    if(!bAgeSel && !bMassSel){
+      bAgeFoc = !bAgeFoc;
+      bMassFoc = !bMassFoc;
+    }
+  }else{
+    if(bAgeSel)
+      nAgeDisplay ++;
+    else if(bMassSel)
+      nMassDisplay ++;
+  }
+  if(bUp_FE){
+    if(!bAgeSel && !bMassSel){
+      bAgeFoc = !bAgeFoc;
+      bMassFoc = !bMassFoc;
+    }
+  }else{
+    if(bAgeSel)
+      nAgeDisplay --;
+    else if(bMassSel)
+      nMassDisplay --;
+  }
+  if(bLeft_FE && !bMassSel && !bAgeSel){
+    tcxLog.setAge(nAgeDisplay);
+    tcxLog.setMass(nMassDisplay);
+    u16_state = 1;
+  }
+  if(bCenter_RE && bAgeSel)
+    bAgeSel = false;
+  else if(bCenter_RE && bMassSel)
+    bMassSel=false;
+  else if(bCenter_RE && bAgeFoc)
+    bAgeSel = true;
+  else if(bCenter_RE && bMassFoc)
+    bMassSel = true;
+}
+
+
 /**
  * Draws the date time 
  * @param someTime the date time to display
@@ -728,7 +818,7 @@ void drawDateTime(DateTime someTime, int x, int y) {
   display.setCursor(x, y);
 
   //print hours
-  drawSelectable(x, y, someTime.hour(), bHourFoc, bHourSel);
+  drawSelectable(x+2, y+2, someTime.hour(), bHourFoc, bHourSel);
   display.print(":");
   //print minutes
   drawSelectable(display.getCursorX(), display.getCursorY(), someTime.minute(), bMinuteFoc, bMinuteSel);
@@ -737,7 +827,7 @@ void drawDateTime(DateTime someTime, int x, int y) {
   drawSelectable(display.getCursorX(), display.getCursorY(), someTime.second(), bSecondFoc, bSecondSel);
 
   ///add some padding
-  display.setCursor(x, display.getCursorY() + 24);
+  display.setCursor(x+2, display.getCursorY() + 24);
 
   //print days
   drawSelectable(display.getCursorX(), display.getCursorY(), someTime.day(), bDayFoc, bDaySel);
@@ -763,10 +853,10 @@ void drawDateTime(DateTime someTime, int x, int y) {
  * @param y y coordinate of the center of the cluster
  */
 void drawMenuStopped(int x, int y) {
-  display.drawBitmap(x - 32, y - 8, epd_bitmap_Bluetooth, 16, 16, 1);
+  display.drawBitmap(x - 32, y - 8, epd_bitmap_gear , 16, 16, 1);
   display.drawBitmap(x - 8, y - 8, epd_bitmap_play, 16, 16, 1);
-  display.drawBitmap(x + 16, y - 8, epd_bitmap_clock, 16, 16, 1);
-  display.drawBitmap(x - 8, y + 16, epd_bitmap_power, 16, 16, 1);
+  display.drawBitmap(x + 16, y -8, epd_bitmap_power, 16, 16, 1);
+
 }
 
 /**
@@ -783,7 +873,6 @@ void drawMenuRunning(int x, int y) {
     display.drawBitmap(x - 8, y - 8, epd_bitmap_play, 16, 16, 1);
   }
   display.drawBitmap(x + 16, y - 8, epd_bitmap_stop, 16, 16, 1);
-  //display.drawBitmap( x-8, y+10, epd_bitmap_Down,16, 16, 1);
 }
 
 //screens
@@ -801,26 +890,21 @@ void GUI() {
         nLastScan = nCurrentTimeMillis;
       }
 
-      bSysOff = bDown_long && !b_Running;
+      bSysOff = bRight_long && !b_Running && !bSwitchOnDelay;
 
       drawMain();
+
       if (b_Running) {
         if (bRight_RE && b_Running) {
           b_Running = false;
-        } else if (bCenter_RE) {
+        } else if (bCenter_short) {
           log_data.playPause_logging();
         }
       } else if (!b_Running) {
-        if (bCenter_RE) {
+        if (bCenter_short) {
           b_Running = true;
-        } else if (bRight_RE) {
-          dtTimeDisplay = nCurrentTime;
-          u16_state = 2;
-          if(Bluefruit.Scanner.isRunning())
-            Bluefruit.Scanner.stop();
-
-        } else if (bLeft_RE) {
-          u16_state = 4;
+        } else if(bLeft_RE){
+          u16_state = 1;
           if(Bluefruit.Scanner.isRunning())
             Bluefruit.Scanner.stop();
         }
@@ -843,6 +927,8 @@ void GUI() {
       break;
 
     case 1:  //settings menu
+      drawSettings();
+      settingsSelect();
       break;
 
     case 2:  //time
@@ -853,8 +939,9 @@ void GUI() {
       ExitTime();
       break;
 
-    case 3:  //paired devices
-      ;
+    case 3:  //human info
+      drawStats(0,0);
+      statSelection();
       break;
 
     case 4:  //nearby devices
@@ -872,6 +959,101 @@ void GUI() {
   stateTransition();
   bStateEntry = u16_state_prev != u16_state;
   u16_state_prev = u16_state;
+}
+
+void settingsSelect(){
+  if (bUp_RE) {
+    if (s16SettingsSel >= 1)
+    {
+      s16SettingsSel --;
+    }else{
+      s16SettingsSel = s16NumSettings - 1;
+    }
+  }
+  if (bDown_RE) {
+    if (s16SettingsSel < (s16NumSettings-1)){
+      s16SettingsSel ++;
+    }else{
+      s16SettingsSel = 0;
+    }
+  }
+  if (bCenter_RE) {
+    switch (s16SettingsSel) {
+      case 0:
+        u16_state = 2;
+        dtTimeDisplay = rtc.now();
+        break;
+      case 1:
+        u16_state = 4;
+        break;
+      case 2:
+        nAgeDisplay = tcxLog.getAge();
+        nMassDisplay = tcxLog.getMass();
+        bCenter_FE=false;
+        bAgeSel=false;
+        bMassSel=false;
+        bAgeFoc=true;
+        bMassFoc=false;
+        u16_state = 3;
+        break;
+      case 3:
+        u16_state = 0;
+        s16SettingsSel = 0;
+        break;
+    }
+    saveJson();
+    bCenter_Seen = false;
+  } 
+}
+
+void drawSettings(){
+
+  display.setTextColor(SH110X_WHITE);
+
+  int16_t aboveIndex = s16SettingsSel-1;
+  if(s16SettingsSel == 0)
+    aboveIndex = s16NumSettings-1;
+
+  int16_t belowIndex = s16SettingsSel+1;
+  if(s16SettingsSel == (s16NumSettings-1))
+    belowIndex = 0;
+
+  drawSettingsmenuItem(0, 13, false, aboveIndex);
+  drawSettingsmenuItem(0, 47, true, s16SettingsSel);
+  drawSettingsmenuItem(0, 81, false, belowIndex);
+
+}
+
+struct SettingsItem {
+    const unsigned char* img;
+    int x;
+    int y;
+    char name[32];
+};
+
+SettingsItem SettingsItems[s16NumSettings] = {
+  {epd_bitmap_clock_large,32,32,"Time"},
+  {epd_bitmap_bluetooth_large,32,32,"BLE"},
+  {epd_bitmap_heart_large,32,32,"Info"},
+  {epd_bitmap_left_arrow_large,32,32,"Back"}
+};
+
+void drawSettingsmenuItem(int x, int y, bool focus, int16_t menuIndex) {
+  display.setTextColor(SH110X_WHITE);
+  display.setTextSize(2);
+  display.setCursor(x, y);
+ 
+
+  int16_t x1, y1;
+  uint16_t w, h;
+
+  display.getTextBounds(SettingsItems[menuIndex].name, x, y, &x1, &y1, &w, &h);
+  
+  display.drawBitmap(x+2, y+1, SettingsItems[menuIndex].img, SettingsItems[menuIndex].x, SettingsItems[menuIndex].y, 1);
+  display.setCursor(x+32+8, y+8);
+  display.print(SettingsItems[menuIndex].name);
+  if (focus)
+    display.drawRect(x, y, 127, 34, 1);
 }
 
 void deviceSelection() {
@@ -1002,40 +1184,47 @@ void ExitDevices() {
   if (bBackSelDev) {
     s16DeviceSel = 0;
     s16DeviceWindowStart = 0;
-    u16_state = 0;
-    int j = 0;
+    u16_state = 1;
     Bluefruit.Scanner.stop();
 
-    if (nearby_devices.Count() > 0) {
-      JsonDocument doc;
-      JsonArray devices = doc["devices"].to<JsonArray>();
+    bBackSelDev = false;
+    bBackFocDev = false;
+  }
+}
 
-      for (int i = 0; i < nearby_devices.Count(); i++) {
-        if (nearby_devices[i].stored) {
-          devices[j]["name"] = nearby_devices[i].name;
-          devices[j]["type"] = nearby_devices[i].type;
-          JsonArray device_MAC = devices[j]["MAC"].to<JsonArray>();
-          ;
-          device_MAC.add(nearby_devices[i].MAC[0]);
-          device_MAC.add(nearby_devices[i].MAC[1]);
-          device_MAC.add(nearby_devices[i].MAC[2]);
-          device_MAC.add(nearby_devices[i].MAC[3]);
-          device_MAC.add(nearby_devices[i].MAC[4]);
-          device_MAC.add(nearby_devices[i].MAC[5]);
-          j++;
-        }
-      }
+void saveJson(){
 
-      if (SD.exists("/devices.txt"))
-        SD.remove("/devices.txt");
+  JsonDocument doc;
+  JsonArray devices = doc["devices"].to<JsonArray>();
+    int j = 0;
 
-      File32 dataFile = SD.open("/devices.txt", FILE_WRITE);
-
-      serializeJson(doc, dataFile);
-      Serial.println("");
-      dataFile.close();
+  for (int i = 0; i < nearby_devices.Count(); i++) {
+    if (nearby_devices[i].stored) {
+      devices[j]["name"] = nearby_devices[i].name;
+      devices[j]["type"] = nearby_devices[i].type;
+      JsonArray device_MAC = devices[j]["MAC"].to<JsonArray>();
+      ;
+      device_MAC.add(nearby_devices[i].MAC[0]);
+      device_MAC.add(nearby_devices[i].MAC[1]);
+      device_MAC.add(nearby_devices[i].MAC[2]);
+      device_MAC.add(nearby_devices[i].MAC[3]);
+      device_MAC.add(nearby_devices[i].MAC[4]);
+      device_MAC.add(nearby_devices[i].MAC[5]);
+      j++;
     }
   }
+
+  doc["age"] = tcxLog.getAge();
+  doc["mass"] = tcxLog.getMass();
+
+  if (SD.exists("/devices.txt"))
+    SD.remove("/devices.txt");
+
+  File32 dataFile = SD.open("/devices.txt", FILE_WRITE);
+
+  serializeJson(doc, dataFile);
+  Serial.println("");
+  dataFile.close();
 }
 
 /**
@@ -1205,23 +1394,36 @@ void ExitTime() {
   }
   if (bBackSel | bSaveSel) {
     s16timeSel = 0;
-    u16_state = 0;
+    u16_state = 1;
+    bBackFoc = false;
+    bBackSel = false;
+    bSaveFoc = false;
+    bSaveSel = false;
   }
 }
 
 //draw the main screen
 void drawMain() {
+  //draw status symbols
+  display.setTextSize(1);
+  display.drawBitmap(95, 0, epd_bitmap_battery, 32, 16, 1);
+  display.setCursor(102, 5);
+  display.print(nBatteryPercentage);
+  if(gps.location.isValid()){
+    display.drawBitmap(0, 0, epd_bitmap_antenna, 16, 16, 1);
+  }
+  
   display.setTextSize(4);
-  display.setCursor(0, 0);
+  display.setCursor(0, 16);
   if (f32_kph < 10)
     display.print(' ');
   display.print(f32_kph, 1);
   display.setTextSize(1);
-  display.setCursor(96, 0);
+  display.setCursor(96, 16);
   display.println("  k/h");
 
-  display.setTextSize(4);
-  display.setCursor(0, 32);
+  display.setTextSize(2);
+  display.setCursor(47, 48);
 
   if (f32_cadence < 10)
     display.print("   ");
@@ -1231,23 +1433,22 @@ void drawMain() {
     display.print(" ");
   display.print(f32_cadence, 0);
   display.setTextSize(1);
-  display.setCursor(96, 32);
+  display.setCursor(96, 48);
   display.print("  rpm");
 
-  display.drawBitmap(60, 62, epd_bitmap_heart, 16, 16, 1);
-  display.setCursor(79, 66);
-  display.setTextSize(1);
+  //display.drawBitmap(60, 62, epd_bitmap_heart, 16, 16, 1);
+  display.setTextSize(2);
+  display.setCursor(47, 64);
   if(f32_bpm<10)
-    display.print("  ");
+    display.print("   ");
   else if (f32_bpm < 100)
+    display.print("  ");
+  else
     display.print(" ");
   display.print(f32_bpm, 0);
-  display.setCursor(96, 66);
+  display.setTextSize(1);
+  display.setCursor(96, 64);
   display.print("  bpm");
-
-  display.drawBitmap(95, 111, epd_bitmap_battery, 32, 16, 1);
-  display.setCursor(102, 116);
-  display.print(nBatteryPercentage);
 
   if (b_Running) {
     drawMenuRunning(64, 88);
