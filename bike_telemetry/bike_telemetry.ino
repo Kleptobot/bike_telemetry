@@ -23,6 +23,7 @@
 #include "GFX.h"
 #include "logger.h"
 #include "TCXLogger.h"
+#include "uBlox.h"
 
 #define MCP23017_ADDR 0x20
 Adafruit_MCP23X17 mcp;
@@ -59,9 +60,6 @@ Adafruit_SH1107 display = Adafruit_SH1107(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OL
 
 #define s16NumSettings 4
 
-#define bGPS_debug false
-#define GPSSerial Serial1
-static const uint32_t GPSBaud = 9600;
 TinyGPSPlus gps;
 
 //Create a instance of class LSM6DS3
@@ -162,6 +160,7 @@ void disconnectPin(uint32_t ulPin) {
     | ((uint32_t)GPIO_PIN_CNF_DRIVE_S0S1 << GPIO_PIN_CNF_DRIVE_Pos)
     | ((uint32_t)GPIO_PIN_CNF_SENSE_Disabled << GPIO_PIN_CNF_SENSE_Pos);
 }
+
 
 void setup() {
   // Initialize Bluefruit with maximum connections as Peripheral = 0, Central = 4
@@ -284,6 +283,16 @@ void init_devices() {
   delay(500);
 
   Serial.println("Booted");
+
+  //gps wakeup
+  delay(100);
+  GPSSerial.write(0xFF);
+  delay(500);
+  uBlox_PowerSaveMode_Config();
+  delay(50);
+  uBlox_PSM();
+  delay(50);
+  uBlox_Save();
 }
 
 void loadDevices() {
@@ -403,6 +412,7 @@ void loop() {
       display.clearDisplay();
       display.display();
     }
+    uBlox_OFF();
     debugLog.close();
     NRF_POWER->SYSTEMOFF = 1;
   }
@@ -592,20 +602,6 @@ void loop() {
     bSD_Det_FE = !bSD_Det && bSD_Det_Prev && !bSwitchOnDelay;
     bSD_Det_Prev = bSD_Det;
     GUI();
-
-    //gps connection
-
-    display.display();
-
-    //GPS debugging
-    if (bGPS_debug) {
-      display.setCursor(0, 32);
-      display.setTextSize(1);
-      display.println(f32_GPS_long,6);
-      display.println(f32_GPS_lat,6);
-      display.println(f32_GPS_Alt);
-      display.println(f32_GPS_speed);
-    }
 
     display.display();
 
@@ -903,6 +899,7 @@ void GUI() {
       } else if (!b_Running) {
         if (bCenter_short) {
           b_Running = true;
+
         } else if(bLeft_RE){
           u16_state = 1;
           if(Bluefruit.Scanner.isRunning())
@@ -917,9 +914,11 @@ void GUI() {
         log_data.start_logging(nCurrentTime);
         log_data.play_logging();
         tcxLog.startLogging(nCurrentTime);
+        uBlox_Cont();
       } else if (!b_Running && b_Running_Prev) {
         log_data.pause_logging();
         log_data.write_tail(f32_avgSpeed, f32_max_speed, f32_avgCad, f32_max_cad);
+        uBlox_PSM();
         bWriteTCX = true;
       }
       b_Running_Prev = b_Running;
