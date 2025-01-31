@@ -59,6 +59,7 @@ Adafruit_SH1107 display = Adafruit_SH1107(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OL
 #define nDeviceWindowLen 2
 
 #define s16NumSettings 4
+#define nNumStats 2
 
 TinyGPSPlus gps;
 
@@ -102,6 +103,10 @@ bool bDaySel, bMonthSel, bYearSel;
 bool bDayFoc, bMonthFoc, bYearFoc;
 bool bBackFoc, bBackSel, bSaveFoc, bSaveSel;
 
+int16_t nStatSel;
+int nAgeDisplay, nMassDisplay;
+bool bMassSel, bMassFoc, bAgeFoc, bAgeSel, bStatBackSel, bStatBackFoc;
+
 DateTime dtTimeDisplay;
 
 //button inputs
@@ -133,9 +138,6 @@ bool started, bDevicesLoaded;
 
 uint32_t nMillisAtTick, nMillisAtTick_Prev, millisNow, nLastSecond, lastMillis, nStartGPS, nMillisDiff, nlastGPSUpdate;
 uint64_t nCurrentTimeMillis, nStartTimeMillis, nLastIMURead, nLastDSPRead, nLastScan;
-
-int nAgeDisplay, nMassDisplay;
-bool bMassSel, bMassFoc, bAgeFoc, bAgeSel;
 
 // Dps3xx Object
 Dps3xx Dps3xxPressureSensor = Dps3xx();
@@ -694,6 +696,7 @@ void drawSelectable(int16_t x, int16_t y, const uint8_t* bitmap, const char* tex
     display.drawBitmap(x, y, bitmap, 16, 16, 1);
     display.print(text);
   }
+  display.setTextColor(SH110X_WHITE);
 }
 
 void drawSelectable(int16_t x, int16_t y, const char* text, bool focus, bool selected) {
@@ -714,6 +717,7 @@ void drawSelectable(int16_t x, int16_t y, const char* text, bool focus, bool sel
     display.setCursor(x, y);
     display.print(text);
   }
+  display.setTextColor(SH110X_WHITE);
 }
 
 void drawSelectable(int16_t x, int16_t y, int num, bool focus, bool selected) {
@@ -743,6 +747,7 @@ void drawSelectable(int16_t x, int16_t y, int num, bool focus, bool selected) {
     display.setCursor(x, y);
     display.print(text);
   }
+  display.setTextColor(SH110X_WHITE);
 }
 
 void drawStats(int x, int y){
@@ -753,10 +758,11 @@ void drawStats(int x, int y){
   display.print("Age: ");
   drawSelectable(64, display.getCursorY(), nAgeDisplay, bAgeFoc, bAgeSel);
   display.setTextSize(2);
-  display.setCursor(x, y+16);
+  display.setCursor(x, display.getCursorY()+16);
   display.print("Mass: ");
   drawSelectable(64, display.getCursorY(), nMassDisplay, bMassFoc, bMassSel);
-  drawSelectable(x, display.getCursorY(), epd_bitmap_left, "Back", bBackFoc, bBackSel);
+  display.setCursor(x, display.getCursorY()+32);
+  drawSelectable(x, display.getCursorY(), epd_bitmap_left, "Back", bStatBackFoc, bStatBackSel);
 }
 
 void ExitStats(){
@@ -764,41 +770,47 @@ void ExitStats(){
 }
 
 void statSelection(){
-  if(bDown_FE){
-    if(!bAgeSel && !bMassSel){
-      bAgeFoc = !bAgeFoc;
-      bMassFoc = !bMassFoc;
+  if(!bAgeSel && !bMassSel && !bStatBackSel){
+    if(bUp_FE){
+      if((nStatSel & 0x30) >= 0x10)
+        nStatSel -= 0x10;
+      else
+        nStatSel += 0x20;
+
+    }else if(bDown_FE){
+      if((nStatSel & 0x20) < 0x20)
+        nStatSel += 0x10;
+      else
+        nStatSel -= 0x20;
     }
-  }else{
-    if(bAgeSel)
+  }else if(bAgeSel){
+    if(bUp_FE)
       nAgeDisplay ++;
-    else if(bMassSel)
-      nMassDisplay ++;
-  }
-  if(bUp_FE){
-    if(!bAgeSel && !bMassSel){
-      bAgeFoc = !bAgeFoc;
-      bMassFoc = !bMassFoc;
-    }
-  }else{
-    if(bAgeSel)
+    else if(bDown_FE)
       nAgeDisplay --;
-    else if(bMassSel)
+  }else if(bMassSel){
+    if(bUp_FE)
+      nMassDisplay ++;
+    else if(bDown_FE)
       nMassDisplay --;
   }
-  if(bLeft_FE && !bMassSel && !bAgeSel){
+  if(bCenter_RE)
+    nStatSel = nStatSel ^ 1;
+
+  bAgeFoc = (nStatSel==0x00);
+  bAgeSel = (nStatSel==0x01);
+  bMassFoc = (nStatSel==0x10);
+  bMassSel = (nStatSel==0x11);
+  bStatBackFoc = (nStatSel==0x20);
+  bStatBackSel = (nStatSel==0x21);
+
+  if(bStatBackSel){
     tcxLog.setAge(nAgeDisplay);
     tcxLog.setMass(nMassDisplay);
+    nStatSel = 0;
     u16_state = 1;
+    bStatBackSel = bStatBackFoc =false;
   }
-  if(bCenter_RE && bAgeSel)
-    bAgeSel = false;
-  else if(bCenter_RE && bMassSel)
-    bMassSel=false;
-  else if(bCenter_RE && bAgeFoc)
-    bAgeSel = true;
-  else if(bCenter_RE && bMassFoc)
-    bMassSel = true;
 }
 
 
