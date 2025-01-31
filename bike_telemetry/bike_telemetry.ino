@@ -11,7 +11,6 @@
 #include <nrf52840.h>
 #include <Adafruit_MCP23X17.h>
 #include <Dps3xx.h>
-#include "ListLib.h"
 #include <ArduinoJson.h>
 #include <TinyGPSPlus.h>
 
@@ -74,7 +73,7 @@ typedef struct
   uint16_t batt;
   E_Type_BT_Device type;
 } prph_info_t;
-List<prph_info_t> nearby_devices;
+std::vector<prph_info_t> nearby_devices;
 
 uint8_t toConnectMAC[6];
 
@@ -287,14 +286,7 @@ void init_devices() {
   Serial.println("Booted");
 
   //gps wakeup
-  delay(100);
-  GPSSerial.write(0xFF);
-  delay(500);
-  uBlox_PowerSaveMode_Config();
-  delay(50);
-  uBlox_PSM();
-  delay(50);
-  uBlox_Save();
+  uBlox_Idle();
 }
 
 void loadDevices() {
@@ -335,7 +327,7 @@ void loadDevices() {
       copyMAC(newDevice.MAC, MAC);
       newDevice.stored = true;
       newDevice.type = device["type"];
-      nearby_devices.Add(newDevice);
+      nearby_devices.push_back(newDevice);
 
       logInfo("Adding device:");
       Serial.print("Name: ");
@@ -408,13 +400,11 @@ void loop() {
   //check if the device has timed out
   TimeSpan ts1 = nCurrentTime - nLastAction;
   if (((ts1.totalseconds() > Timeout_Period && !b_Running) || bSysOff) && !bWriteTCX){
-  //if (bSysOff){
-  //if (ts1.totalseconds() > Timeout_Period){
     if (started) {
       display.clearDisplay();
       display.display();
+      uBlox_OFF();
     }
-    uBlox_OFF();
     debugLog.close();
     NRF_POWER->SYSTEMOFF = 1;
   }
@@ -930,7 +920,7 @@ void GUI() {
       } else if (!b_Running && b_Running_Prev) {
         log_data.pause_logging();
         log_data.write_tail(f32_avgSpeed, f32_max_speed, f32_avgCad, f32_max_cad);
-        uBlox_PSM();
+        uBlox_Idle();
         bWriteTCX = true;
       }
       b_Running_Prev = b_Running;
@@ -1082,9 +1072,9 @@ void deviceSelection() {
   }
 
   if (bDown_RE) {
-    if (s16DeviceSel < nearby_devices.Count())
+    if (s16DeviceSel < nearby_devices.size())
       s16DeviceSel ++;
-      if((s16DeviceSel >= (s16DeviceWindowStart + nDeviceWindowLen)) && (s16DeviceSel < nearby_devices.Count()))
+      if((s16DeviceSel >= (s16DeviceWindowStart + nDeviceWindowLen)) && (s16DeviceSel < nearby_devices.size()))
         s16DeviceWindowStart++;
     Serial.print("s16DeviceSel = ");
     Serial.println(s16DeviceSel);
@@ -1092,7 +1082,7 @@ void deviceSelection() {
     Serial.println(s16DeviceWindowStart);
   }
 
-  if (s16DeviceSel != nearby_devices.Count()) {
+  if (s16DeviceSel != nearby_devices.size()) {
     if (bCenter_RE) {
       nearby_devices[s16DeviceSel].stored = !nearby_devices[s16DeviceSel].stored;
 
@@ -1123,7 +1113,7 @@ void deviceSelection() {
     }
   }
 
-  bBackFocDev = s16DeviceSel == nearby_devices.Count();
+  bBackFocDev = s16DeviceSel == nearby_devices.size();
   bBackSelDev = bCenter_RE && bBackFocDev;
 }
 
@@ -1135,12 +1125,12 @@ void showDevices() {
   display.print("Bluetooth Devices");
 
   int devicesToShow = nDeviceWindowLen;
-  if(nearby_devices.Count() < nDeviceWindowLen)
-    devicesToShow = nearby_devices.Count();
-  else if(s16DeviceSel>(nearby_devices.Count()+nDeviceWindowLen))
+  if(nearby_devices.size() < nDeviceWindowLen)
+    devicesToShow = nearby_devices.size();
+  else if(s16DeviceSel>(nearby_devices.size()+nDeviceWindowLen))
     s16DeviceSel--;
 
-  if (nearby_devices.Count() > 0) {
+  if (nearby_devices.size() > 0) {
     //iterate the list
     for (int i = 0; i < devicesToShow; i++) {
       bool selected, focus, discovered;
@@ -1209,7 +1199,7 @@ void saveJson(){
   JsonArray devices = doc["devices"].to<JsonArray>();
     int j = 0;
 
-  for (int i = 0; i < nearby_devices.Count(); i++) {
+  for (int i = 0; i < nearby_devices.size(); i++) {
     if (nearby_devices[i].stored) {
       devices[j]["name"] = nearby_devices[i].name;
       devices[j]["type"] = nearby_devices[i].type;
@@ -1253,9 +1243,9 @@ void scan_discovery(ble_gap_evt_adv_report_t* report) {
 
   bool bMatch = 0;
   //check if the list contains anyhting
-  if (nearby_devices.Count() > 0) {
+  if (nearby_devices.size() > 0) {
     //iterate the list
-    for (int i = 0; i < nearby_devices.Count(); i++) {
+    for (int i = 0; i < nearby_devices.size(); i++) {
       //check if the new found device matches any of the devices in the list
       if (compareMAC(nearby_devices[i].MAC, newDevice.MAC)) {
         bMatch = 1;
@@ -1272,7 +1262,7 @@ void scan_discovery(ble_gap_evt_adv_report_t* report) {
     if(Bluefruit.Scanner.checkReportForUuid(report, GATT_CPS_UUID))
       newDevice.type = E_Type_BT_Device::bt_cps;
 
-    nearby_devices.Add(newDevice);
+    nearby_devices.push_back(newDevice);
   }
 
   // For Softdevice v6: after received a report, scanner will be paused
