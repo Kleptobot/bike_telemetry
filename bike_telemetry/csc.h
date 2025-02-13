@@ -14,7 +14,6 @@
 #define     GATT_CSC_UUID                           0x1816
 #define     GATT_CSC_MEASUREMENT_UUID               0x2A5B
 #define     GATT_CSC_FEATURE_UUID                   0x2A5C
-#define     GATT_SENSOR_LOCATION_UUID               0x2A5D
 #define     GATT_SC_CONTROL_POINT_UUID              0x2A55
 
 /* Device Information configuration */
@@ -30,25 +29,6 @@
 #define     CSC_FEATURE_WHEEL_REV_DATA              0x01
 #define     CSC_FEATURE_CRANK_REV_DATA              0x02
 #define     CSC_FEATURE_MULTIPLE_SENSOR_LOC         0x04
-
-/* Sensor location enum */
-#define     SENSOR_LOCATION_OTHER                   0
-#define     SENSOR_LOCATION_TOP_OF_SHOE             1
-#define     SENSOR_LOCATION_IN_SHOE                 2
-#define     SENSOR_LOCATION_HIP                     3
-#define     SENSOR_LOCATION_FRONT_WHEEL             4
-#define     SENSOR_LOCATION_LEFT_CRANK              5
-#define     SENSOR_LOCATION_RIGHT_CRANK             6
-#define     SENSOR_LOCATION_LEFT_PEDAL              7
-#define     SENSOR_LOCATION_RIGHT_PEDAL             8
-#define     SENSOR_LOCATION_FROT_HUB                9
-#define     SENSOR_LOCATION_REAR_DROPOUT            10
-#define     SENSOR_LOCATION_CHAINSTAY               11
-#define     SENSOR_LOCATION_REAR_WHEEL              12
-#define     SENSOR_LOCATION_REAR_HUB                13
-#define     SENSOR_LOCATION_CHEST                   14
-#define     SENSOR_LOCATION_SPIDER                  15
-#define     SENSOR_LOCATION_CHAIN_RING              16
 
 /* SC Control Point op codes */
 #define     SC_CP_OP_SET_CUMULATIVE_VALUE           1

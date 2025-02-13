@@ -23,6 +23,11 @@ class cps : public BT_Device {
     BLEClientService        cps_serv  = BLEClientService(GATT_CPS_UUID);
     BLEClientCharacteristic cps_meas  = BLEClientCharacteristic(GATT_CPS_MEASUREMENT_UUID);
     BLEClientCharacteristic cps_feat  = BLEClientCharacteristic(GATT_CPS_FEATURE_UUID);
+    BLEClientCharacteristic cps_loc   = BLEClientCharacteristic(GATT_SENSOR_LOCATION_UUID);
+
+    bool _CadencePresent, _TorquePresent, _BalancePresent, _ForceMagPresent;
+    uint16_t u16_feature;
+    uint8_t u8_location;
 
     cps(){
       this->bt_type = E_Type_BT_Device::bt_cps;
@@ -37,7 +42,7 @@ class cps : public BT_Device {
     }
 
   public:
-    float f32_power;
+    float f32_power, f32_cadence, f32_torque, f32_pedal_balance, f32_force_magnitude;
     virtual ~cps(){};
     
     static void create_cps(char* name, size_t nameLen, uint8_t* MAC)
@@ -46,6 +51,11 @@ class cps : public BT_Device {
     };
 
     static void cps_notify_callback(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len);
+    static std::vector<float> getPower();
+    static std::vector<float> getCadence();
+    static std::vector<float> getTorque();
+    static std::vector<float> getPedalBalance();
+    static std::vector<float> getForceMagnitude();
 
     void begin();
 

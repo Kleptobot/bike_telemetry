@@ -125,6 +125,7 @@ void TCXLogger::addTrackpoint(const Trackpoint& tp){
   file.println("              </TPX>");
   file.println("            </Extensions>");
   file.println("          </Trackpoint>");
+  file.flush();
 
   updateTotals(tp);
 }
@@ -200,6 +201,7 @@ bool TCXLogger::finaliseLogging() {
   // Check if we are writing
   if (bWriting) {
     file.write(buffer, bytesRead);
+    file.flush();
     bWriting = false; // Reset writing flag after writing
   }
 

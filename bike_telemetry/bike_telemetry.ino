@@ -211,6 +211,8 @@ void setup() {
   nMillisAtTick = 0;
   nCurrentTimeMillis = nStartTimeMillis;
   bSysOff = false;
+
+  delay(100);
 }
 
 void init_devices() {
@@ -286,7 +288,7 @@ void init_devices() {
   Serial.println("Booted");
 
   //gps wakeup
-  uBlox_Idle();
+  uBlox_Cont();
 }
 
 void loadDevices() {
@@ -415,6 +417,7 @@ void loop() {
     }
   }else{
     nDetThresh =0;
+    bWriteTCX = false;
   }
 
   if ((nDetThresh==20) || !started) {
@@ -641,9 +644,9 @@ void loop() {
 
   if(bWriteTCX){
     if(tcxLog.finaliseLogging()){
-      if (SD.remove("data.tmp")) {
-        Serial.println("Deleted data.tmp");
-      }
+      // if (SD.remove("data.tmp")) {
+      //   Serial.println("Deleted data.tmp");
+      // }
       bWriteTCX = false;
     }
   }
@@ -920,7 +923,7 @@ void GUI() {
       } else if (!b_Running && b_Running_Prev) {
         log_data.pause_logging();
         log_data.write_tail(f32_avgSpeed, f32_max_speed, f32_avgCad, f32_max_cad);
-        uBlox_Idle();
+        // uBlox_Idle();
         bWriteTCX = true;
       }
       b_Running_Prev = b_Running;
