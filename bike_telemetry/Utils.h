@@ -2,6 +2,7 @@
 #define utils_H
 #include <Arduino.h>
 #include "SdFat.h"
+#define SD_CS       D3      // SD CS
 
 static File32 debugLog;
 

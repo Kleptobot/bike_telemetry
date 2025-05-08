@@ -20,7 +20,6 @@
 #include "hrm.h"
 #include "cps.h"
 #include "GFX.h"
-#include "logger.h"
 #include "TCXLogger.h"
 #include "uBlox.h"
 
@@ -83,7 +82,6 @@ bool bBackFocDev, bBackSelDev;
 int16_t s16SettingsSel, s16GPS_SettingsSel;
 
 float f32_RTC_Temp, f32_DSP_Temp, f32_DSP_Pa, f32_Alt, f32_acc_x, f32_acc_y, f32_acc_z, f32_gyro_x, f32_gyro_y, f32_gyro_z, f32_kph, f32_cadence, f32_bpm, f32_kph_last, f32_distance;
-float f32_speedSum, f32_max_speed, f32_avgSpeed, f32_cadSum, f32_max_cad, f32_avgCad, f32_bpmSum, f32_max_bpm, f32_avg_bpm;
 float f32_GPS_speed, f32_GPS_angle, f32_GPS_Alt;
 double f32_GPS_long, f32_GPS_lat;
 uint32_t nGPS_Hrs, nGPS_Min, nGPS_Sec;
@@ -123,9 +121,9 @@ bool bSysOff;
 
 uint16_t u16_state, u16_state_prev;
 bool bStateEntry = true;
+bool paused = false;
 
 SdFat32 SD;
-logger log_data = logger(500, &SD);
 
 TCXLogger tcxLog;
 bool bWriteTCX= false;
@@ -175,7 +173,6 @@ void setup() {
   pinMode(D2, INPUT);
 
   Serial.begin(115200);
-  GPSSerial.begin(GPSBaud);
 
   if (!mcp.begin_I2C()) {
 
@@ -246,21 +243,6 @@ void init_devices() {
 
   display.setTextColor(SH110X_WHITE);
 
-  log_data.addSource((char*)"Temp1", &f32_RTC_Temp);
-  log_data.addSource((char*)"Temp2", &f32_DSP_Temp);
-  log_data.addSource((char*)"Pres", &f32_DSP_Pa);
-  log_data.addSource((char*)"Alt", &f32_Alt);
-  log_data.addSource((char*)"X Acc", &f32_acc_x);
-  log_data.addSource((char*)"Y Acc", &f32_acc_y);
-  log_data.addSource((char*)"Z Acc", &f32_acc_z);
-  log_data.addSource((char*)"X Gyro", &f32_gyro_x);
-  log_data.addSource((char*)"Y Gyro", &f32_gyro_y);
-  log_data.addSource((char*)"Z Gyro", &f32_gyro_z);
-  log_data.addSource((char*)"Batt", &fBatteryVoltage);
-  log_data.addSource((char*)"Speed", &f32_kph);
-  log_data.addSource((char*)"Cadence", &f32_cadence);
-  log_data.addSource((char*)"Heart", &f32_bpm);
-
   Bluefruit.setName("OBike");
 
   // Increase Blink rate to different from PrPh advertising mode
@@ -290,6 +272,7 @@ void init_devices() {
   Serial.println("Booted");
 
   //gps wakeup
+  GPSSerial.begin(GPSBaud);
   GPSSerial.write((char)0xFF);
   uBlox_Cont();
   uBlox_Cont();
@@ -640,13 +623,9 @@ void loop() {
   }
 
   //data logging
-  log_data.log(nCurrentTime, millisNow - nMillisAtTick);
-  if (log_data.logging()) {
+  if (b_Running) {
     if (nCurrentTime.secondstime() > nLastSecond) {
-      f32_speedSum += f32_kph;
       f32_distance += (f32_kph + f32_kph_last)*(0.5/3.6);
-      f32_cadSum += f32_cadence;
-      f32_bpmSum += f32_bpm;
       f32_kph_last = f32_kph;
 
       tcxLog.addTrackpoint({nCurrentTime,f32_GPS_lat,f32_GPS_long,f32_GPS_Alt,f32_bpm,0,f32_cadence,f32_kph,f32_distance});
@@ -654,21 +633,7 @@ void loop() {
       nLastSecond = nCurrentTime.secondstime();
     }
   } else {
-    f32_speedSum = 0;
-    f32_cadSum = 0;
-    f32_bpmSum = 0;
     f32_kph_last = 0;
-  }
-  int32_t elapsedSeconds = log_data.elapsed().totalseconds();
-  if(elapsedSeconds>0){
-    f32_avgSpeed = f32_speedSum / elapsedSeconds;
-    f32_avgCad = f32_cadSum / elapsedSeconds;
-    f32_avg_bpm = f32_bpmSum / elapsedSeconds;
-  }else{
-    f32_avgSpeed = 0;
-    f32_avgCad = 0;
-    f32_avg_bpm = 0;
-    f32_distance = 0;
   }
 
   if(bWriteTCX){
@@ -678,20 +643,6 @@ void loop() {
       }
       bWriteTCX = false;
     }
-  }
-
-  //get the current max
-  if(!b_Running){
-    f32_max_speed = 0;
-    f32_max_cad = 0;
-    f32_max_bpm = 0;
-  }else{
-    if(f32_kph>f32_max_speed)
-      f32_max_speed = f32_kph;
-    if(f32_cadence>f32_max_cad)
-      f32_max_cad = f32_cadence;
-    if(f32_bpm>f32_max_bpm)
-      f32_max_bpm = f32_bpm;
   }
 
 
@@ -925,10 +876,10 @@ void drawMenuStopped(int x, int y) {
 void drawMenuRunning(int x, int y) {
   //display.drawBitmap( x-8, y-26, epd_bitmap_UP,16, 16, 1);
   //display.drawBitmap( x-32, y-8, epd_bitmap_loop,16, 16, 1);
-  if (log_data.logging()) {
-    display.drawBitmap(x - 8, y - 8, epd_bitmap_pause, 16, 16, 1);
-  } else {
+  if (paused) {
     display.drawBitmap(x - 8, y - 8, epd_bitmap_play, 16, 16, 1);
+  } else {
+    display.drawBitmap(x - 8, y - 8, epd_bitmap_pause, 16, 16, 1);
   }
   display.drawBitmap(x + 16, y - 8, epd_bitmap_stop, 16, 16, 1);
 }
@@ -956,7 +907,7 @@ void GUI() {
         if (bRight_RE && b_Running) {
           b_Running = false;
         } else if (bCenter_short) {
-          log_data.playPause_logging();
+          paused = !paused;
         }
       } else if (!b_Running) {
         if (bCenter_short) {
@@ -973,13 +924,9 @@ void GUI() {
         if(Bluefruit.Scanner.isRunning())
           Bluefruit.Scanner.stop();
         Serial.println("start logger");
-        log_data.start_logging(nCurrentTime);
-        log_data.play_logging();
         tcxLog.startLogging(nCurrentTime);
         uBlox_Cont();
       } else if (!b_Running && b_Running_Prev) {
-        log_data.pause_logging();
-        log_data.write_tail(f32_avgSpeed, f32_max_speed, f32_avgCad, f32_max_cad);
         // uBlox_Idle();
         bWriteTCX = true;
       }
@@ -1611,7 +1558,7 @@ void drawMain() {
     drawMenuRunning(64, 88);
     display.setCursor(0, 112);
     display.setTextSize(2);
-    display.print(log_data.elapsedString());
+    display.print(tcxLog.elapsedString_Total());
   } else {
     drawMenuStopped(64, 88);
   }

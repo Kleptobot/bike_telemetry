@@ -29,39 +29,21 @@ void TCXLogger::writeHeader(){
   file.println("<TrainingCenterDatabase xmlns=\"http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2\">");
   file.println("  <Activities>");
   file.println("    <Activity Sport=\"Biking\">");
-  file.print("      <Id>");
-  file.print(time);
-  file.println("</Id>");
-  file.print("      <Lap StartTime=\"");
-  file.print(time);
-  file.println("\">");
+  file.print("      <Id>");file.print(time);file.println("</Id>");
+  file.print("      <Lap StartTime=\"");file.print(time);file.println("\">");
   // Initialize total time, distance, etc. 
-  file.print("        <TotalTimeSeconds>");
-  file.print(0);
-  file.print("</TotalTimeSeconds>\n");
-  file.print("        <DistanceMeters>");
-  file.print(totalDistance);
-  file.print("</DistanceMeters>\n");
-  file.print("        <MaximumSpeed>");
-  file.print(maxSpeed);
-  file.print("</MaximumSpeed>\n");
-  file.print("        <Calories>");
-  file.print(Calories);
-  file.print("</Calories>\n");
+  file.print("        <TotalTimeSeconds>");file.print(_elapsed_Lap.totalseconds());file.print("</TotalTimeSeconds>\n");
+  file.print("        <DistanceMeters>");file.print(totalDistance);file.print("</DistanceMeters>\n");
+  file.print("        <MaximumSpeed>");file.print(maxSpeed);file.print("</MaximumSpeed>\n");
+  file.print("        <Calories>");file.print(Calories);file.print("</Calories>\n");
   file.print("        <AverageHeartRateBpm>\n");
-  file.print("          <Value>");
-  file.print(avgHRM);
-  file.print("</Value>\n"); // Set to at least 1
+  file.print("          <Value>");file.print(avgHRM);file.print("</Value>\n"); // Set to at least 1
   file.print("        </AverageHeartRateBpm>\n");
   file.print("        <MaximumHeartRateBpm>\n");
-  file.print("          <Value>");
-  file.print(maxHRM);
-  file.print("</Value>\n"); // Set to at least 1
+  file.print("          <Value>");file.print(maxHRM);file.print("</Value>\n"); // Set to at least 1
   file.print("        </MaximumHeartRateBpm>\n");
   file.print("        <Intensity>Active</Intensity>\n"); // Add intensity element
-  file.print("        <Cadence>");
-  file.print(0);
-  file.print("</Cadence>\n"); // Placeholder value
+  file.print("        <Cadence>");file.print(avgCadence,2);file.print("</Cadence>\n"); // Placeholder value
   file.print("        <TriggerMethod>Manual</TriggerMethod>\n");
   file.println("        <Track>");
 
@@ -78,23 +60,13 @@ void TCXLogger::addTrackpoint(const Trackpoint& tp){
   sprintf(time, "%d-%02d-%02dT%02d:%02d:%02d", tp.currentTime.year(), tp.currentTime.month(), tp.currentTime.day(), tp.currentTime.hour(), tp.currentTime.minute(), tp.currentTime.second());
 
   file.println("          <Trackpoint>");
-  file.print("            <Time>");
-  file.print(time);
-  file.println("</Time>");
+  file.print("            <Time>");file.print(time);file.println("</Time>");
   file.println("            <Position>");
-  file.print("              <LatitudeDegrees>");
-  file.print(tp.latitude,6);
-  file.println("</LatitudeDegrees>");
-  file.print("              <LongitudeDegrees>");
-  file.print(tp.longitude,6);
-  file.println("</LongitudeDegrees>");
+  file.print("              <LatitudeDegrees>");file.print(tp.latitude,6);file.println("</LatitudeDegrees>");
+  file.print("              <LongitudeDegrees>");file.print(tp.longitude,6);file.println("</LongitudeDegrees>");
   file.println("            </Position>");
-  file.print("            <AltitudeMeters>");
-  file.print(tp.altitude);
-  file.println("</AltitudeMeters>");
-  file.print("            <DistanceMeters>");
-  file.print(tp.distance);
-  file.println("</DistanceMeters>");
+  file.print("            <AltitudeMeters>");file.print(tp.altitude);file.println("</AltitudeMeters>");
+  file.print("            <DistanceMeters>");file.print(tp.distance);file.println("</DistanceMeters>");
 
   if (tp.heartRate > 0) { // Optional heart rate
     file.println("            <HeartRateBpm>");
@@ -107,19 +79,13 @@ void TCXLogger::addTrackpoint(const Trackpoint& tp){
   file.println("              <TPX xmlns=\"http://www.garmin.com/xmlschemas/TrackPointExtension/v1\">");
 
   if (tp.power > 0) { // Optional power
-    file.print("                <Power>");
-    file.print(tp.power);
-    file.println("</Power>");
+    file.print("                <Power>");file.print(tp.power);file.println("</Power>");
   }
   if (tp.cadence > 0) { // Optional cadence
-    file.print("                <Cadence>");
-    file.print(tp.cadence);
-    file.println("</Cadence>");
+    file.print("                <Cadence>");file.print(tp.cadence);file.println("</Cadence>");
   }
   if (tp.speed > 0) { // Optional speed
-    file.print("                <Speed>");
-    file.print(tp.speed);
-    file.println("</Speed>");
+    file.print("                <Speed>");file.print(tp.speed);file.println("</Speed>");
   }
 
   file.println("              </TPX>");
@@ -127,38 +93,66 @@ void TCXLogger::addTrackpoint(const Trackpoint& tp){
   file.println("          </Trackpoint>");
   file.flush();
 
-  updateTotals(tp);
-}
-
-void TCXLogger::writeFooter() {
-  // Write closing tags for Track
-  file.println("        </Track>");
-  file.println("      </Lap>"); // Close the Lap element
-  file.println("    </Activity>");
-  file.println("  </Activities>");
-  file.println("</TrainingCenterDatabase>");
-}
-
-void TCXLogger::updateTotals(const Trackpoint& tp) {
   totalPoints ++;
-  if (tp.heartRate > 0)
-    totalHeartRate += tp.heartRate;
+  TimeSpan ts = tp.currentTime - _currentTime;
+
+  double beats = (tp.heartRate + _BPM_last)/2;
+  _BPM_last = tp.heartRate;
+  double cads = (tp.cadence + _CAD_last)/2;
+  _CAD_last = tp.cadence;
+
+  totalHeartBeats += beats*(ts.totalseconds()/60);
+  total_RPMS += cads*(ts.totalseconds()/60);
+  
+  ts = tp.currentTime - _startTime;
+  avgHRM = totalHeartBeats/(ts.totalseconds()/60);
+  avgCadence = total_RPMS/(ts.totalseconds()/60);
+
   if(tp.speed>maxSpeed)
     maxSpeed=tp.speed;
   if(tp.heartRate>maxHRM)
     maxHRM=tp.heartRate;
 
   totalDistance = tp.distance;
-  
-  avgHRM = totalHeartRate/totalPoints;
-  if(avgHRM<1)
-    avgHRM=1;
-  
-  TimeSpan totalTime = (tp.currentTime - _startTime);
 
-  Calories = ((_age * 0.2017) - (_mass * 0.09036) + (avgHRM * 0.6309) - 55.0969) * totalTime.totalseconds() / 4.184;
+  
+  _currentTime = tp.currentTime;
+  _elapsed_Lap = (tp.currentTime - _startTime);
+
+  Calories = ((_age * 0.2017) - (_mass * 0.09036) + (avgHRM * 0.6309) - 55.0969) * _elapsed_Lap.totalseconds() / 4.184;
   if(Calories<0)
     Calories=0;
+}
+
+void TCXLogger::resetTotals()
+{
+    totalHeartBeats = 0;
+    _BPM_last = 0;
+    totalDistance = 0;
+    totalPoints = 0;
+    total_RPMS = 0;
+    _CAD_last = 0;
+
+    maxSpeed=0;
+    avgCadence=0;
+    maxHRM=1;
+    avgHRM=1;
+    Calories=0;
+}
+
+void TCXLogger::writeFooter() {
+  if (!file.open(_filename, O_WRITE | O_APPEND | O_CREAT)) {
+    Serial.println("Error opening : ");
+    Serial.println(_filename);
+    return;
+  }
+  // Write closing tags for Track
+  file.println("        </Track>");
+  file.println("      </Lap>"); // Close the Lap element
+  file.println("    </Activity>");
+  file.println("  </Activities>");
+  file.println("</TrainingCenterDatabase>");
+  file.close();
 }
 
 bool TCXLogger::finaliseLogging() {
@@ -172,14 +166,6 @@ bool TCXLogger::finaliseLogging() {
     // Open the source file for reading
     if (!data_tmp.open("data.tmp", O_READ)) {
       Serial.println("Error opening source file.");
-      return true;
-    }
-
-    // Open the destination file for appending
-    if (!file.open(_filename, O_WRITE | O_APPEND | O_CREAT)) {
-      Serial.println("Error opening : ");
-      Serial.println(_filename);
-      data_tmp.close();
       return true;
     }
     bFinalise_Started = true;
@@ -200,26 +186,25 @@ bool TCXLogger::finaliseLogging() {
 
   // Check if we are writing
   if (bWriting) {
+    // Open the destination file for appending
+    if (!file.open(_filename, O_WRITE | O_APPEND | O_CREAT)) {
+      Serial.println("Error opening : ");
+      Serial.println(_filename);
+      data_tmp.close();
+      return true;
+    }
     file.write(buffer, bytesRead);
-    file.flush();
+    file.close();
     bWriting = false; // Reset writing flag after writing
   }
 
   if (!bReading && !bWriting) {
     data_tmp.close();
     writeFooter();
-    file.close();
 
     bFinalise_Started = false;
 
-    //reset totals
-    totalHeartRate = 0;
-    totalDistance = 0;
-    totalPoints = 0;
-    maxSpeed=0;
-    maxHRM=1;
-    avgHRM=1;
-    Calories=0;
+    resetTotals();
 
     Serial.println("File append complete.");
     return true;

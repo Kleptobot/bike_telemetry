@@ -32,10 +32,16 @@ class TCXLogger {
 
     char _filename[32];
     DateTime _startTime;
+    DateTime _currentTime;
+    TimeSpan _elapsed_Total, _elapsed_Lap;
 
-    double totalHeartRate=0;
+    double totalHeartBeats=0;
+    double _BPM_last=0;
     double maxSpeed=0;
     double totalDistance=0;     // Cumulative distance in meters
+    double total_RPMS;
+    double avgCadence=0;
+    double _CAD_last=0;
     int maxHRM=1;
     int avgHRM=1;
     int Calories=0;
@@ -45,6 +51,7 @@ class TCXLogger {
     void writeHeader();
     void writeLaps();
     void writeFooter();
+    void resetTotals();
       
   public:
     TCXLogger() : file() {};
@@ -56,6 +63,13 @@ class TCXLogger {
     int getMass(){return _mass;};
     void setAge(int age) {_age = age;};
     int getAge(){return _age;};
+    TimeSpan elapsed_Total(){return _currentTime-_startTime;};
+    TimeSpan elapsed_Lap(){return _currentTime-_startTime;};
+    String elapsedString_Total()
+    {
+      TimeSpan ts = elapsed_Total();
+      return String(ts.hours())+":"+String(ts.minutes())+":"+String(ts.seconds());
+    }
 
 };
 

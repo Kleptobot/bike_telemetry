@@ -9,7 +9,6 @@
 #include <RTClib.h>
 
 #define MAX_SOURCES 20
-#define SD_CS       D3      // SD CS
 
 // Struct containing peripheral info
 typedef struct

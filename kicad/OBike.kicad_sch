@@ -5009,6 +5009,16 @@
 		)
 		(uuid "028bdff9-c25d-4d51-8936-75abc2a63fb8")
 	)
+	(wire
+		(pts
+			(xy 99.06 158.75) (xy 99.06 168.91)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "031ba93d-4481-4dcb-8e8d-efe7bb67eb04")
+	)
 	(polyline
 		(pts
 			(xy 80.01 12.7) (xy 80.01 77.47)
@@ -5101,7 +5111,7 @@
 	)
 	(wire
 		(pts
-			(xy 99.06 143.51) (xy 99.06 168.91)
+			(xy 99.06 143.51) (xy 99.06 151.13)
 		)
 		(stroke
 			(width 0)
@@ -5541,7 +5551,7 @@
 	)
 	(wire
 		(pts
-			(xy 106.68 143.51) (xy 106.68 179.07)
+			(xy 106.68 143.51) (xy 106.68 151.13)
 		)
 		(stroke
 			(width 0)
@@ -6958,6 +6968,16 @@
 			(type default)
 		)
 		(uuid "c960733f-047f-4a6b-b379-a6701cc44adf")
+	)
+	(wire
+		(pts
+			(xy 106.68 158.75) (xy 106.68 179.07)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "ca129327-a09a-494f-ae35-148486307f41")
 	)
 	(wire
 		(pts
@@ -9167,6 +9187,42 @@
 				(hide yes)
 			)
 		)
+		(property "Manufacturer" "JST Sales America Inc."
+			(at 115.57 124.46 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer PN" "CONN HEADER R/A 2POS 2MM"
+			(at 115.57 124.46 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Digikiey PN" "  455-1719-ND"
+			(at 115.57 124.46 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" ""
+			(at 115.57 124.46 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "771b2bb1-9605-4d7f-8c8f-73e55eae2465")
 		)
@@ -9226,6 +9282,15 @@
 			)
 		)
 		(property "Description" "Resistor"
+			(at 36.83 59.69 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" ""
 			(at 36.83 59.69 0)
 			(effects
 				(font
@@ -9370,6 +9435,15 @@
 				(hide yes)
 			)
 		)
+		(property "MANUFACTURER" ""
+			(at 151.13 25.4 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "396e9c4e-47a4-436b-ac92-4b75a48cec17")
 		)
@@ -9440,6 +9514,15 @@
 				(hide yes)
 			)
 		)
+		(property "MANUFACTURER" ""
+			(at 243.84 26.67 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "0e47943d-4b25-4108-b980-01f2b2509302")
 		)
@@ -9502,6 +9585,15 @@
 			)
 		)
 		(property "Description" "Unpolarized capacitor"
+			(at 256.54 121.92 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" ""
 			(at 256.54 121.92 0)
 			(effects
 				(font
@@ -9645,6 +9737,42 @@
 				(hide yes)
 			)
 		)
+		(property "Manufacturer" "Toshiba Semiconductor and Storage"
+			(at 215.9 76.2 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer PN" "74HC14D"
+			(at 215.9 76.2 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Digikiey PN" "74HC14DCT-ND"
+			(at 215.9 76.2 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" ""
+			(at 215.9 76.2 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "4"
 			(uuid "19819fb6-7454-44d5-933e-55550779aff5")
 		)
@@ -9767,6 +9895,42 @@
 				(hide yes)
 			)
 		)
+		(property "Manufacturer" "Taiwan Semiconductor Corporation"
+			(at 199.39 72.39 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer PN" "1N4148W RHG"
+			(at 199.39 72.39 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Digikiey PN" "1N4148WRHGCT-ND"
+			(at 199.39 72.39 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" ""
+			(at 199.39 72.39 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "75402c51-71cf-4776-95b7-4980c3bb4f42")
 		)
@@ -9827,6 +9991,42 @@
 			)
 		)
 		(property "Description" "Hex inverter schmitt trigger"
+			(at 215.9 36.83 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer" "Toshiba Semiconductor and Storage"
+			(at 215.9 36.83 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer PN" "74HC14D"
+			(at 215.9 36.83 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Digikiey PN" "74HC14DCT-ND"
+			(at 215.9 36.83 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" ""
 			(at 215.9 36.83 0)
 			(effects
 				(font
@@ -9941,6 +10141,15 @@
 				(hide yes)
 			)
 		)
+		(property "MANUFACTURER" ""
+			(at 204.47 82.55 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "fe236b1e-8b6d-438f-9723-346e09cdbc7b")
 		)
@@ -10040,13 +10249,39 @@
 				(hide yes)
 			)
 		)
-		(property "MANUFACTURER" "u-blox"
+		(property "Manufacturer" "u-blox"
 			(at 48.26 104.14 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(justify bottom)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer PN" "MAX-M8C-0"
+			(at 48.26 104.14 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Digikiey PN" "672-MAX-M8C-0CT-ND"
+			(at 48.26 104.14 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" ""
+			(at 48.26 104.14 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
 				(hide yes)
 			)
 		)
@@ -10165,6 +10400,15 @@
 				(hide yes)
 			)
 		)
+		(property "MANUFACTURER" ""
+			(at 199.39 36.83 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "0d5b02fc-96c8-43da-8f6c-a296c700fff0")
 		)
@@ -10225,6 +10469,42 @@
 			)
 		)
 		(property "Description" "Hex inverter schmitt trigger"
+			(at 267.97 115.57 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer" "Toshiba Semiconductor and Storage"
+			(at 267.97 115.57 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer PN" "74HC14D"
+			(at 267.97 115.57 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Digikiey PN" "74HC14DCT-ND"
+			(at 267.97 115.57 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" ""
 			(at 267.97 115.57 0)
 			(effects
 				(font
@@ -10338,6 +10618,42 @@
 				(hide yes)
 			)
 		)
+		(property "Manufacturer" "TE Connectivity ALCOSWITCH Switches"
+			(at 171.45 110.49 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer PN" "2425755-1"
+			(at 171.45 110.49 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Digikiey PN" "450-2425755-1CT-ND"
+			(at 171.45 110.49 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" ""
+			(at 171.45 110.49 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "8ef0d99c-f241-4cea-a108-96f3ea81c95d")
 		)
@@ -10420,6 +10736,15 @@
 				(hide yes)
 			)
 		)
+		(property "MANUFACTURER" ""
+			(at 243.84 106.68 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "ad907c26-0097-4c5a-8053-8ba93eb990f6")
 		)
@@ -10479,6 +10804,15 @@
 			)
 		)
 		(property "Description" "Resistor"
+			(at 199.39 76.2 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" ""
 			(at 199.39 76.2 0)
 			(effects
 				(font
@@ -10557,6 +10891,15 @@
 				(hide yes)
 			)
 		)
+		(property "MANUFACTURER" ""
+			(at 256.54 43.18 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "fa9d282d-5b34-4246-b19c-b56aea644aa3")
 		)
@@ -10618,6 +10961,15 @@
 			)
 		)
 		(property "Description" "Generic connector, single row, 01x08, script generated (kicad-library-utils/schlib/autogen/connector/)"
+			(at 137.16 104.14 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" ""
 			(at 137.16 104.14 0)
 			(effects
 				(font
@@ -10730,6 +11082,42 @@
 				(hide yes)
 			)
 		)
+		(property "Manufacturer" "Taiwan Semiconductor Corporation"
+			(at 250.19 33.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer PN" "1N4148W RHG"
+			(at 250.19 33.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Digikiey PN" "1N4148WRHGCT-ND"
+			(at 250.19 33.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" ""
+			(at 250.19 33.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "7f1b141f-6808-4d7a-b87f-258d2fc7dd29")
 		)
@@ -10800,6 +11188,15 @@
 				(hide yes)
 			)
 		)
+		(property "MANUFACTURER" ""
+			(at 204.47 41.91 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "d7852530-a656-493d-a166-2eaa5a8f19c4")
 		)
@@ -10860,6 +11257,42 @@
 			)
 		)
 		(property "Description" "Micro SD Card Socket with one card detection pin"
+			(at 149.86 171.45 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer" "Same Sky (Formerly CUI Devices)"
+			(at 149.86 171.45 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer PN" "MSD-11-A"
+			(at 149.86 171.45 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Digikiey PN" "2223-MSD-11-ACT-ND"
+			(at 149.86 171.45 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" ""
 			(at 149.86 171.45 0)
 			(effects
 				(font
@@ -11031,6 +11464,42 @@
 				(hide yes)
 			)
 		)
+		(property "Manufacturer" "Microchip Technology"
+			(at 123.19 53.34 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer PN" "MCP23017T-E/SO"
+			(at 123.19 53.34 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Digikiey PN" "MCP23017T-E/SOCT-ND"
+			(at 123.19 53.34 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" ""
+			(at 123.19 53.34 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "10"
 			(uuid "743ef62b-75f9-4ea2-ba0f-f3df51d94024")
 		)
@@ -11176,6 +11645,15 @@
 				(hide yes)
 			)
 		)
+		(property "MANUFACTURER" ""
+			(at 250.19 115.57 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "9149993b-0596-4562-87d6-e73bedaab231")
 		)
@@ -11246,6 +11724,15 @@
 				(hide yes)
 			)
 		)
+		(property "MANUFACTURER" ""
+			(at 68.58 31.75 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "8e6b62e6-0797-41a7-b6e9-5ec5e56bb56b")
 		)
@@ -11305,6 +11792,15 @@
 			)
 		)
 		(property "Description" "Resistor"
+			(at 251.46 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" ""
 			(at 251.46 154.94 0)
 			(effects
 				(font
@@ -11514,6 +12010,42 @@
 				(hide yes)
 			)
 		)
+		(property "Manufacturer" "The Antenna Company"
+			(at 91.44 110.49 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer PN" "AC30036-01"
+			(at 91.44 110.49 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Digikiey PN" "5350-AC30036-01-ND"
+			(at 91.44 110.49 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" ""
+			(at 91.44 110.49 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "d9e9ae68-f330-4d22-bc67-d2c1f7fdffc8")
 		)
@@ -11573,6 +12105,15 @@
 			)
 		)
 		(property "Description" "Resistor"
+			(at 193.04 27.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" ""
 			(at 193.04 27.94 0)
 			(effects
 				(font
@@ -11651,6 +12192,15 @@
 				(hide yes)
 			)
 		)
+		(property "MANUFACTURER" ""
+			(at 269.24 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "2ae8e8e0-a926-44bd-8cd1-4b68d7e1e550")
 		)
@@ -11713,6 +12263,15 @@
 			)
 		)
 		(property "Description" "Unpolarized capacitor"
+			(at 57.15 31.75 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" ""
 			(at 57.15 31.75 0)
 			(effects
 				(font
@@ -11857,6 +12416,15 @@
 				(hide yes)
 			)
 		)
+		(property "MANUFACTURER" ""
+			(at 162.56 25.4 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "4025a367-b232-4ee6-8b36-8875e13d680e")
 		)
@@ -11918,6 +12486,15 @@
 			)
 		)
 		(property "Description" "Unpolarized capacitor"
+			(at 259.08 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" ""
 			(at 259.08 154.94 0)
 			(effects
 				(font
@@ -12003,6 +12580,84 @@
 			(project "OBike"
 				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
 					(reference "#PWR05")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R")
+		(at 99.06 154.94 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "8ea6a12c-89a6-4e84-9967-73f1f3516b23")
+		(property "Reference" "R15"
+			(at 99.568 158.75 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "100K"
+			(at 99.06 156.972 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Resistor_SMD:R_0603_1608Metric"
+			(at 97.282 154.94 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 99.06 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Resistor"
+			(at 99.06 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" ""
+			(at 99.06 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "1b4f0f08-c082-4d34-98f2-a7ff0de6cbbd")
+		)
+		(pin "2"
+			(uuid "15e1e8f1-2f1b-43e5-9ff8-dc4c289a2379")
+		)
+		(instances
+			(project "OBike"
+				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
+					(reference "R15")
 					(unit 1)
 				)
 			)
@@ -12263,6 +12918,15 @@
 				(hide yes)
 			)
 		)
+		(property "MANUFACTURER" ""
+			(at 243.84 67.31 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "b17b88df-ee6f-408b-9c18-edfbf31c2e99")
 		)
@@ -12323,6 +12987,42 @@
 			)
 		)
 		(property "Description" "Hex inverter schmitt trigger"
+			(at 214.63 111.76 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer" "Toshiba Semiconductor and Storage"
+			(at 214.63 111.76 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer PN" "74HC14D"
+			(at 214.63 111.76 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Digikiey PN" "74HC14DCT-ND"
+			(at 214.63 111.76 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" ""
 			(at 214.63 111.76 0)
 			(effects
 				(font
@@ -12429,6 +13129,15 @@
 			)
 		)
 		(property "Description" "Resistor"
+			(at 87.63 48.26 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" ""
 			(at 87.63 48.26 0)
 			(effects
 				(font
@@ -12574,6 +13283,15 @@
 				(hide yes)
 			)
 		)
+		(property "MANUFACTURER" ""
+			(at 256.54 82.55 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "df7392f9-9a51-45ba-a5b8-e6881e2ead31")
 		)
@@ -12633,6 +13351,15 @@
 			)
 		)
 		(property "Description" "Resistor"
+			(at 101.6 80.01 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" ""
 			(at 101.6 80.01 0)
 			(effects
 				(font
@@ -12794,6 +13521,42 @@
 				(hide yes)
 			)
 		)
+		(property "Manufacturer" "Taiwan Semiconductor Corporation"
+			(at 199.39 33.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer PN" "1N4148W RHG"
+			(at 199.39 33.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Digikiey PN" "1N4148WRHGCT-ND"
+			(at 199.39 33.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" ""
+			(at 199.39 33.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "4c9bd778-0509-4b00-a22e-a6b114514e91")
 		)
@@ -12856,6 +13619,15 @@
 			)
 		)
 		(property "Description" "Generic connector, single row, 01x02, script generated (kicad-library-utils/schlib/autogen/connector/)"
+			(at 101.6 124.46 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" ""
 			(at 101.6 124.46 0)
 			(effects
 				(font
@@ -12931,6 +13703,15 @@
 				(hide yes)
 			)
 		)
+		(property "MANUFACTURER" ""
+			(at 104.14 80.01 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "8c88042d-6d12-4968-b735-f430a78c99b3")
 		)
@@ -12941,6 +13722,84 @@
 			(project "OBike"
 				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
 					(reference "R23")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R")
+		(at 106.68 154.94 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "c601fbab-2b9d-475c-9c41-f277089cf40a")
+		(property "Reference" "R17"
+			(at 107.188 158.75 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "100K"
+			(at 106.68 156.972 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Resistor_SMD:R_0603_1608Metric"
+			(at 104.902 154.94 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 106.68 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Resistor"
+			(at 106.68 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" ""
+			(at 106.68 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "312cfd4f-32b8-40e9-83c7-c442f48cb78c")
+		)
+		(pin "2"
+			(uuid "cc78022c-3f69-4415-82e9-b85a526c8076")
+		)
+		(instances
+			(project "OBike"
+				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
+					(reference "R17")
 					(unit 1)
 				)
 			)
@@ -12991,6 +13850,42 @@
 			)
 		)
 		(property "Description" "Hex inverter schmitt trigger"
+			(at 266.7 36.83 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer" "Toshiba Semiconductor and Storage"
+			(at 266.7 36.83 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer PN" "74HC14D"
+			(at 266.7 36.83 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Digikiey PN" "74HC14DCT-ND"
+			(at 266.7 36.83 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" ""
 			(at 266.7 36.83 0)
 			(effects
 				(font
@@ -13102,6 +13997,15 @@
 				(hide yes)
 			)
 		)
+		(property "MANUFACTURER" ""
+			(at 99.06 80.01 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "93affa79-6aa7-42e7-b4ff-982d0b304942")
 		)
@@ -13188,6 +14092,42 @@
 				(hide yes)
 			)
 		)
+		(property "Manufacturer" "Taiwan Semiconductor Corporation"
+			(at 250.19 111.76 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer PN" "1N4148W RHG"
+			(at 250.19 111.76 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Digikiey PN" "1N4148WRHGCT-ND"
+			(at 250.19 111.76 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" ""
+			(at 250.19 111.76 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "53bdde56-63d8-4e91-9997-e8fd5310d2d3")
 		)
@@ -13250,6 +14190,42 @@
 			)
 		)
 		(property "Description" "Extremely Accurate I2C-Integrated RTC/TCXO/Crystal SOIC-16"
+			(at 54.61 54.61 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer" "Analog Devices Inc./Maxim Integrated"
+			(at 54.61 54.61 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer PN" "DS3231MZ+"
+			(at 54.61 54.61 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Digikiey PN" "DS3231MZ+-ND"
+			(at 54.61 54.61 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" ""
 			(at 54.61 54.61 0)
 			(effects
 				(font
@@ -13346,6 +14322,15 @@
 				(hide yes)
 			)
 		)
+		(property "MANUFACTURER" ""
+			(at 193.04 67.31 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "ad2efbc4-4f44-4dec-ac8b-41f5faf68310")
 		)
@@ -13405,6 +14390,15 @@
 			)
 		)
 		(property "Description" "Resistor"
+			(at 250.19 76.2 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" ""
 			(at 250.19 76.2 0)
 			(effects
 				(font
@@ -13475,6 +14469,15 @@
 			)
 		)
 		(property "Description" "Unpolarized capacitor"
+			(at 87.63 148.59 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" ""
 			(at 87.63 148.59 0)
 			(effects
 				(font
@@ -13617,6 +14620,42 @@
 				(hide yes)
 			)
 		)
+		(property "Manufacturer" "Toshiba Semiconductor and Storage"
+			(at 267.97 76.2 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer PN" "74HC14D"
+			(at 267.97 76.2 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Digikiey PN" "74HC14DCT-ND"
+			(at 267.97 76.2 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" ""
+			(at 267.97 76.2 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "4"
 			(uuid "19819fb6-7454-44d5-933e-55550779aff8")
 		)
@@ -13715,6 +14754,15 @@
 			)
 		)
 		(property "Description" ""
+			(at 46.99 166.37 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" ""
 			(at 46.99 166.37 0)
 			(effects
 				(font
@@ -13877,7 +14925,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "10K"
+		(property "Value" "100K"
 			(at 110.49 156.972 90)
 			(effects
 				(font
@@ -13905,6 +14953,15 @@
 			)
 		)
 		(property "Description" "Resistor"
+			(at 110.49 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" ""
 			(at 110.49 154.94 0)
 			(effects
 				(font
@@ -14049,6 +15106,15 @@
 				(hide yes)
 			)
 		)
+		(property "MANUFACTURER" ""
+			(at 104.14 139.7 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "5c8ad01b-0dcd-4b80-924e-3d538372ff05")
 		)
@@ -14182,6 +15248,15 @@
 				(hide yes)
 			)
 		)
+		(property "MANUFACTURER" ""
+			(at 250.19 36.83 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "06dddc47-7aa3-4978-9a2e-d61cec4cc4b8")
 		)
@@ -14268,6 +15343,42 @@
 				(hide yes)
 			)
 		)
+		(property "Manufacturer" "Taiwan Semiconductor Corporation"
+			(at 250.19 72.39 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer PN" "1N4148W RHG"
+			(at 250.19 72.39 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Digikiey PN" "1N4148WRHGCT-ND"
+			(at 250.19 72.39 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" ""
+			(at 250.19 72.39 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "1409237e-ecc7-4ee5-9676-8261512a93b3")
 		)
@@ -14330,6 +15441,42 @@
 			)
 		)
 		(property "Description" ""
+			(at 205.74 143.51 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer" "Infineon Technologies"
+			(at 205.74 143.51 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer PN" "DPS368XTSA1"
+			(at 205.74 143.51 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Digikiey PN" "DPS368XTSA1CT-ND"
+			(at 205.74 143.51 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" ""
 			(at 205.74 143.51 0)
 			(effects
 				(font
@@ -14484,6 +15631,15 @@
 			)
 		)
 		(property "Description" "Resistor"
+			(at 102.87 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" ""
 			(at 102.87 154.94 0)
 			(effects
 				(font
