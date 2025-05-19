@@ -125,7 +125,7 @@ bool paused = false;
 
 SdFat32 SD;
 
-TCXLogger tcxLog;
+TCXLogger tcxLog = TCXLogger(&SD);
 bool bWriteTCX= false;
 
 //RTC
@@ -637,12 +637,8 @@ void loop() {
   }
 
   if(bWriteTCX){
-    if(tcxLog.finaliseLogging()){
-      if (SD.remove("data.tmp")) {
-        Serial.println("Deleted data.tmp");
-      }
-      bWriteTCX = false;
-    }
+    tcxLog.finaliseLogging();
+    bWriteTCX = false;
   }
 
 

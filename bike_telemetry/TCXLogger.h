@@ -3,8 +3,11 @@
 
 #include <Arduino.h>
 #include <SPI.h>
+#include <vector>
 #include "SdFat.h"
 #include <RTClib.h>
+
+#define points_per_chunk 1800
 
 struct Trackpoint {
     DateTime currentTime;    // Time in ISO 8601 format
@@ -18,17 +21,28 @@ struct Trackpoint {
     double distance;     // Cumulative distance in meters
 };
 
+struct Lap {
+  DateTime startTime;
+  uint32_t maxHRM;
+  uint32_t avgHRM;
+  uint32_t Calories;
+  double avgCadence;
+  double maxSpeed;
+  double totalDistance;     // Cumulative distance in meters
+  uint32_t parts;
+};
+
 class TCXLogger {
 
   private:
-    File32 file, data_tmp;
+    SdFat32* SD;
     
-    bool bFinalise_Started = false;
-    bool bReading, bWriting;
     uint8_t buffer[512];  // Buffer for reading data
     size_t bytesRead = 0;
     int _age = 34;
     int _mass = 75;
+
+    std::vector<Lap> laps;
 
     char _filename[32];
     DateTime _startTime;
@@ -37,28 +51,28 @@ class TCXLogger {
 
     double totalHeartBeats=0;
     double _BPM_last=0;
-    double maxSpeed=0;
-    double totalDistance=0;     // Cumulative distance in meters
     double total_RPMS;
-    double avgCadence=0;
     double _CAD_last=0;
-    int maxHRM=1;
-    int avgHRM=1;
-    int Calories=0;
     int totalPoints=0;
 
     void updateTotals(const Trackpoint& tp);
-    void writeHeader();
-    void writeLaps();
-    void writeFooter();
+    void writeLapHeader(Lap lp, File32 file);
     void resetTotals();
+    void dataTransfer(File32 from, File32 to);
       
   public:
-    TCXLogger() : file() {};
+
+    TCXLogger(){};
+    TCXLogger(SdFat32* sd_ptr)
+    {
+      SD = sd_ptr;
+    };
 
     void startLogging(DateTime currentTime);
     void addTrackpoint(const Trackpoint& tp);
+    void newLap(DateTime currentTime);
     bool finaliseLogging();
+
     void setMass(int mass) {_mass = mass;};
     int getMass(){return _mass;};
     void setAge(int age) {_age = age;};
