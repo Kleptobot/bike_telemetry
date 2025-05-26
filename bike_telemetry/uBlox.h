@@ -38,8 +38,8 @@ struct param {
 param PM2_settings[]={
   {"maxStartupStateDur",0,255,0},
   {"extintSel",0,1,0},
-  {"extintWake",0,1,0},
-  {"extintBackup",0,1,0},
+  {"extintWake",1,1,0},
+  {"extintBackup",1,1,0},
   {"limitPeakCurr",0,1,0},
   {"waitTimeFix",0,1,0},
   {"updateRTC",1,1,0},

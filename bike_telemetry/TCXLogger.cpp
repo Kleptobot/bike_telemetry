@@ -8,30 +8,39 @@ void TCXLogger::startLogging(DateTime currentTime) {
   sprintf(_filename, "%d-%d-%d_%02d-%02d-%02d.tcx", _startTime.day(),_startTime.month(),_startTime.year(),_startTime.hour(),_startTime.minute(),_startTime.second());
 };
 
-void TCXLogger::writeLapHeader(Lap lp, File32 file){
-  if (!file.isOpen()) {
+void TCXLogger::writeLapHeader(int lapIndex, File32 *file){
+  if (!file->isOpen()) {
     Serial.println("Error file not open: ");
     return;
   }
   char time[32];
 
+  Lap lp = laps[lapIndex];
+  TimeSpan ts;
+  if(lapIndex < laps.size()-1 )
+  {
+    ts = laps[lapIndex+1].startTime - laps[lapIndex].startTime;
+  }else{
+    ts = elapsed_Lap();
+  }
+
   sprintf(time, "%d-%02d-%02dT%02d:%02d:%02d", lp.startTime.year(), lp.startTime.month(), lp.startTime.day(), lp.startTime.hour(), lp.startTime.minute(), lp.startTime.second());
-  file.print("      <Lap StartTime=\"");file.print(time);file.println("\">");
+  file->print("      <Lap StartTime=\"");file->print(time);file->println("\">");
   // Initialize total time, distance, etc. 
-  file.print("        <TotalTimeSeconds>");file.print(_elapsed_Lap.totalseconds());file.print("</TotalTimeSeconds>\n");
-  file.print("        <DistanceMeters>");file.print(lp.totalDistance);file.print("</DistanceMeters>\n");
-  file.print("        <MaximumSpeed>");file.print(lp.maxSpeed);file.print("</MaximumSpeed>\n");
-  file.print("        <Calories>");file.print(lp.Calories);file.print("</Calories>\n");
-  file.print("        <AverageHeartRateBpm>\n");
-  file.print("          <Value>");file.print(lp.avgHRM);file.print("</Value>\n"); // Set to at least 1
-  file.print("        </AverageHeartRateBpm>\n");
-  file.print("        <MaximumHeartRateBpm>\n");
-  file.print("          <Value>");file.print(lp.maxHRM);file.print("</Value>\n"); // Set to at least 1
-  file.print("        </MaximumHeartRateBpm>\n");
-  file.print("        <Intensity>Active</Intensity>\n"); // Add intensity element
-  file.print("        <Cadence>");file.print(lp.avgCadence,2);file.print("</Cadence>\n"); // Placeholder value
-  file.print("        <TriggerMethod>Manual</TriggerMethod>\n");
-  file.println("        <Track>");
+  file->print("        <TotalTimeSeconds>");file->print(ts.totalseconds());file->print("</TotalTimeSeconds>\n");
+  file->print("        <DistanceMeters>");file->print(lp.totalDistance);file->print("</DistanceMeters>\n");
+  file->print("        <MaximumSpeed>");file->print(lp.maxSpeed);file->print("</MaximumSpeed>\n");
+  file->print("        <Calories>");file->print(lp.Calories);file->print("</Calories>\n");
+  file->print("        <AverageHeartRateBpm>\n");
+  file->print("          <Value>");file->print(lp.avgHRM);file->print("</Value>\n"); // Set to at least 1
+  file->print("        </AverageHeartRateBpm>\n");
+  file->print("        <MaximumHeartRateBpm>\n");
+  file->print("          <Value>");file->print(lp.maxHRM);file->print("</Value>\n"); // Set to at least 1
+  file->print("        </MaximumHeartRateBpm>\n");
+  file->print("        <Intensity>Active</Intensity>\n"); // Add intensity element
+  file->print("        <Cadence>");file->print(lp.avgCadence,2);file->print("</Cadence>\n"); // Placeholder value
+  file->print("        <TriggerMethod>Manual</TriggerMethod>\n");
+  file->println("        <Track>");
 };
 
 void TCXLogger::addTrackpoint(const Trackpoint& tp){
@@ -117,6 +126,7 @@ void TCXLogger::addTrackpoint(const Trackpoint& tp){
   totalPoints ++;
   if(totalPoints >= points_per_chunk)
   {
+    totalPoints = 0;
     laps.back().parts++;
   }
 };
@@ -136,7 +146,7 @@ void TCXLogger::newLap(DateTime currentTime)
   laps.push_back({currentTime, 1, 1, 0, 0, 0, 0, 0});
 };
 
-void TCXLogger::dataTransfer(File32 from, File32 to)
+void TCXLogger::dataTransfer(File32 *from, File32 *to)
 {
   bool bReading=true, bWriting=false;
 
@@ -144,7 +154,7 @@ void TCXLogger::dataTransfer(File32 from, File32 to)
   {
     if (bReading) {
       memset(buffer, 0, sizeof(buffer)); // Clear buffer
-      bytesRead = from.read(buffer, sizeof(buffer)-1); // Leave space for null-terminator
+      bytesRead = from->read(buffer, sizeof(buffer)-1); // Leave space for null-terminator
       if (bytesRead > 0) {
         bWriting = true; // Data is available to write
       } else {
@@ -156,19 +166,18 @@ void TCXLogger::dataTransfer(File32 from, File32 to)
     // Check if we are writing
     if (bWriting) {
       // Open the destination file for appending
-      to.write(buffer, bytesRead);
+      to->write(buffer, bytesRead);
       bWriting = false; // Reset writing flag after writing
     }
   }
-  to.flush();
+  to->flush();
 }
 
 bool TCXLogger::finaliseLogging()
 {
   File32 file, data;
   if (!file.open(_filename, O_WRITE | O_APPEND | O_CREAT)) {
-    Serial.println("Error opening : ");
-    Serial.println(_filename);
+    Serial.print("Error opening : ");Serial.println(_filename);
     return false;
   }
   //nested loop to add all laps and their parts into the main file
@@ -176,27 +185,36 @@ bool TCXLogger::finaliseLogging()
   char time[32];
   sprintf(time, "%d-%02d-%02dT%02d:%02d:%02d", _startTime.day(),_startTime.month(),_startTime.year(),_startTime.hour(),_startTime.minute(),_startTime.second());
 
+  Serial.print("Writing head to "); Serial.println(_filename);
+
   // Write the XML header and opening tags
   file.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
   file.println("<TrainingCenterDatabase xmlns=\"http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2\">");
   file.println("  <Activities>");
   file.println("    <Activity Sport=\"Biking\">");
   file.print("      <Id>");file.print(time);file.println("</Id>");
-  for(int i=0;i<laps.size();i++)
+
+  Serial.println("Processing laps...");
+
+  char lap_name[32];
+  int lapSize = laps.size();
+  for(int i=0;i<lapSize;i++)
   {
-    writeLapHeader(laps[i], file);
-    for(int j=0;j<laps[i].parts;j++)
+    char lapString[30];
+    sprintf(lapString,"processing lap %d of %d", i, lapSize);
+    Serial.println(lapString);
+    writeLapHeader(i, &file);
+    for(int j=0;j<=laps[i].parts;j++)
     { 
       //transfer lap_%d_%d, i,j to _filename
-      char lap_name[32];
       sprintf(lap_name, "lap_%d_%d", i, j);
+      Serial.print("processing file "); Serial.println(lap_name);
       if (!data.open(lap_name, O_READ))
       {
-        Serial.println("Error opening : ");
-        Serial.println(lap_name);
+        Serial.println("Error opening : ");Serial.println(lap_name);
         return false;
       }
-      dataTransfer(data,file);
+      dataTransfer(&data,&file);
       data.close();
       SD->remove(lap_name);
     }

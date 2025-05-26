@@ -56,9 +56,9 @@ class TCXLogger {
     int totalPoints=0;
 
     void updateTotals(const Trackpoint& tp);
-    void writeLapHeader(Lap lp, File32 file);
+    void writeLapHeader(int lapIndex, File32 *file);
     void resetTotals();
-    void dataTransfer(File32 from, File32 to);
+    void dataTransfer(File32 *from, File32 *to);
       
   public:
 
@@ -78,10 +78,15 @@ class TCXLogger {
     void setAge(int age) {_age = age;};
     int getAge(){return _age;};
     TimeSpan elapsed_Total(){return _currentTime-_startTime;};
-    TimeSpan elapsed_Lap(){return _currentTime-_startTime;};
+    TimeSpan elapsed_Lap(){return _currentTime-laps.back().startTime;};
     String elapsedString_Total()
     {
       TimeSpan ts = elapsed_Total();
+      return String(ts.hours())+":"+String(ts.minutes())+":"+String(ts.seconds());
+    }
+    String elapsedString_Lap()
+    {
+      TimeSpan ts = elapsed_Lap();
       return String(ts.hours())+":"+String(ts.minutes())+":"+String(ts.seconds());
     }
 

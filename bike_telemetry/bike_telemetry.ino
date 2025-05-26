@@ -42,6 +42,7 @@ Adafruit_SH1107 display = Adafruit_SH1107(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OL
 #define GPIOB2 10
 #define GPIOB3 11
 #define GPIOB4 12
+#define GPIOB5 13
 
 #define Battery_Read_Period 60
 #define GPS_Read_Period 1000
@@ -186,7 +187,9 @@ void setup() {
   mcp.pinMode(GPIOB2, INPUT_PULLUP);
   mcp.pinMode(GPIOB3, INPUT_PULLUP);
   mcp.pinMode(GPIOB4, INPUT_PULLUP);
+  mcp.pinMode(GPIOB5, OUTPUT);
   mcp.setupInterruptPin(GPIOB0, HIGH);
+  mcp.digitalWrite(GPIOB5,false);
 
   if (!rtc.begin()) {
     Serial.println("Couldn't find RTC");
@@ -274,8 +277,14 @@ void init_devices() {
   //gps wakeup
   GPSSerial.begin(GPSBaud);
   GPSSerial.write((char)0xFF);
-  uBlox_Cont();
-  uBlox_Cont();
+  //uBlox_Cont();
+  //uBlox_Cont();
+  Serial.print("state of EXTINT: ");  Serial.println(mcp.digitalRead(GPIOB5));
+  delay(500);
+  mcp.digitalWrite(GPIOB5,true);
+  delay(500);
+  Serial.print("state of EXTINT: ");  Serial.println(mcp.digitalRead(GPIOB5));
+  delay(500);
 }
 
 void loadDevices() {
@@ -400,7 +409,13 @@ void loop() {
     if (started) {
       display.clearDisplay();
       display.display();
-      uBlox_OFF();
+      //uBlox_OFF();
+      Serial.print("state of EXTINT: ");  Serial.println(mcp.digitalRead(GPIOB5));
+      delay(500);
+      mcp.digitalWrite(GPIOB5,false);
+      delay(500);
+      Serial.print("state of EXTINT: ");  Serial.println(mcp.digitalRead(GPIOB5));
+      delay(500);
     }
     debugLog.close();
     NRF_POWER->SYSTEMOFF = 1;
@@ -872,11 +887,12 @@ void drawMenuStopped(int x, int y) {
 void drawMenuRunning(int x, int y) {
   //display.drawBitmap( x-8, y-26, epd_bitmap_UP,16, 16, 1);
   //display.drawBitmap( x-32, y-8, epd_bitmap_loop,16, 16, 1);
-  if (paused) {
-    display.drawBitmap(x - 8, y - 8, epd_bitmap_play, 16, 16, 1);
-  } else {
-    display.drawBitmap(x - 8, y - 8, epd_bitmap_pause, 16, 16, 1);
-  }
+  // if (paused) {
+  //   display.drawBitmap(x - 8, y - 8, epd_bitmap_play, 16, 16, 1);
+  // } else {
+  //   display.drawBitmap(x - 8, y - 8, epd_bitmap_pause, 16, 16, 1);
+  // }
+  display.drawBitmap(x - 8, y - 8, epd_bitmap_loop, 16, 16, 1);
   display.drawBitmap(x + 16, y - 8, epd_bitmap_stop, 16, 16, 1);
 }
 
@@ -903,7 +919,8 @@ void GUI() {
         if (bRight_RE && b_Running) {
           b_Running = false;
         } else if (bCenter_short) {
-          paused = !paused;
+          //paused = !paused;
+          tcxLog.newLap(nCurrentTime);
         }
       } else if (!b_Running) {
         if (bCenter_short) {
@@ -1554,7 +1571,7 @@ void drawMain() {
     drawMenuRunning(64, 88);
     display.setCursor(0, 112);
     display.setTextSize(2);
-    display.print(tcxLog.elapsedString_Total());
+    display.print(tcxLog.elapsedString_Lap());
   } else {
     drawMenuStopped(64, 88);
   }
