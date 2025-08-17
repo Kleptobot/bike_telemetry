@@ -36,11 +36,14 @@ class TCXLogger {
 
   private:
     SdFat32* SD;
+
+    File32 file;
     
     uint8_t buffer[512];  // Buffer for reading data
     size_t bytesRead = 0;
     int _age = 34;
     int _mass = 75;
+    char lap_name[32];
 
     std::vector<Lap> laps;
 

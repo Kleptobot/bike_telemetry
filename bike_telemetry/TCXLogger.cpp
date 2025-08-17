@@ -6,6 +6,14 @@ void TCXLogger::startLogging(DateTime currentTime) {
   laps.clear();
   laps.push_back({currentTime, 1, 1, 0, 0, 0, 0, 0});
   sprintf(_filename, "%d-%d-%d_%02d-%02d-%02d.tcx", _startTime.day(),_startTime.month(),_startTime.year(),_startTime.hour(),_startTime.minute(),_startTime.second());
+
+  //open the first lap file
+  memset(lap_name,0,32);
+  sprintf(lap_name, "lap_%d_%d", laps.size()-1, laps.back().parts);
+  if (!file.open(lap_name, O_WRITE | O_APPEND | O_CREAT)) {
+    Serial.print("Error opening file: ");
+    Serial.println(lap_name);
+  }
 };
 
 void TCXLogger::writeLapHeader(int lapIndex, File32 *file){
@@ -44,16 +52,6 @@ void TCXLogger::writeLapHeader(int lapIndex, File32 *file){
 };
 
 void TCXLogger::addTrackpoint(const Trackpoint& tp){
-  File32 file;
-  char lap_name[32];
-  sprintf(lap_name, "lap_%d_%d", laps.size()-1, laps.back().parts);
-  if (!file.isOpen()) {
-    if (!file.open(lap_name, O_WRITE | O_APPEND | O_CREAT)) {
-      Serial.print("Error opening file: ");
-      Serial.println(lap_name);
-      return;
-    }
-  }
 
   char time[32];
   sprintf(time, "%d-%02d-%02dT%02d:%02d:%02d", tp.currentTime.year(), tp.currentTime.month(), tp.currentTime.day(), tp.currentTime.hour(), tp.currentTime.minute(), tp.currentTime.second());
@@ -91,7 +89,6 @@ void TCXLogger::addTrackpoint(const Trackpoint& tp){
   file.println("            </Extensions>");
   file.println("          </Trackpoint>");
   file.flush();
-  file.close();
 
   TimeSpan ts = tp.currentTime - _currentTime;
 
@@ -128,6 +125,14 @@ void TCXLogger::addTrackpoint(const Trackpoint& tp){
   {
     totalPoints = 0;
     laps.back().parts++;
+    file.close();
+
+    memset(lap_name,0,32);
+    sprintf(lap_name, "lap_%d_%d", laps.size()-1, laps.back().parts);
+    if (!file.open(lap_name, O_WRITE | O_APPEND | O_CREAT)) {
+      Serial.print("Error opening file: ");
+      Serial.println(lap_name);
+    }
   }
 };
 
@@ -142,8 +147,17 @@ void TCXLogger::resetTotals()
 
 void TCXLogger::newLap(DateTime currentTime)
 {
+  totalPoints = 0;
   resetTotals();
   laps.push_back({currentTime, 1, 1, 0, 0, 0, 0, 0});
+  file.close();
+
+  memset(lap_name,0,32);
+  sprintf(lap_name, "lap_%d_%d", laps.size()-1, laps.back().parts);
+  if (!file.open(lap_name, O_WRITE | O_APPEND | O_CREAT)) {
+    Serial.print("Error opening file: ");
+    Serial.println(lap_name);
+  }
 };
 
 void TCXLogger::dataTransfer(File32 *from, File32 *to)
@@ -175,56 +189,73 @@ void TCXLogger::dataTransfer(File32 *from, File32 *to)
 
 bool TCXLogger::finaliseLogging()
 {
-  File32 file, data;
-  if (!file.open(_filename, O_WRITE | O_APPEND | O_CREAT)) {
-    Serial.print("Error opening : ");Serial.println(_filename);
+  File32 final_file;
+  file.close();
+
+  int lapSize = laps.size();
+
+  int numparts = 0;
+  for(int i=0;i<lapSize;i++)
+  {
+    numparts += laps[i].parts;
+  }
+
+  if (!final_file.open(_filename, O_WRITE | O_APPEND | O_CREAT)) {
+    final_file.print("Error opening : ");Serial.println(_filename);
     return false;
   }
-  //nested loop to add all laps and their parts into the main file
 
+  //nested loop to add all laps and their parts into the main file
   char time[32];
   sprintf(time, "%d-%02d-%02dT%02d:%02d:%02d", _startTime.day(),_startTime.month(),_startTime.year(),_startTime.hour(),_startTime.minute(),_startTime.second());
 
   Serial.print("Writing head to "); Serial.println(_filename);
 
   // Write the XML header and opening tags
-  file.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
-  file.println("<TrainingCenterDatabase xmlns=\"http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2\">");
-  file.println("  <Activities>");
-  file.println("    <Activity Sport=\"Biking\">");
-  file.print("      <Id>");file.print(time);file.println("</Id>");
+  final_file.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+  final_file.println("<TrainingCenterDatabase xmlns=\"http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2\">");
+  final_file.println("  <Activities>");
+  final_file.println("    <Activity Sport=\"Biking\">");
+  final_file.print("      <Id>");final_file.print(time);final_file.println("</Id>");
 
   Serial.println("Processing laps...");
-
-  char lap_name[32];
-  int lapSize = laps.size();
   for(int i=0;i<lapSize;i++)
   {
     char lapString[30];
-    sprintf(lapString,"processing lap %d of %d", i, lapSize);
+    sprintf(lapString,"processing lap %d of %d", i+1, lapSize);
     Serial.println(lapString);
-    writeLapHeader(i, &file);
+    writeLapHeader(i, &final_file);
     for(int j=0;j<=laps[i].parts;j++)
     { 
       //transfer lap_%d_%d, i,j to _filename
+      memset(lap_name, 0 , 32);
       sprintf(lap_name, "lap_%d_%d", i, j);
       Serial.print("processing file "); Serial.println(lap_name);
-      if (!data.open(lap_name, O_READ))
+      if (!file.open(lap_name, O_READ))
       {
         Serial.println("Error opening : ");Serial.println(lap_name);
         return false;
       }
-      dataTransfer(&data,&file);
-      data.close();
+      memset(buffer, 0, sizeof(buffer)); // Clear buffer
+      while ((bytesRead = file.read(buffer, sizeof(buffer)-1)) > 0) {
+        int written = final_file.write(buffer, bytesRead);
+        memset(buffer, 0, sizeof(buffer)); // Clear buffer
+        if (written != bytesRead) {
+          Serial.println("Write error!");
+          break;
+        }
+      }
+      file.close();
+      final_file.flush();
       SD->remove(lap_name);
     }
-    file.println("        </Track>");
-    file.println("      </Lap>"); // Close the Lap element
+    final_file.println("        </Track>");
+    final_file.println("      </Lap>"); // Close the Lap element
   }
-  file.println("    </Activity>");
-  file.println("  </Activities>");
-  file.println("</TrainingCenterDatabase>");
-  file.close();
+  final_file.println("    </Activity>");
+  final_file.println("  </Activities>");
+  final_file.println("</TrainingCenterDatabase>");
+  final_file.close();
 
   return true;
 }
