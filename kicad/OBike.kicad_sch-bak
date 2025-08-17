@@ -11853,7 +11853,7 @@
 				(hide yes)
 			)
 		)
-		(property "Digikiey PN" "MAX40200AUK+TCT-ND"
+		(property "Digikiey PN" "MAX40200AUK+-ND"
 			(at 132.08 110.49 0)
 			(effects
 				(font
@@ -12461,7 +12461,7 @@
 				(hide yes)
 			)
 		)
-		(property "Digikiey PN" "MAX40200AUK+TCT-ND"
+		(property "Digikiey PN" "MAX40200AUK+-ND"
 			(at 133.35 85.09 0)
 			(effects
 				(font
@@ -18034,7 +18034,7 @@
 				(hide yes)
 			)
 		)
-		(property "Digikiey PN" "MAX40200AUK+TCT-ND"
+		(property "Digikiey PN" "MAX40200AUK+-ND"
 			(at 147.32 215.9 0)
 			(effects
 				(font
@@ -19033,7 +19033,7 @@
 				(hide yes)
 			)
 		)
-		(property "Digikiey PN" "1276-1038-1-ND"
+		(property "Digikiey PN" ""
 			(at 250.19 153.67 0)
 			(effects
 				(font
@@ -20266,7 +20266,7 @@
 				(hide yes)
 			)
 		)
-		(property "Digikiey PN" "1276-1044-1-ND"
+		(property "Digikiey PN" "1276-1038-1-ND"
 			(at 149.86 111.76 0)
 			(effects
 				(font
