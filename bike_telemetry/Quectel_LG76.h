@@ -6,7 +6,7 @@
 
 class Quectel_LG76 {
   public:
-    explicit Quectel_GPS(TwoWire &w = Wire);
+    explicit Quectel_LG76(TwoWire &w = Wire);
 
     void begin();
     void poll();

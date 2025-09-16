@@ -22,6 +22,7 @@
 #include "GFX.h"
 #include "TCXLogger.h"
 #include "uBlox.h"
+#include "button.h"
 
 #define MCP23017_ADDR 0x20
 Adafruit_MCP23X17 mcp;
@@ -109,15 +110,13 @@ DateTime dtTimeDisplay;
 
 //button inputs
 bool bUp, bDown, bLeft, bRight, bCenter, bSD_Det;
-bool bUp_Prev, bDown_Prev, bLeft_Prev, bRight_Prev, bCenter_Prev, bSD_Det_Prev;
-bool bUp_RE, bDown_RE, bLeft_RE, bRight_RE, bCenter_RE, bSD_Det_RE;
-bool bUp_FE, bDown_FE, bLeft_FE, bRight_FE, bCenter_FE, bSD_Det_FE;
-bool bUp_long, bDown_long, bLeft_long, bRight_long, bCenter_long;
-uint16_t nUp_long_mult, nDown_long_mult, nLeft_long_mult, nRight_long_mult, nCenter_long_mult;
-bool bUp_short, bDown_short, bLeft_short, bRight_short, bCenter_short;
-bool bUp_short_held, bDown_short_held, bLeft_short_held, bRight_short_held, bCenter_short_held;
-bool bUp_Seen, bDown_Seen, bLeft_Seen, bRight_Seen, bCenter_Seen;
-uint64_t nUpPress, nDownPress, nLeftPress, nRightPress, nCenterPress;
+button Up(&bUp, nHeldPressTime, nShortPressTime);
+button Down(&bDown, nHeldPressTime, nShortPressTime);
+button Left(&bLeft, nHeldPressTime, nShortPressTime);
+button Right(&bRight, nHeldPressTime, nShortPressTime);
+button Center(&bCenter, nHeldPressTime, nShortPressTime);
+button SD_Det(&bSD_Det, nHeldPressTime, nShortPressTime);
+
 bool bSysOff;
 
 uint16_t u16_state, u16_state_prev;
@@ -397,6 +396,13 @@ void loop() {
   bUp = (currentB >> 4) & 0x01;
   bSD_Det = digitalRead(D2);
 
+  Up.process();
+  Down.process();
+  Left.process();
+  Right.process();
+  Center.process();
+  SD_Det.process();
+
   mcp.clearInterrupts();
 
   if (bRight | bUp | bDown | bCenter | bLeft) {
@@ -440,7 +446,7 @@ void loop() {
     }
     nDetThresh ++;
   }
-  if (bSD_Det_RE) {
+  if (SD_Det.RE()) {
     debugLog.close();
   }
 
@@ -560,69 +566,6 @@ void loop() {
     
     display.clearDisplay();
 
-    bRight_RE = bRight && !bRight_Prev && !bSwitchOnDelay;
-    bRight_FE = !bRight && bRight_Prev && !bSwitchOnDelay;
-    if (bRight_RE)
-      nRightPress = nCurrentTimeMillis;
-    bRight_long = bRight && ((nCurrentTimeMillis - nRightPress) > nHeldPressTime);
-    bRight_Prev = bRight;
-
-    bUp_RE = bUp && !bUp_Prev && !bSwitchOnDelay;
-    bUp_FE = !bUp && bUp_Prev && !bSwitchOnDelay;
-    if (bUp_RE)
-      nUpPress = nCurrentTimeMillis;
-    bUp_long = bUp && ((nCurrentTimeMillis - nUpPress) > nHeldPressTime);
-    nUp_long_mult = (nCurrentTimeMillis - nUpPress) / nHeldPressTime;
-    if(bUp_short)
-      bUp_short=false;
-    bUp_short = bUp_FE && ((nCurrentTimeMillis - nUpPress) < nShortPressTime) && bUp_Seen;
-    bUp_short_held = bUp && !bUp_long && ((nCurrentTimeMillis - nUpPress) > nShortPressTime);
-    if(!bUp){
-      bUp_Seen = false;
-      nUp_long_mult = 0;
-    }
-    bUp_Prev = bUp;
-
-    bDown_RE = bDown && !bDown_Prev && !bSwitchOnDelay;
-    bDown_FE = !bDown && bDown_Prev && !bSwitchOnDelay;
-    if (bDown_RE)
-      nDownPress = nCurrentTimeMillis;
-    bDown_long = bDown && ((nCurrentTimeMillis - nDownPress) > nHeldPressTime);
-    nDown_long_mult = (nCurrentTimeMillis - nDownPress) / nHeldPressTime;
-    if(bDown_short)
-      bDown_short=false;
-    bDown_short = bDown_FE && ((nCurrentTimeMillis - nDownPress) < nShortPressTime) && bDown_Seen;
-    bDown_short_held = bDown && !bDown_long && ((nCurrentTimeMillis - nDownPress) > nShortPressTime);
-    if(!bDown){
-      bDown_Seen = false;
-      nDown_long_mult = 0;
-    }
-    bDown_Prev = bDown;
-
-    bCenter_RE = bCenter && !bCenter_Prev && !bSwitchOnDelay;
-    bCenter_FE = !bCenter && bCenter_Prev && !bSwitchOnDelay;
-    if (bCenter_RE){
-      nCenterPress = nCurrentTimeMillis;
-      bCenter_Seen = true;
-    }
-    bCenter_long = bCenter && ((nCurrentTimeMillis - nCenterPress) > nHeldPressTime);
-    if(bCenter_short)
-      bCenter_short=false;
-    bCenter_short = bCenter_FE && ((nCurrentTimeMillis - nCenterPress) < nShortPressTime) && bCenter_Seen;
-    if(!bCenter)
-      bCenter_Seen = false;
-    bCenter_Prev = bCenter;
-
-    bLeft_RE = bLeft && !bLeft_Prev && !bSwitchOnDelay;
-    bLeft_FE = !bLeft && bLeft_Prev && !bSwitchOnDelay;
-    if (bLeft_RE)
-      nLeftPress = nCurrentTimeMillis;
-    bLeft_long = bLeft && ((nCurrentTimeMillis - nLeftPress) > nHeldPressTime);
-    bLeft_Prev = bLeft;
-
-    bSD_Det_RE = bSD_Det && !bSD_Det_Prev && !bSwitchOnDelay;
-    bSD_Det_FE = !bSD_Det && bSD_Det_Prev && !bSwitchOnDelay;
-    bSD_Det_Prev = bSD_Det;
     GUI();
 
     display.display();
@@ -783,30 +726,30 @@ void ExitStats(){
 
 void statSelection(){
   if(!bAgeSel && !bMassSel && !bStatBackSel){
-    if(bUp_FE){
+    if(Up.shortPress()){
       if((nStatSel & 0x30) >= 0x10)
         nStatSel -= 0x10;
       else
         nStatSel += 0x20;
 
-    }else if(bDown_FE){
+    }else if(Down.shortPress()){
       if((nStatSel & 0x20) < 0x20)
         nStatSel += 0x10;
       else
         nStatSel -= 0x20;
     }
   }else if(bAgeSel){
-    if(bUp_FE)
+    if(Up.shortPress())
       nAgeDisplay ++;
-    else if(bDown_FE)
+    else if(Down.shortPress())
       nAgeDisplay --;
   }else if(bMassSel){
-    if(bUp_FE)
+    if(Up.shortPress())
       nMassDisplay ++;
-    else if(bDown_FE)
+    else if(Down.shortPress())
       nMassDisplay --;
   }
-  if(bCenter_RE)
+  if(Center.shortPress())
     nStatSel = nStatSel ^ 1;
 
   bAgeFoc = (nStatSel==0x00);
@@ -911,22 +854,22 @@ void GUI() {
         nLastScan = nCurrentTimeMillis;
       }
 
-      bSysOff = bRight_long && !b_Running && !bSwitchOnDelay;
+      bSysOff = Right.longHeld() && !b_Running && !bSwitchOnDelay;
 
       drawMain();
 
       if (b_Running) {
-        if (bRight_RE && b_Running) {
+        if (Right.shortPress() && b_Running) {
           b_Running = false;
-        } else if (bCenter_short) {
+        } else if (Center.shortPress()) {
           //paused = !paused;
           tcxLog.newLap(nCurrentTime);
         }
       } else if (!b_Running) {
-        if (bCenter_short) {
+        if (Center.shortPress()) {
           b_Running = true;
 
-        } else if(bLeft_RE){
+        } else if(Left.shortPress()){
           u16_state = 1;
           if(Bluefruit.Scanner.isRunning())
             Bluefruit.Scanner.stop();
@@ -990,7 +933,7 @@ bool GPS_Param_Sel;
 void GPSSelect(){
   int numSettings = std::end(PM2_settings)-std::begin(PM2_settings);
   if(!GPS_Param_Sel){
-    if (bUp_RE) {
+    if (Up.shortPress()) {
       if (s16GPS_SettingsSel >= 1)
       {
         s16GPS_SettingsSel --;
@@ -998,32 +941,32 @@ void GPSSelect(){
         s16GPS_SettingsSel = numSettings - 1;
       }
     }
-    if (bDown_RE) {
+    if (Down.shortPress()) {
       if (s16GPS_SettingsSel < (numSettings-1)){
         s16GPS_SettingsSel ++;
       }else{
         s16GPS_SettingsSel = 0;
       }
     }
-    if (bLeft_RE) {
+    if (Left.shortPress()) {
       u16_state = 1;
       uBlox_PM2();
       uBlox_Save();
     }
   }else{
-    if(bUp_RE)
+    if(Up.shortPress())
       PM2_settings[s16GPS_SettingsSel].val++;
-    else if(bUp && bUp_short_held)
+    else if(Up.shortHeld())
       PM2_settings[s16GPS_SettingsSel].val++;
-    else if(bUp_long)
-      PM2_settings[s16GPS_SettingsSel].val+=10*nUp_long_mult;
+    else if(Up.longHeld())
+      PM2_settings[s16GPS_SettingsSel].val+=10*Up.mult();
 
-    if(bDown_RE)
+    if(Down.shortPress())
       PM2_settings[s16GPS_SettingsSel].val--;
-    else if(bDown && bDown_short_held)
+    else if(Down.shortHeld())
       PM2_settings[s16GPS_SettingsSel].val--;
-    else if(bDown_long)
-      PM2_settings[s16GPS_SettingsSel].val-=10*nDown_long_mult;
+    else if(Down.longHeld())
+      PM2_settings[s16GPS_SettingsSel].val-=10*Down.mult();
 
     if(PM2_settings[s16GPS_SettingsSel].val>PM2_settings[s16GPS_SettingsSel].maxVal)
       PM2_settings[s16GPS_SettingsSel].val=PM2_settings[s16GPS_SettingsSel].maxVal;
@@ -1031,7 +974,7 @@ void GPSSelect(){
     if(PM2_settings[s16GPS_SettingsSel].val<PM2_settings[s16GPS_SettingsSel].minVal)
       PM2_settings[s16GPS_SettingsSel].val=PM2_settings[s16GPS_SettingsSel].minVal;
   }
-  if (bCenter_RE) {
+  if (Center.shortPress()) {
     GPS_Param_Sel = !GPS_Param_Sel;
   }
 }
@@ -1066,7 +1009,7 @@ void drawGPSsettings(){
 }
 
 void settingsSelect(){
-  if (bUp_RE) {
+  if (Up.shortPress()) {
     if (s16SettingsSel >= 1)
     {
       s16SettingsSel --;
@@ -1074,14 +1017,14 @@ void settingsSelect(){
       s16SettingsSel = s16NumSettings - 1;
     }
   }
-  if (bDown_RE) {
+  if (Down.shortPress()) {
     if (s16SettingsSel < (s16NumSettings-1)){
       s16SettingsSel ++;
     }else{
       s16SettingsSel = 0;
     }
   }
-  if (bCenter_RE) {
+  if (Center.shortPress()) {
     switch (s16SettingsSel) {
       case 0:
         u16_state = 2;
@@ -1093,7 +1036,7 @@ void settingsSelect(){
       case 2:
         nAgeDisplay = tcxLog.getAge();
         nMassDisplay = tcxLog.getMass();
-        bCenter_FE=false;
+        
         bAgeSel=false;
         bMassSel=false;
         bAgeFoc=true;
@@ -1109,7 +1052,6 @@ void settingsSelect(){
         break;
     }
     saveJson();
-    bCenter_Seen = false;
   } 
 }
 
@@ -1165,7 +1107,7 @@ void drawSettingsmenuItem(int x, int y, bool focus, int16_t menuIndex) {
 }
 
 void deviceSelection() {
-  if (bUp_RE) {
+  if (Up.shortPress()) {
     if (s16DeviceSel >= 1)
     {
       s16DeviceSel --;
@@ -1178,7 +1120,7 @@ void deviceSelection() {
     Serial.println(s16DeviceWindowStart);
   }
 
-  if (bDown_RE) {
+  if (Down.shortPress()) {
     if (s16DeviceSel < nearby_devices.size())
       s16DeviceSel ++;
       if((s16DeviceSel >= (s16DeviceWindowStart + nDeviceWindowLen)) && (s16DeviceSel < nearby_devices.size()))
@@ -1190,7 +1132,7 @@ void deviceSelection() {
   }
 
   if (s16DeviceSel != nearby_devices.size()) {
-    if (bCenter_RE) {
+    if (Center.shortPress()) {
       nearby_devices[s16DeviceSel].stored = !nearby_devices[s16DeviceSel].stored;
 
       BT_Device* device = BT_Device::getDeviceWithMAC(nearby_devices[s16DeviceSel].MAC);
@@ -1221,7 +1163,7 @@ void deviceSelection() {
   }
 
   bBackFocDev = s16DeviceSel == nearby_devices.size();
-  bBackSelDev = bCenter_RE && bBackFocDev;
+  bBackSelDev = Center.shortPress() && bBackFocDev;
 }
 
 void showDevices() {
@@ -1412,9 +1354,9 @@ void stateTransition() {
 
 DateTime updateTime(DateTime someTime) {
   int8_t s8AddVal;
-  if (bUp_RE) {
+  if (Up.shortPress()) {
     s8AddVal = 1;
-  } else if (bDown_RE) {
+  } else if (Down.shortPress()) {
     s8AddVal = -1;
   }
 
@@ -1448,28 +1390,28 @@ DateTime updateTime(DateTime someTime) {
 void timeSelection() {
   //button inputs
   if (!(bHourSel | bMinuteSel | bSecondSel | bDaySel | bMonthSel | bYearSel)) {
-    if (bUp_RE) {
+    if (Up.shortPress()) {
       if ((s16timeSel & 0x0300) >= 0x0100)
         s16timeSel -= 0x0100;
       else
         s16timeSel += 0x0200;
     }
 
-    if (bDown_RE) {
+    if (Down.shortPress()) {
       if ((s16timeSel & 0x0200) < 0x0200)
         s16timeSel += 0x100;
       else
         s16timeSel -= 0x0200;
     }
 
-    if (bLeft_RE) {
+    if (Left.shortPress()) {
       if ((s16timeSel & 0x0030) >= 0x0010)
         s16timeSel -= 0x0010;
       else
         s16timeSel += 0x0020;
     }
 
-    if (bRight_RE) {
+    if (Right.shortPress()) {
       if ((s16timeSel & 0x0020) < 0x0020)
         s16timeSel += 0x0010;
       else
@@ -1481,7 +1423,7 @@ void timeSelection() {
     s16timeSel &= 0xFF0F;
   }
 
-  if (bCenter_RE)
+  if (Center.shortPress())
     s16timeSel = s16timeSel ^ 1;
 
   //calculate boolean values
