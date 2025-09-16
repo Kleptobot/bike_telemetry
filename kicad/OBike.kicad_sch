@@ -6677,6 +6677,12 @@
 		(uuid "aa0975db-3231-4745-ac84-091286ced931")
 	)
 	(junction
+		(at 302.26 209.55)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "aa3c1d69-603e-4b5f-9fd5-9747681fb034")
+	)
+	(junction
 		(at 149.86 107.95)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -6711,6 +6717,12 @@
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "c8d8fe2b-d3a2-4cac-9a14-25ef9194e5d3")
+	)
+	(junction
+		(at 313.69 219.71)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "c976afb0-c898-44a6-ab12-e2008493f14a")
 	)
 	(junction
 		(at 154.94 115.57)
@@ -6783,6 +6795,12 @@
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "ebd5101b-83cf-44e8-81bd-abf4880fcb9b")
+	)
+	(junction
+		(at 313.69 209.55)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "ecd6e8a4-3d24-49db-88d6-1ad518414b50")
 	)
 	(junction
 		(at 156.21 90.17)
@@ -7087,6 +7105,16 @@
 			(type default)
 		)
 		(uuid "1c70598f-73cc-487a-816d-d2f7c62f940c")
+	)
+	(wire
+		(pts
+			(xy 313.69 219.71) (xy 313.69 218.44)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "1d069de3-5f4b-4620-9d35-8c18321c86ef")
 	)
 	(wire
 		(pts
@@ -7580,6 +7608,16 @@
 	)
 	(wire
 		(pts
+			(xy 302.26 219.71) (xy 302.26 218.44)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "41d215c6-c830-4df0-860f-8e019342f11b")
+	)
+	(wire
+		(pts
 			(xy 273.05 148.59) (xy 276.86 148.59)
 		)
 		(stroke
@@ -7620,7 +7658,7 @@
 	)
 	(wire
 		(pts
-			(xy 266.7 222.25) (xy 271.78 222.25)
+			(xy 250.19 224.79) (xy 255.27 224.79)
 		)
 		(stroke
 			(width 0)
@@ -8290,6 +8328,26 @@
 	)
 	(wire
 		(pts
+			(xy 302.26 209.55) (xy 313.69 209.55)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "7def805b-ce7f-4d84-9b9e-8e8bd3e1d18c")
+	)
+	(wire
+		(pts
+			(xy 313.69 209.55) (xy 316.23 209.55)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "7ecb6d6d-399d-4a26-93d1-f243416ba298")
+	)
+	(wire
+		(pts
 			(xy 41.91 26.67) (xy 41.91 40.64)
 		)
 		(stroke
@@ -8410,6 +8468,16 @@
 	)
 	(wire
 		(pts
+			(xy 302.26 219.71) (xy 313.69 219.71)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "8a2e3a00-1ab0-4694-a289-669080231f33")
+	)
+	(wire
+		(pts
 			(xy 270.51 144.78) (xy 273.05 144.78)
 		)
 		(stroke
@@ -8460,6 +8528,16 @@
 	)
 	(wire
 		(pts
+			(xy 302.26 210.82) (xy 302.26 209.55)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "92a15e62-a5af-47ae-b432-48328bf18d6e")
+	)
+	(wire
+		(pts
 			(xy 361.95 54.61) (xy 365.76 54.61)
 		)
 		(stroke
@@ -8470,7 +8548,7 @@
 	)
 	(wire
 		(pts
-			(xy 266.7 212.09) (xy 271.78 212.09)
+			(xy 250.19 214.63) (xy 255.27 214.63)
 		)
 		(stroke
 			(width 0)
@@ -8550,7 +8628,7 @@
 	)
 	(wire
 		(pts
-			(xy 317.5 207.01) (xy 321.31 207.01)
+			(xy 300.99 209.55) (xy 302.26 209.55)
 		)
 		(stroke
 			(width 0)
@@ -8580,7 +8658,7 @@
 	)
 	(wire
 		(pts
-			(xy 266.7 214.63) (xy 271.78 214.63)
+			(xy 250.19 217.17) (xy 255.27 217.17)
 		)
 		(stroke
 			(width 0)
@@ -8637,6 +8715,16 @@
 			(type default)
 		)
 		(uuid "a9cbd999-30de-42e3-a9de-35d81e103d6c")
+	)
+	(wire
+		(pts
+			(xy 313.69 220.98) (xy 313.69 219.71)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "aa8946be-7079-48a7-b3bb-1d339992dc95")
 	)
 	(wire
 		(pts
@@ -8740,7 +8828,7 @@
 	)
 	(wire
 		(pts
-			(xy 266.7 219.71) (xy 271.78 219.71)
+			(xy 250.19 222.25) (xy 255.27 222.25)
 		)
 		(stroke
 			(width 0)
@@ -8820,7 +8908,7 @@
 	)
 	(wire
 		(pts
-			(xy 317.5 227.33) (xy 321.31 227.33)
+			(xy 300.99 229.87) (xy 304.8 229.87)
 		)
 		(stroke
 			(width 0)
@@ -8887,6 +8975,16 @@
 			(type default)
 		)
 		(uuid "c498e43d-f47c-45cf-a2d6-98dae643d15f")
+	)
+	(wire
+		(pts
+			(xy 313.69 210.82) (xy 313.69 209.55)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "c4f76ac5-a520-46aa-866f-f7383d5c2d33")
 	)
 	(wire
 		(pts
@@ -9674,7 +9772,7 @@
 	)
 	(global_label "MOSI"
 		(shape input)
-		(at 266.7 219.71 180)
+		(at 250.19 222.25 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -9684,7 +9782,7 @@
 		)
 		(uuid "24a52661-0c8b-4c7f-a6ee-22892ba573cd")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 259.1186 219.71 0)
+			(at 242.6086 222.25 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9740,7 +9838,7 @@
 	)
 	(global_label "FL_CS"
 		(shape input)
-		(at 266.7 212.09 180)
+		(at 250.19 214.63 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -9750,7 +9848,7 @@
 		)
 		(uuid "31ca56d1-8813-456d-b31a-220330fc839c")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 258.151 212.09 0)
+			(at 241.641 214.63 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10422,7 +10520,7 @@
 	)
 	(global_label "MISO"
 		(shape input)
-		(at 266.7 222.25 180)
+		(at 250.19 224.79 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -10432,7 +10530,7 @@
 		)
 		(uuid "9752e66d-1036-49e0-be61-19eb381dff08")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 259.1186 222.25 0)
+			(at 242.6086 224.79 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10554,7 +10652,7 @@
 	)
 	(global_label "SCK"
 		(shape input)
-		(at 266.7 214.63 180)
+		(at 250.19 217.17 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -10564,7 +10662,7 @@
 		)
 		(uuid "a5ae6622-fd91-480b-ad04-7b224fcbda64")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 259.9653 214.63 0)
+			(at 243.4553 217.17 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10884,7 +10982,7 @@
 	)
 	(global_label "AUX_3V3"
 		(shape output)
-		(at 321.31 207.01 0)
+		(at 316.23 209.55 0)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -10894,7 +10992,7 @@
 		)
 		(uuid "cbfed94c-6117-485c-aa37-210eb41607de")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 332.399 207.01 0)
+			(at 327.319 209.55 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12798,6 +12896,103 @@
 		)
 	)
 	(symbol
+		(lib_id "Device:C")
+		(at 313.69 214.63 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "19d6b3cf-218a-46a0-a788-281c8af8c4d4")
+		(property "Reference" "C14"
+			(at 317.5 213.3599 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "1.0uF"
+			(at 317.5 215.8999 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_0805_2012Metric"
+			(at 314.6552 218.44 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 313.69 214.63 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Unpolarized capacitor"
+			(at 313.69 214.63 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" ""
+			(at 313.69 214.63 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Digikiey PN" "1276-1066-1-ND"
+			(at 313.69 214.63 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Field6" ""
+			(at 313.69 214.63 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "0c481f10-fe2d-4fa4-8cfa-53cbd3c96a00")
+		)
+		(pin "2"
+			(uuid "a7a4d407-d091-492c-be31-99407396b445")
+		)
+		(instances
+			(project "OBike"
+				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
+					(reference "C14")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "Diode:1N4448W")
 		(at 248.92 73.66 0)
 		(mirror y)
@@ -13778,7 +13973,7 @@
 	)
 	(symbol
 		(lib_id "Windbond:W25N01GVZEIG_TR")
-		(at 294.64 217.17 0)
+		(at 278.13 219.71 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -13787,7 +13982,7 @@
 		(fields_autoplaced yes)
 		(uuid "40dadfe8-5879-406d-9031-7f3a7e93f3c2")
 		(property "Reference" "U9"
-			(at 294.64 199.39 0)
+			(at 278.13 201.93 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13795,7 +13990,7 @@
 			)
 		)
 		(property "Value" "W25N01GVZEIG_TR"
-			(at 294.64 201.93 0)
+			(at 278.13 204.47 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13803,7 +13998,7 @@
 			)
 		)
 		(property "Footprint" "windbond:SON127P800X600X80-9N"
-			(at 294.64 217.17 0)
+			(at 278.13 219.71 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13813,7 +14008,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 294.64 217.17 0)
+			(at 278.13 219.71 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13822,7 +14017,7 @@
 			)
 		)
 		(property "Description" ""
-			(at 294.64 217.17 0)
+			(at 278.13 219.71 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13831,7 +14026,7 @@
 			)
 		)
 		(property "MF" "Winbond Electronics"
-			(at 294.64 217.17 0)
+			(at 278.13 219.71 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13841,7 +14036,7 @@
 			)
 		)
 		(property "DESCRIPTION" "Ic Flash 1gbit 104mhz 8wson"
-			(at 294.64 217.17 0)
+			(at 278.13 219.71 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13851,7 +14046,7 @@
 			)
 		)
 		(property "PACKAGE" "WSON-8 Winbond"
-			(at 294.64 217.17 0)
+			(at 278.13 219.71 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13861,7 +14056,7 @@
 			)
 		)
 		(property "PRICE" "None"
-			(at 294.64 217.17 0)
+			(at 278.13 219.71 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13871,7 +14066,7 @@
 			)
 		)
 		(property "Package" "WSON-8 Winbond"
-			(at 294.64 217.17 0)
+			(at 278.13 219.71 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13881,7 +14076,7 @@
 			)
 		)
 		(property "Check_prices" "https://www.snapeda.com/parts/W25N01GVZEIG%20TR/Winbond/view-part/?ref=eda"
-			(at 294.64 217.17 0)
+			(at 278.13 219.71 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13891,7 +14086,7 @@
 			)
 		)
 		(property "STANDARD" "IPC7351B"
-			(at 294.64 217.17 0)
+			(at 278.13 219.71 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13901,7 +14096,7 @@
 			)
 		)
 		(property "SnapEDA_Link" "https://www.snapeda.com/parts/W25N01GVZEIG%20TR/Winbond/view-part/?ref=snap"
-			(at 294.64 217.17 0)
+			(at 278.13 219.71 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13911,7 +14106,7 @@
 			)
 		)
 		(property "MP" "W25N01GVZEIG TR"
-			(at 294.64 217.17 0)
+			(at 278.13 219.71 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13921,7 +14116,7 @@
 			)
 		)
 		(property "Description_1" "FLASH - NAND Memory IC 1Gb (128M x 8) SPI 104 MHz 8-WSON (8x6)"
-			(at 294.64 217.17 0)
+			(at 278.13 219.71 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13931,7 +14126,7 @@
 			)
 		)
 		(property "Availability" "In Stock"
-			(at 294.64 217.17 0)
+			(at 278.13 219.71 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13941,7 +14136,7 @@
 			)
 		)
 		(property "Price" "None"
-			(at 294.64 217.17 0)
+			(at 278.13 219.71 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13951,7 +14146,7 @@
 			)
 		)
 		(property "MANUFACTURER" "Winbond Electronics"
-			(at 294.64 217.17 0)
+			(at 278.13 219.71 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13961,7 +14156,7 @@
 			)
 		)
 		(property "Digikiey PN" "256-W25N01GVZEIGTRCT-ND"
-			(at 294.64 217.17 0)
+			(at 278.13 219.71 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -14414,7 +14609,7 @@
 	)
 	(symbol
 		(lib_id "power:Earth")
-		(at 321.31 227.33 0)
+		(at 304.8 229.87 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -14423,7 +14618,7 @@
 		(fields_autoplaced yes)
 		(uuid "5631c019-028b-4574-aa00-66c595b972bf")
 		(property "Reference" "#PWR026"
-			(at 321.31 233.68 0)
+			(at 304.8 236.22 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -14432,7 +14627,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 321.31 232.41 0)
+			(at 304.8 234.95 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -14440,7 +14635,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 321.31 227.33 0)
+			(at 304.8 229.87 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -14449,7 +14644,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 321.31 227.33 0)
+			(at 304.8 229.87 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -14458,7 +14653,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"Earth\""
-			(at 321.31 227.33 0)
+			(at 304.8 229.87 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -16533,6 +16728,102 @@
 			(project "OBike"
 				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
 					(reference "#PWR010")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C")
+		(at 302.26 214.63 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "91e3b4d7-8b6d-48b3-b6cc-c51201e979c5")
+		(property "Reference" "C13"
+			(at 305.054 213.36 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "0.1uF"
+			(at 305.054 215.9 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_0805_2012Metric"
+			(at 303.2252 218.44 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 302.26 214.63 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Unpolarized capacitor"
+			(at 302.26 214.63 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" ""
+			(at 302.26 214.63 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Digikiey PN" "1276-2442-1-ND"
+			(at 302.26 214.63 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Field6" ""
+			(at 302.26 214.63 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "c5278649-af4b-4ee3-ab83-1e24492d871f")
+		)
+		(pin "2"
+			(uuid "284cf5e3-a6ab-4507-9698-a8076971aea8")
+		)
+		(instances
+			(project "OBike"
+				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
+					(reference "C13")
 					(unit 1)
 				)
 			)
@@ -20696,6 +20987,72 @@
 			(project "OBike"
 				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
 					(reference "#PWR023")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:Earth")
+		(at 313.69 220.98 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "fdf1a10e-c750-4355-82d5-f15eb037a9b5")
+		(property "Reference" "#PWR030"
+			(at 313.69 227.33 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND"
+			(at 313.69 226.06 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 313.69 220.98 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 313.69 220.98 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"Earth\""
+			(at 313.69 220.98 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "47df6b57-7e72-41d4-a8f9-34b3089284b9")
+		)
+		(instances
+			(project "OBike"
+				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
+					(reference "#PWR030")
 					(unit 1)
 				)
 			)
