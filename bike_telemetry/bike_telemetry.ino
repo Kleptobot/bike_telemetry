@@ -1,7 +1,5 @@
 #include <LSM6DS3.h>
 #include <Wire.h>
-//#include <Adafruit_ST7789.h> // Hardware-specific library for ST7789
-#include <Adafruit_SH110X.h>
 #include <SPI.h>
 #include "SdFat.h"
 #include "sdios.h"
@@ -23,19 +21,12 @@
 #include "TCXLogger.h"
 #include "uBlox.h"
 #include "button.h"
+#include "GUI.h"
+#include "TimeMenu.h"
+#include "body.h"
 
 #define MCP23017_ADDR 0x20
 Adafruit_MCP23X17 mcp;
-
-#define i2c_Address 0x3c   //initialize with the I2C addr 0x3C Typically eBay OLED's
-#define SCREEN_WIDTH 128   // OLED display width, in pixels
-#define SCREEN_HEIGHT 128  // OLED display height, in pixels
-#define TFT_CS D0
-#define TFT_RST -1
-//#define TFT_DC        D2
-#define OLED_RESET -1  //   QT-PY / XIAO
-Adafruit_SH1107 display = Adafruit_SH1107(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-//Adafruit_ST7789 display = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
 
 #define WAKEUP_PIN D1
 #define GPIOB0 8
@@ -58,7 +49,6 @@ Adafruit_SH1107 display = Adafruit_SH1107(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OL
 
 #define nDeviceWindowLen 2
 
-#define s16NumSettings 5
 #define nNumStats 2
 
 TinyGPSPlus gps;
@@ -94,18 +84,6 @@ Xiao battery;
 float fBatteryVoltage;
 int nBatteryPercentage;
 
-//time selection state variables
-int16_t s16timeSel;
-bool bHourSel, bMinuteSel, bSecondSel;
-bool bHourFoc, bMinuteFoc, bSecondFoc;
-bool bDaySel, bMonthSel, bYearSel;
-bool bDayFoc, bMonthFoc, bYearFoc;
-bool bBackFoc, bBackSel, bSaveFoc, bSaveSel;
-
-int16_t nStatSel;
-int nAgeDisplay, nMassDisplay;
-bool bMassSel, bMassFoc, bAgeFoc, bAgeSel, bStatBackSel, bStatBackFoc;
-
 DateTime dtTimeDisplay;
 
 //button inputs
@@ -116,6 +94,9 @@ button Left(&bLeft, nHeldPressTime, nShortPressTime);
 button Right(&bRight, nHeldPressTime, nShortPressTime);
 button Center(&bCenter, nHeldPressTime, nShortPressTime);
 button SD_Det(&bSD_Det, nHeldPressTime, nShortPressTime);
+
+TimeMenu timeMenu(&Up, &Down, &Left, &Right, &Center);
+body human(&Up, &Down, &Left, &Right, &Center);
 
 bool bSysOff;
 
@@ -140,10 +121,6 @@ uint64_t nCurrentTimeMillis, nStartTimeMillis, nLastIMURead, nLastDSPRead, nLast
 
 // Dps3xx Object
 Dps3xx Dps3xxPressureSensor = Dps3xx();
-
-//declare methods with default values
-void drawMenuStopped(int x = 0, int y = 0);
-void drawMenuRunning(int x = 0, int y = 0);
 
 void disconnectPin(uint32_t ulPin) {
   if (ulPin >= PINS_COUNT) {
@@ -599,244 +576,6 @@ void loop() {
     bWriteTCX = false;
   }
 
-
-
-}
-
-void drawSelectable(int16_t x, int16_t y, const uint8_t* bitmap, const char* text, bool focus, bool selected) {
-  int16_t x1, y1;
-  uint16_t w, h;
-
-  display.setTextSize(2);
-  display.getTextBounds(text, x + 16, y, &x1, &y1, &w, &h);
-  if (selected) {
-    display.setTextColor(SH110X_BLACK);
-    display.fillRect(x - 1, y - 1, w + 17, h + 1, 1);
-    display.setCursor(x + 16, y);
-    display.drawBitmap(x, y, bitmap, 16, 16, 1);
-    display.print(text);
-  } else {
-    display.setTextColor(SH110X_WHITE);
-    if (focus)
-      display.drawRect(x - 2, y - 2, w + 18, h + 2, 1);
-    display.setCursor(x + 16, y);
-    display.drawBitmap(x, y, bitmap, 16, 16, 1);
-    display.print(text);
-  }
-  display.setTextColor(SH110X_WHITE);
-}
-
-void drawSelectable(int16_t x, int16_t y, const char* text, bool focus, bool selected) {
-  int16_t x1, y1;
-  uint16_t w, h;
-
-  display.setTextSize(2);
-  display.getTextBounds(text, x, y, &x1, &y1, &w, &h);
-  if (selected) {
-    display.setTextColor(SH110X_BLACK);
-    display.fillRect(x - 1, y - 1, w, h, 1);
-    display.setCursor(x, y);
-    display.print(text);
-  } else {
-    display.setTextColor(SH110X_WHITE);
-    if (focus)
-      display.drawRect(x - 2, y - 2, w + 2, h + 2, 1);
-    display.setCursor(x, y);
-    display.print(text);
-  }
-  display.setTextColor(SH110X_WHITE);
-}
-
-void drawSelectable(int16_t x, int16_t y, int num, bool focus, bool selected) {
-  int16_t x1, y1;
-  uint16_t w, h;
-
-  String text;
-
-  if (num < 10)
-    text = "0" + String(num);
-  else if (num > 99)
-    text = "99";
-  else
-    text = String(num);
-
-  display.setTextSize(2);
-  display.getTextBounds(text, x, y, &x1, &y1, &w, &h);
-  if (selected) {
-    display.setTextColor(SH110X_BLACK);
-    display.fillRect(x - 1, y - 1, w, h, 1);
-    display.setCursor(x, y);
-    display.print(text);
-  } else {
-    display.setTextColor(SH110X_WHITE);
-    if (focus)
-      display.drawRect(x - 2, y - 2, w + 2, h + 2, 1);
-    display.setCursor(x, y);
-    display.print(text);
-  }
-  display.setTextColor(SH110X_WHITE);
-}
-
-void drawSelectable(int16_t x, int16_t y, const char* text, int num, bool focus, bool selected) {
-  int16_t x1, y1;
-  uint16_t w, h;
-  String numText;
-
-  numText = String(num);
-  display.getTextBounds(numText, x, y, &x1, &y1, &w, &h);
-
-  display.setTextSize(1);  
-  if (selected) {
-    display.setTextColor(SH110X_BLACK);
-    display.fillRect(0, y - 1, 127, 17, 1);
-    display.setCursor(2, y);
-    display.print(text);
-    display.setCursor(128-w-2, y+8);
-    display.print(numText);
-  } else {
-    display.setTextColor(SH110X_WHITE);
-    if (focus)
-      display.drawRect(0, y - 2, 128, 19, 1);
-    display.setCursor(2, y);
-    display.print(text);
-    display.setCursor(128-w-2, y+8);
-    display.print(numText);
-  }
-  display.setTextColor(SH110X_WHITE);
-}
-
-void drawStats(int x, int y){
-  display.setTextColor(SH110X_WHITE);
-  display.setTextSize(2);
-  display.setCursor(x, y);
-
-  display.print("Age: ");
-  drawSelectable(64, display.getCursorY(), nAgeDisplay, bAgeFoc, bAgeSel);
-  display.setTextSize(2);
-  display.setCursor(x, display.getCursorY()+16);
-  display.print("Mass: ");
-  drawSelectable(64, display.getCursorY(), nMassDisplay, bMassFoc, bMassSel);
-  display.setCursor(x, display.getCursorY()+32);
-  drawSelectable(x, display.getCursorY(), epd_bitmap_left, "Back", bStatBackFoc, bStatBackSel);
-}
-
-void ExitStats(){
-
-}
-
-void statSelection(){
-  if(!bAgeSel && !bMassSel && !bStatBackSel){
-    if(Up.shortPress()){
-      if((nStatSel & 0x30) >= 0x10)
-        nStatSel -= 0x10;
-      else
-        nStatSel += 0x20;
-
-    }else if(Down.shortPress()){
-      if((nStatSel & 0x20) < 0x20)
-        nStatSel += 0x10;
-      else
-        nStatSel -= 0x20;
-    }
-  }else if(bAgeSel){
-    if(Up.shortPress())
-      nAgeDisplay ++;
-    else if(Down.shortPress())
-      nAgeDisplay --;
-  }else if(bMassSel){
-    if(Up.shortPress())
-      nMassDisplay ++;
-    else if(Down.shortPress())
-      nMassDisplay --;
-  }
-  if(Center.shortPress())
-    nStatSel = nStatSel ^ 1;
-
-  bAgeFoc = (nStatSel==0x00);
-  bAgeSel = (nStatSel==0x01);
-  bMassFoc = (nStatSel==0x10);
-  bMassSel = (nStatSel==0x11);
-  bStatBackFoc = (nStatSel==0x20);
-  bStatBackSel = (nStatSel==0x21);
-
-  if(bStatBackSel){
-    tcxLog.setAge(nAgeDisplay);
-    tcxLog.setMass(nMassDisplay);
-    nStatSel = 0;
-    u16_state = 1;
-    bStatBackSel = bStatBackFoc =false;
-  }
-}
-
-
-/**
- * Draws the date time 
- * @param someTime the date time to display
- * @param x top left x coordinate of the date time
- * @param y top left y coordinate of the date time
- */
-void drawDateTime(DateTime someTime, int x, int y) {
-  display.setTextColor(SH110X_WHITE);
-  display.setTextSize(2);
-  display.setCursor(x, y);
-
-  //print hours
-  drawSelectable(x+2, y+2, someTime.hour(), bHourFoc, bHourSel);
-  display.print(":");
-  //print minutes
-  drawSelectable(display.getCursorX(), display.getCursorY(), someTime.minute(), bMinuteFoc, bMinuteSel);
-  display.print(":");
-  //print seconds
-  drawSelectable(display.getCursorX(), display.getCursorY(), someTime.second(), bSecondFoc, bSecondSel);
-
-  ///add some padding
-  display.setCursor(x+2, display.getCursorY() + 24);
-
-  //print days
-  drawSelectable(display.getCursorX(), display.getCursorY(), someTime.day(), bDayFoc, bDaySel);
-  display.print("/");
-  //print months
-  drawSelectable(display.getCursorX(), display.getCursorY(), someTime.month(), bMonthFoc, bMonthSel);
-  display.print("/");
-  //print years
-  String years = String(someTime.year());
-  drawSelectable(display.getCursorX(), display.getCursorY(), years.c_str(), bYearFoc, bYearSel);
-
-  ///add some more padding
-  display.setCursor(x + 16, display.getCursorY() + 24);
-
-  ///print the menu options
-  drawSelectable(x, display.getCursorY(), epd_bitmap_left, "Back", bBackFoc, bBackSel);
-  drawSelectable(display.getCursorX(), display.getCursorY(), epd_bitmap_save, "Save", bSaveFoc, bSaveSel);
-}
-
-/**
- * Used to draw the menu cluster for when no logging is occuring
- * @param x x coordinate of the center of the cluster
- * @param y y coordinate of the center of the cluster
- */
-void drawMenuStopped(int x, int y) {
-  display.drawBitmap(x - 32, y - 8, epd_bitmap_gear , 16, 16, 1);
-  display.drawBitmap(x - 8, y - 8, epd_bitmap_play, 16, 16, 1);
-  display.drawBitmap(x + 16, y -8, epd_bitmap_power, 16, 16, 1);
-
-}
-
-/**
- * Used to draw the menu cluster for when logging is running
- * @param x x coordinate of the center of the cluster
- * @param y y coordinate of the center of the cluster
- */
-void drawMenuRunning(int x, int y) {
-  //display.drawBitmap( x-8, y-26, epd_bitmap_UP,16, 16, 1);
-  //display.drawBitmap( x-32, y-8, epd_bitmap_loop,16, 16, 1);
-  // if (paused) {
-  //   display.drawBitmap(x - 8, y - 8, epd_bitmap_play, 16, 16, 1);
-  // } else {
-  //   display.drawBitmap(x - 8, y - 8, epd_bitmap_pause, 16, 16, 1);
-  // }
-  display.drawBitmap(x - 8, y - 8, epd_bitmap_loop, 16, 16, 1);
-  display.drawBitmap(x + 16, y - 8, epd_bitmap_stop, 16, 16, 1);
 }
 
 //screens
@@ -891,21 +630,21 @@ void GUI() {
       break;
 
     case 1:  //settings menu
-      drawSettings();
+      drawSettings(s16SettingsSel);
       settingsSelect();
       break;
 
     case 2:  //time
 
-      dtTimeDisplay = updateTime(dtTimeDisplay);
-      drawDateTime(dtTimeDisplay, 0, 0);
-      timeSelection();
+      dtTimeDisplay = timeMenu.updateTime(dtTimeDisplay);
+      timeMenu.drawDateTime(dtTimeDisplay, 0, 0);
+      timeMenu.timeSelection();
       ExitTime();
       break;
 
     case 3:  //human info
-      drawStats(0,0);
-      statSelection();
+      human.drawStats(0,0);
+      human.statSelection();
       break;
 
     case 4:  //nearby devices
@@ -1034,13 +773,9 @@ void settingsSelect(){
         u16_state = 4;
         break;
       case 2:
-        nAgeDisplay = tcxLog.getAge();
-        nMassDisplay = tcxLog.getMass();
-        
-        bAgeSel=false;
-        bMassSel=false;
-        bAgeFoc=true;
-        bMassFoc=false;
+        //nAgeDisplay = tcxLog.getAge();
+        human.setMass(tcxLog.getMass());
+
         u16_state = 3;
         break;
       case 3:
@@ -1055,56 +790,6 @@ void settingsSelect(){
   } 
 }
 
-void drawSettings(){
-
-  display.setTextColor(SH110X_WHITE);
-
-  int16_t aboveIndex = s16SettingsSel-1;
-  if(s16SettingsSel == 0)
-    aboveIndex = s16NumSettings-1;
-
-  int16_t belowIndex = s16SettingsSel+1;
-  if(s16SettingsSel == (s16NumSettings-1))
-    belowIndex = 0;
-
-  drawSettingsmenuItem(0, 13, false, aboveIndex);
-  drawSettingsmenuItem(0, 47, true, s16SettingsSel);
-  drawSettingsmenuItem(0, 81, false, belowIndex);
-
-}
-
-struct SettingsItem {
-    const unsigned char* img;
-    int x;
-    int y;
-    char name[32];
-};
-
-SettingsItem SettingsItems[s16NumSettings] = {
-  {epd_bitmap_clock_large,32,32,"Time"},
-  {epd_bitmap_bluetooth_large,32,32,"BLE"},
-  {epd_bitmap_heart_large,32,32,"Info"},
-  {epd_bitmap_left_arrow_large,32,32,"Back"},
-  {epd_bitmap_antenna_large,32,32,"GPS"}
-};
-
-void drawSettingsmenuItem(int x, int y, bool focus, int16_t menuIndex) {
-  display.setTextColor(SH110X_WHITE);
-  display.setTextSize(2);
-  display.setCursor(x, y);
- 
-
-  int16_t x1, y1;
-  uint16_t w, h;
-
-  display.getTextBounds(SettingsItems[menuIndex].name, x, y, &x1, &y1, &w, &h);
-  
-  display.drawBitmap(x+2, y+1, SettingsItems[menuIndex].img, SettingsItems[menuIndex].x, SettingsItems[menuIndex].y, 1);
-  display.setCursor(x+32+8, y+8);
-  display.print(SettingsItems[menuIndex].name);
-  if (focus)
-    display.drawRect(x, y, 127, 34, 1);
-}
 
 void deviceSelection() {
   if (Up.shortPress()) {
@@ -1352,112 +1037,13 @@ void scan_callback(ble_gap_evt_adv_report_t* report) {
 void stateTransition() {
 }
 
-DateTime updateTime(DateTime someTime) {
-  int8_t s8AddVal;
-  if (Up.shortPress()) {
-    s8AddVal = 1;
-  } else if (Down.shortPress()) {
-    s8AddVal = -1;
-  }
-
-  TimeSpan span;
-  if (bSecondSel) {
-    DateTime dt0(someTime.year(), someTime.month(), someTime.day(), someTime.hour(), someTime.minute(), someTime.second() + s8AddVal);
-    someTime = dt0;
-  } else if (bMinuteSel) {
-    DateTime dt0(someTime.year(), someTime.month(), someTime.day(), someTime.hour(), someTime.minute() + s8AddVal, someTime.second());
-    someTime = dt0;
-  } else if (bHourSel) {
-    DateTime dt0(someTime.year(), someTime.month(), someTime.day(), someTime.hour() + s8AddVal, someTime.minute(), someTime.second());
-    someTime = dt0;
-  } else if (bDaySel) {
-    DateTime dt0(someTime.year(), someTime.month(), someTime.day() + s8AddVal, someTime.hour(), someTime.minute(), someTime.second());
-    someTime = dt0;
-  } else if (bMonthSel) {
-    DateTime dt0(someTime.year(), someTime.month() + s8AddVal, someTime.day(), someTime.hour(), someTime.minute(), someTime.second());
-    someTime = dt0;
-  } else if (bYearSel) {
-    DateTime dt0(someTime.year() + s8AddVal, someTime.month(), someTime.day(), someTime.hour(), someTime.minute(), someTime.second());
-    someTime = dt0;
-  }
-
-  return someTime;
-}
-
-/**
- * Determines what value in the data time display is focused or slected
- */
-void timeSelection() {
-  //button inputs
-  if (!(bHourSel | bMinuteSel | bSecondSel | bDaySel | bMonthSel | bYearSel)) {
-    if (Up.shortPress()) {
-      if ((s16timeSel & 0x0300) >= 0x0100)
-        s16timeSel -= 0x0100;
-      else
-        s16timeSel += 0x0200;
-    }
-
-    if (Down.shortPress()) {
-      if ((s16timeSel & 0x0200) < 0x0200)
-        s16timeSel += 0x100;
-      else
-        s16timeSel -= 0x0200;
-    }
-
-    if (Left.shortPress()) {
-      if ((s16timeSel & 0x0030) >= 0x0010)
-        s16timeSel -= 0x0010;
-      else
-        s16timeSel += 0x0020;
-    }
-
-    if (Right.shortPress()) {
-      if ((s16timeSel & 0x0020) < 0x0020)
-        s16timeSel += 0x0010;
-      else
-        s16timeSel &= 0xFFCF;
-    }
-  }
-
-  if (s16timeSel > 0x211) {
-    s16timeSel &= 0xFF0F;
-  }
-
-  if (Center.shortPress())
-    s16timeSel = s16timeSel ^ 1;
-
-  //calculate boolean values
-  bHourFoc = (s16timeSel == 0x000);
-  bHourSel = (s16timeSel == 0x001);
-  bMinuteFoc = (s16timeSel == 0x010);
-  bMinuteSel = (s16timeSel == 0x011);
-  bSecondFoc = (s16timeSel == 0x020);
-  bSecondSel = (s16timeSel == 0x021);
-
-  bDayFoc = (s16timeSel == 0x100);
-  bDaySel = (s16timeSel == 0x101);
-  bMonthFoc = (s16timeSel == 0x110);
-  bMonthSel = (s16timeSel == 0x111);
-  bYearFoc = (s16timeSel == 0x120);
-  bYearSel = (s16timeSel == 0x121);
-
-  bBackFoc = (s16timeSel == 0x200);
-  bBackSel = (s16timeSel == 0x201);
-  bSaveFoc = (s16timeSel == 0x210);
-  bSaveSel = (s16timeSel == 0x211);
-}
 
 void ExitTime() {
-  if (bSaveSel) {
+  if (timeMenu.save()){
     rtc.adjust(dtTimeDisplay);
   }
-  if (bBackSel | bSaveSel) {
-    s16timeSel = 0;
+  if (timeMenu.back() | timeMenu.save()) {
     u16_state = 1;
-    bBackFoc = false;
-    bBackSel = false;
-    bSaveFoc = false;
-    bSaveSel = false;
   }
 }
 
