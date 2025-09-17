@@ -14,11 +14,15 @@ void body::statSelection(){
       else
         nStatSel -= 0x20;
     }
-  }else if(bAgeSel){
-    if(_Up->shortPress())
-      nAgeDisplay ++;
-    else if(_Down->shortPress())
-      nAgeDisplay --;
+  } else if (bDaySel) {
+    DateTime dt0(_bday.year(), _bday.month(), _bday.day() + 1, _bday.hour(), _bday.minute(), _bday.second());
+    _bday = dt0;
+  } else if (bMonthSel) {
+    DateTime dt0(_bday.year(), _bday.month() + 1, _bday.day(), _bday.hour(), _bday.minute(), _bday.second());
+    _bday = dt0;
+  } else if (bYearSel) {
+    DateTime dt0(_bday.year() + 1, _bday.month(), _bday.day(), _bday.hour(), _bday.minute(), _bday.second());
+    _bday = dt0;
   }else if(bMassSel){
     if(_Up->shortPress())
       nMassDisplay ++;
@@ -51,11 +55,22 @@ void body::drawStats(int x, int y){
   display.setCursor(x, y);
 
   display.print("Age: ");
-  drawSelectable(64, display.getCursorY(), nAgeDisplay, bAgeFoc, bAgeSel);
-  display.setTextSize(2);
   display.setCursor(x, display.getCursorY()+16);
+  //print day
+  drawSelectable(display.getCursorX(), display.getCursorY(), _bday.day(), bDayFoc, bDaySel);
+  display.print("/");
+  //print month
+  drawSelectable(display.getCursorX(), display.getCursorY(), _bday.month(), bMonthFoc, bMonthSel);
+  display.print("/");
+  //print year
+  String years = String(_bday.year());
+  drawSelectable(display.getCursorX(), display.getCursorY(), years.c_str(), bYearFoc, bYearSel);
+
+
+
   display.print("Mass: ");
   drawSelectable(64, display.getCursorY(), nMassDisplay, bMassFoc, bMassSel);
   display.setCursor(x, display.getCursorY()+32);
   drawSelectable(x, display.getCursorY(), epd_bitmap_left, "Back", bStatBackFoc, bStatBackSel);
+  
 }

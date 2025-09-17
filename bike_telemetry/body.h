@@ -10,8 +10,10 @@ class body
 {
   private:
     int16_t nStatSel;
-    int nAgeDisplay, nMassDisplay;
+    int nMassDisplay;
     bool bMassSel, bMassFoc, bAgeFoc, bAgeSel, bStatBackSel, bStatBackFoc;
+    bool bDaySel, bMonthSel, bYearSel;
+    bool bDayFoc, bMonthFoc, bYearFoc;
     DateTime _bday;
 
     button* _Up = nullptr;
