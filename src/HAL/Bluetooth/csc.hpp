@@ -62,10 +62,10 @@ class csc : public BT_Device {
     }
 
   protected:
-    csc(char* name, size_t nameLen, uint8_t* MAC){
+    csc(const char* name, size_t nameLen, MacAddress MAC){
       this->bt_type = E_Type_BT_Device::bt_csc;
       memcpy(this->name, name, nameLen);
-      copyMAC(this->MAC, MAC);
+      this->MAC=MAC;
       this->begin();
     }
 
@@ -74,7 +74,7 @@ class csc : public BT_Device {
     float f32_rpm, f32_kph, f32_cadence;
     virtual ~csc(){};
     
-    static void create_csc(char* name, size_t nameLen, uint8_t* MAC)
+    static void create_csc(const char* name, size_t nameLen, MacAddress MAC)
     {
       btDevices.push_back(std::unique_ptr<csc>(new csc(name, nameLen, MAC)));
     };

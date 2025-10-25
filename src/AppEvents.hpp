@@ -1,4 +1,7 @@
 #pragma once
+#include <Arduino.h>
+#include <mpark/variant.hpp>
+#include "HAL/BluetoothInterface.hpp"
 
 enum class AppEventType {
     None,
@@ -12,5 +15,5 @@ enum class AppEventType {
 
 struct AppEvent {
     AppEventType type;
-    void* data;
+    mpark::variant<int,float,BluetoothDevice> payload;
 };

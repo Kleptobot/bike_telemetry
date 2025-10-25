@@ -3,27 +3,12 @@
 #include <RTClib.h>
 #include <Dps3xx.h>
 #include <LSM6DS3.h>
+#include "SensorData.hpp"
 
 #define LSM6DS3_ADDR 0x6A //I2C device address 0x6A
 #define BAT_HIGH_CHARGE 22  // HIGH for 50mA, LOW for 100mA
 #define BAT_CHARGE_STATE 23 // LOW for charging, HIGH not charging
 #define VBAT_MV_PER_LBS (0.003395996F)
-
-struct imu_data {
-    float f32_acc_x;
-    float f32_acc_y;
-    float f32_acc_z;
-    float f32_gyro_x;
-    float f32_gyro_y;
-    float f32_gyro_z;
-};
-
-struct dps_data {
-    float f32_Alt;
-    float f32_DSP_Pa;
-    float f32_DSP_Temp;
-    float f32_RTC_Temp;
-};
 
 class SensorSystem {
 public:

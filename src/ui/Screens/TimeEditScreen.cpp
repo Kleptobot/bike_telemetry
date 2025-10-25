@@ -36,11 +36,13 @@ void TimeEditScreen::handleInput(physIO input) {
 void TimeEditScreen::moveFocusUp() {
     switch (focusField) {
         case EditField::Time:
+            _date = timeWidget.getDate();
             focusField = EditField::Back;
             timeWidget.setFocused(false);
             backWidget.setFocused(true);
             break;
         case EditField::Date:
+            _date = dateWidget.getDate();
             focusField = EditField::Time;
             dateWidget.setFocused(false);
             timeWidget.setFocused(true);

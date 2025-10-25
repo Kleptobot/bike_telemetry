@@ -1,4 +1,4 @@
-#include "Input.hpp"
+#include "InputSystem.hpp"
 
 InputSystem::GpsEnableCallback InputSystem::gpsEnableCallback;
 

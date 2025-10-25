@@ -7,7 +7,6 @@ TinyGPSPlus HAL::_gps;
 SDCardSystem HAL::storageSystem;
 
 HAL::TelemetryCallback HAL::telemetryCallback;
-HAL::BluetoothCallback HAL::bluetoothCallback;
 
 float HAL::f32_kph, HAL::f32_cadence, HAL::f32_temp, HAL::f32_alt, HAL::f32_bpm;
 float HAL::f32_GPS_speed, HAL::f32_GPS_Alt;
@@ -33,7 +32,7 @@ void HAL::init() {
     Wire.setClock(50000); // 50kHz
     _LC76G.begin(&Wire);
     sensorSystem.init();
-    btManager.init();
+    bluetoothSystem.init();
     storageSystem.init();
     resetGPS();
 }
@@ -69,7 +68,7 @@ void HAL::update() {
         //on success tell the LC76G to delay
         _LC76G.i2c_wait();
     }
-    btManager.update();
+    bluetoothSystem.update();
 
     if(_gps.speed.isValid()) 
       f32_GPS_speed = _gps.speed.kmph();
@@ -116,6 +115,7 @@ void HAL::update() {
     //if the telemetry callback has been set, run it
     if (telemetryCallback) {
         telemetryCallback(sensorSystem.imu(),
+                          sensorSystem.dps(),
                           f32_kph,
                           f32_cadence,
                           f32_temp,
@@ -123,11 +123,6 @@ void HAL::update() {
                           f32_bpm,
                           _gps.location,
                           sensorSystem.now());
-    }
-
-    // //if the bluetooth callback has been set, run it
-    if (bluetoothCallback) {
-        bluetoothCallback(btManager.devices());
     }
 
     //if reset time is non zero check if 100ms has passed since the trigger, then reset time to zero and write reset pin high

@@ -26,11 +26,6 @@ void loop() {
         delay(500);
         HAL::sleep();
     }
-        
-    if (millis() - last > 2000) {
-        Serial.println(App::instance().getSpeed());
-        last = millis();
-    }
 
     if ( !App::instance().getGpsEnableState() ) {
       NRF_POWER->SYSTEMOFF = 1;

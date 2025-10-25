@@ -34,10 +34,10 @@ class cps : public BT_Device {
     }
 
   protected:
-    cps(char* name, size_t nameLen, uint8_t* MAC){
+    cps(const char* name, size_t nameLen, MacAddress MAC){
       this->bt_type = E_Type_BT_Device::bt_cps;
       memcpy(this->name, name, nameLen);
-      copyMAC(this->MAC, MAC);
+      this->MAC = MAC;
       this->begin();
     }
 
@@ -45,7 +45,7 @@ class cps : public BT_Device {
     float f32_power, f32_cadence, f32_torque, f32_pedal_balance, f32_force_magnitude;
     virtual ~cps(){};
     
-    static void create_cps(char* name, size_t nameLen, uint8_t* MAC)
+    static void create_cps(const char* name, size_t nameLen, MacAddress MAC)
     {
       btDevices.push_back(std::unique_ptr<cps>(new cps(name, nameLen, MAC)));
     };

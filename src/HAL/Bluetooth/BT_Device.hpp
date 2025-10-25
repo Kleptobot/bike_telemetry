@@ -9,7 +9,7 @@
 #include <algorithm> 
 
 #include "HAL/BluetoothInterface.hpp"
-#include "Utils.hpp"
+#include "MAC.hpp"
 
 #define     GATT_BAT_UUID                           0x180F
 #define     GATT_BAT_MEASUREMENT_UUID               0x2A19
@@ -42,7 +42,7 @@ class BT_Device {
     BLEClientCharacteristic bat_meas  = BLEClientCharacteristic(GATT_BAT_MEASUREMENT_UUID);
     
     char name[32];
-    uint8_t MAC[6];
+    MacAddress MAC;
     uint8_t u8_Batt = 100;
     bool _begun;
     uint16_t _conn_handle;
@@ -52,11 +52,11 @@ class BT_Device {
     bool _disconnected;
 
   public:
-    virtual ~BT_Device(){Serial.println("deleteing BT_Device");};
+    virtual ~BT_Device();
     
-    static BT_Device* getDeviceWithMAC(uint8_t* MAC);
+    static BT_Device* getDeviceWithMAC(MacAddress MAC);
 
-    static std::unique_ptr<BT_Device> removeDeviceWithMAC(uint8_t* MAC);
+    static std::unique_ptr<BT_Device> removeDeviceWithMAC(MacAddress MAC);
 
     static std::unique_ptr<BT_Device> removeDevice(std::unique_ptr<BT_Device> device);
 
@@ -66,11 +66,11 @@ class BT_Device {
 
     static bool all_devices_discovered();
 
-    static bool deviceWithMacDiscovered(uint8_t* MAC);
+    static bool deviceWithMacDiscovered(MacAddress MAC);
 
     void bat_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len);
 
-    uint8_t *getMac() {return MAC;}
+    MacAddress getMac() {return MAC;}
     String getName() const {return (String)name;}
     E_Type_BT_Device getType() const {return bt_type;}
     bool begun() const {return _begun;}

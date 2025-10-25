@@ -4,9 +4,9 @@
 #include <TinyGPSPlus.h>
 #include <functional>
 
-#include "Input.hpp"
+#include "InputSystem.hpp"
 #include "Sensors.hpp"
-#include "Bluetooth/Bluetooth.hpp"
+#include "Bluetooth/BluetoothSystem.hpp"
 #include "LC76G.hpp"
 #include "SDCard.hpp"
 
@@ -17,16 +17,16 @@ class HAL {
     static void update();
     static physIO inputs() { return inputSystem.state(); };
     static IStorage* SD() { return &storageSystem; }
-    static TinyGPSPlus& gps() { return _gps; }
+    static BluetoothSystem& bluetooth() { return bluetoothSystem; }
    
     static void displayGPSInfo();
     static void sleep();
 
-    using TelemetryCallback = std::function<void(imu_data imu, float speed, float cadence, float temp, float alt, float bpm, TinyGPSLocation loc, DateTime now)>;
-    using BluetoothCallback = std::function<void(std::vector<BluetoothDevice> devices)>;
+    using TelemetryCallback = std::function<void(imu_data imu, dps_data dps, float speed, float cadence, float temp, float alt, float bpm, TinyGPSLocation loc, DateTime now)>;
+    // using BluetoothCallback = std::function<void(std::vector<BluetoothDevice> devices)>;
 
     static void onTelemetry(TelemetryCallback cb) { telemetryCallback = cb; }
-    static void onBluetooth(BluetoothCallback cb) { bluetoothCallback = cb; }
+    // static void onBluetooth(BluetoothCallback cb) { bluetoothCallback = cb; }
 
     static void setTime(DateTime date) { sensorSystem.setTime(date); }
 
@@ -36,12 +36,12 @@ class HAL {
     static TinyGPSPlus _gps;
     static InputSystem inputSystem;
     static SensorSystem sensorSystem;
-    static BluetoothManager btManager;
+    static BluetoothSystem bluetoothSystem;
     static SDCardSystem storageSystem;
 
     //callbacks used to transmit data to the App
     static TelemetryCallback telemetryCallback;
-    static BluetoothCallback bluetoothCallback;
+    // static BluetoothCallback bluetoothCallback;
 
     // private memeber variables
     static float f32_kph, f32_cadence, f32_temp, f32_alt, f32_bpm;

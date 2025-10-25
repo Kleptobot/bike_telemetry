@@ -1,17 +1,26 @@
 #pragma once
 #include <Arduino.h>
+#include "MAC.hpp"
 
-enum E_Type_BT_Device{
+enum E_Type_BT_Device {
   bt_csc,
   bt_hrm,
   bt_cps
 };
 
-typedef struct
-{
+enum E_Type_BT_Mode {
+  idle,
+  scan,
+  connect
+};
+
+struct BluetoothDevice {
   char name[32];
-  uint8_t MAC[6];
+  MacAddress MAC;
   uint16_t batt;
   E_Type_BT_Device type;
   bool connected;
-} BluetoothDevice;
+
+  BluetoothDevice(){}
+  BluetoothDevice(uint8_t* macAddr) : MAC(macAddr) {}
+} ;

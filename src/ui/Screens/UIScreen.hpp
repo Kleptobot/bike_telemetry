@@ -6,9 +6,11 @@
 #include "HAL/InputInterface.hpp"
 #include "UI/Widgets/Widget.hpp"
 #include "UIEventBus.hpp"
+#include "DataModel.hpp"
 
 class UIScreen {
     public:
+        explicit UIScreen(DataModel& model) : model(model) {}
         virtual ~UIScreen() = default;
 
         virtual void onEnter() {}
@@ -20,13 +22,14 @@ class UIScreen {
         void setEventBus(UIEventBus* bus) { eventBus = bus; }
 
     protected:
-        void emitAppEvent(AppEventType type, void* data) {
-            if (eventBus) eventBus->postAppEvent({type, data});
+        void emitAppEvent(AppEventType type) {
+            if (eventBus) eventBus->postAppEvent({type});
         }
 
         void emitUIEvent(UIEventType type, ScreenID target = ScreenID::None) {
             if (eventBus) eventBus->postUIEvent({type, target});
         }
+        DataModel& model;
 
     private:
         UIEventBus* eventBus = nullptr;

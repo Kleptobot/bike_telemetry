@@ -1,8 +1,8 @@
-#include "App.hpp"
-// #include "UI/Screens/MainScreen.h"
-// #include "UI/Screens/LoggingScreen.h"
-#include "display/Display.hpp"
+#pragma once
+
 #include <Arduino.h>
+#include "App.hpp"
+#include <mpark/variant.hpp>
 
 void App::begin(UIManager* uiManager, IStorage* storage) {
     ui = uiManager;
@@ -11,11 +11,11 @@ void App::begin(UIManager* uiManager, IStorage* storage) {
     state = AppState::IDLE;
 
     // Register callback with HAL
-    HAL::onTelemetry([this](imu_data imu, float speed, float cadence, float temp, float alt, float bpm, TinyGPSLocation loc, DateTime now) {
-        this->updateTelemetry(imu, speed, cadence, temp, alt, bpm, loc, now);
+    HAL::onTelemetry([this](imu_data imu, dps_data dps, float speed, float cadence, float temp, float alt, float bpm, TinyGPSLocation loc, DateTime now) {
+        this->updateTelemetry(imu, dps, speed, cadence, temp, alt, bpm, loc, now);
     });
 
-    HAL::onBluetooth([this](std::vector<BluetoothDevice> devices) {
+    HAL::bluetooth().onDeviceList([this](std::vector<BluetoothDevice> devices) {
         this->updateBluetooth(devices);
     });
 
@@ -29,62 +29,47 @@ void App::begin(UIManager* uiManager, IStorage* storage) {
 void App::update() {
     // Any periodic application-level behavior here
     if (state == AppState::LOGGING) {
-        f32_distance += (currentSpeed + lastSpeed)*(0.5/3.6);
-        lastSpeed = currentSpeed;
+        Telemetry tel = model.telemetry().get();
+        DateTime currentTime = model.time().get();
+        f32_distance += (tel.speed + lastSpeed)*(0.5/3.6);
+        lastSpeed = tel.speed;
         //check if seconds has changed for logging tick
         if (currentTime.second() != lastSecond)
-            logger->addTrackpoint({currentTime,currentLocation.lat(),currentLocation.lng(),currentAlt,currentBPM,0,currentCadence,currentSpeed,f32_distance});
+            logger->addTrackpoint({ currentTime,
+                                    tel.longitude,
+                                    tel.longitude,
+                                    tel.altitude,
+                                    tel.heartrate,
+                                    tel.power,
+                                    tel.cadence,
+                                    tel.speed,
+                                    f32_distance});
         lastSecond = currentTime.second();
     }
     _inputs = HAL::inputs();
 }
 
-void App::updateTelemetry(imu_data imu, float speed, float cadence, float temp, float alt, float bpm, TinyGPSLocation loc, DateTime now) {
-    currentSpeed = speed;
-    currentCadence = cadence;
-    currentBPM = bpm;
-    currentTemp = temp;
-    currentAlt = alt;
-    currentLocation = loc;
-    currentIMU = imu;
-    currentTime = now;
+void App::updateTelemetry(imu_data imu, dps_data dps, float speed, float cadence, float temp, float alt, float bpm, TinyGPSLocation loc, DateTime now) {
+    model.telemetry().update({imu,dps,speed,cadence,temp,alt,bpm,0,loc.lng(),loc.lat()});
+    model.time().update(now);
 }
 
 void App::updateBluetooth(std::vector<BluetoothDevice> devices) {
-    _devices = devices;
+    model.bluetooth().update(devices);
 }
 
 void App::updateGpsEnable(bool state) {
     _gpsEnableState = state;
 }
 
-void App::transitionTo(AppState newState) {
-    state = newState;
-
-    // switch (state) {
-    //     case AppState::IDLE:
-    //         ui->setScreen(UIManager::ScreenID::MAIN);
-    //         break;
-    //     case AppState::LOGGING:
-    //         ui->setScreen(UIManager::ScreenID::LOGGING);
-    //         break;
-    //     case AppState::PAUSED:
-    //         ui->setScreen(UIManager::ScreenID::PAUSED);
-    //         break;
-    //     default:
-    //         break;
-    // }
-}
-
 void App::handleAppEvent(const AppEvent& e) {
     switch (e.type) {
         case AppEventType::SaveTime:
-            DateTime* pdate = static_cast<DateTime*>(e.data);
-            HAL::setTime(*pdate);
+            HAL::setTime(model.time().get());
             break;
 
         case AppEventType::StartLogging:
-            logger->startLogging(currentTime);
+            logger->startLogging(model.time().get());
             break;
 
         case AppEventType::StopLogging:
@@ -92,8 +77,11 @@ void App::handleAppEvent(const AppEvent& e) {
             break;
 
         case AppEventType::ConnectBluetooth:
-            //hal.Bluetooth().connect();
+            HAL::bluetooth().createDevice(mpark::get<BluetoothDevice>(e.payload));
             break;
+
+        case AppEventType::DisconnectBluetooth:
+            HAL::bluetooth().disconnectDevice(mpark::get<BluetoothDevice>(e.payload));
 
         default:
             break;

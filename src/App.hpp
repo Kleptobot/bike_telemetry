@@ -2,10 +2,15 @@
 #include "UI/UIManager.hpp"
 #include "HAL/HAL.hpp"
 #include "TCXLogger.hpp"
+#include "AppEvents.hpp"
+#include "DataModel.hpp"
+#include "HAL/BluetoothInterface.hpp"
 
 // Application-level states
 enum class AppState {
     BOOT,
+
+
     IDLE,
     LOGGING,
     PAUSED
@@ -17,6 +22,8 @@ public:
         static App instance;
         return instance;
     }
+
+    DataModel& dataModel() { return model; }
 
     // Called at startup
     void begin(UIManager* ui, IStorage* storage);
@@ -33,22 +40,12 @@ public:
     void update();
 
     // Data from HAL
-    void updateTelemetry(imu_data imu, float speed, float cadence, float temp, float alt, float bpm, TinyGPSLocation loc, DateTime now);
+    void updateTelemetry(imu_data imu, dps_data dps, float speed, float cadence, float temp, float alt, float bpm, TinyGPSLocation loc, DateTime now);
     void updateBluetooth(std::vector<BluetoothDevice> devices);
     void updateGpsEnable(bool state);
 
     // Getters for UI access
-    float getSpeed() const { return currentSpeed; }
-    float getCadence() const { return currentCadence; }
-    float getTemp()  const { return currentTemp; }
-    float getAlt() const { return currentAlt; }
-    float getBPM() const { return currentBPM; }
-    DateTime now() const { return currentTime; }
-    imu_data getIMU() const { return currentIMU; }
     AppState getState() const { return state; }
-    TinyGPSLocation getLoc() const { return currentLocation; }
-    const std::vector<BluetoothDevice>& getDevices() const { return _devices; }
-    physIO getInput() const { return _inputs; }
     bool getGpsEnableState() const { return _gpsEnableState; }
 
     bool isLogging() const { return state == AppState::LOGGING; }
@@ -57,7 +54,6 @@ public:
 
 private:
     App() = default; // private singleton
-    void transitionTo(AppState newState);
 
 private:
     std::queue<AppEvent> appEvents;
@@ -66,19 +62,14 @@ private:
     TCXLogger* logger = nullptr;
     AppState state = AppState::BOOT;
 
-    float currentSpeed = 0.0f;
-    float currentCadence = 0.0f;
-    float currentTemp = 0.0f;
-    float currentAlt = 0.0f;
-    float currentBPM = 0.0f;
-    DateTime currentTime;
     float lastSpeed, f32_distance;
+    dps_data currentDps;
 
-    TinyGPSLocation currentLocation;
     imu_data currentIMU;
-    std::vector<BluetoothDevice> _devices;
     physIO _inputs;
     bool _gpsEnableState = true;
 
     uint8_t lastSecond;
+
+    DataModel model;
 };

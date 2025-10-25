@@ -1,10 +1,11 @@
-#include "Bluetooth.hpp"
+#include "BluetoothSystem.hpp"
 
-uint8_t BluetoothManager::toConnectMAC[6];
-std::vector<BluetoothDevice> BluetoothManager::deviceList;
+MacAddress BluetoothSystem::toConnectMAC;
+std::vector<BluetoothDevice> BluetoothSystem::deviceList;
+BluetoothSystem::DeviceListCallback BluetoothSystem::deviceListCallback;
+E_Type_BT_Mode BluetoothSystem::_mode, BluetoothSystem::_mode_prev;
 
-
-void BluetoothManager::init() {
+void BluetoothSystem::init() {
     deviceList.clear();
     Bluefruit.begin(0, 10);
     Bluefruit.setName("OBike");
@@ -27,21 +28,40 @@ void BluetoothManager::init() {
     Bluefruit.Scanner.setInterval(160, 80);  // in unit of 0.625 ms
 }
 
-void BluetoothManager::update() {
-    bool test = false;
-    if (test) {
-        if (!BT_Device::all_devices_discovered() && !Bluefruit.Scanner.isRunning()) {
-            Bluefruit.Scanner.setRxCallback(scan_callback);
-            Bluefruit.Scanner.filterUuid(GATT_CSC_UUID, UUID16_SVC_HEART_RATE, GATT_CPS_UUID, GATT_BAT_UUID);
-            Bluefruit.Scanner.useActiveScan(true);
-            Bluefruit.Scanner.start(0);
-        } else {
-            Bluefruit.Scanner.setRxCallback(scan_discovery);
-            Bluefruit.Scanner.filterUuid(GATT_CSC_UUID, UUID16_SVC_HEART_RATE, GATT_CPS_UUID);
-            Bluefruit.Scanner.useActiveScan(true);
-            Bluefruit.Scanner.start(0);  // // 0 = Don't stop scanning after n seconds
-        }
+void BluetoothSystem::update() {
+    
+    switch (_mode) {
+        case E_Type_BT_Mode::connect:
+            if (_mode != _mode_prev) {
+                Bluefruit.Scanner.setRxCallback(scan_callback);
+                Bluefruit.Scanner.filterUuid(GATT_CSC_UUID, UUID16_SVC_HEART_RATE, GATT_CPS_UUID, GATT_BAT_UUID);
+                Bluefruit.Scanner.useActiveScan(true);
+                Bluefruit.Scanner.start(0); // // 0 = Don't stop scanning after n seconds
+            }
+            break;
+
+        case E_Type_BT_Mode::scan:
+            if (_mode != _mode_prev) {
+                Bluefruit.Scanner.setRxCallback(scan_discovery);
+                Bluefruit.Scanner.filterUuid(GATT_CSC_UUID, UUID16_SVC_HEART_RATE, GATT_CPS_UUID);
+                Bluefruit.Scanner.useActiveScan(true);
+                Bluefruit.Scanner.start(0);  // // 0 = Don't stop scanning after n seconds
+            }
+            break;
+
+        case E_Type_BT_Mode::idle:
+            if (_mode != _mode_prev) {
+                Bluefruit.Scanner.stop();
+            }
+            break;
+
+        default:
+            if (_mode != _mode_prev) {
+                Bluefruit.Scanner.stop();
+            }
+            break;
     }
+    _mode_prev = _mode;
     for (auto it = deviceList.begin(); it != deviceList.end(); it++ ) {
         (*it).connected = BT_Device::deviceWithMacDiscovered((*it).MAC);
     }
@@ -51,11 +71,15 @@ void BluetoothManager::update() {
  * Callback invoked when an connection is established
  * @param conn_handle
  */
-void BluetoothManager::connect_callback(uint16_t conn_handle) {
+void BluetoothSystem::connect_callback(uint16_t conn_handle) {
     BT_Device* device = BT_Device::getDeviceWithMAC(toConnectMAC);
     if (device != NULL) {
-        if(!device->discovered())
+        if(!device->discovered()) {
             device->discover(conn_handle);
+            if (deviceListCallback) {
+                deviceListCallback(deviceList);
+            }
+        }
     }
     if (!BT_Device::all_devices_discovered()) {
         Bluefruit.Scanner.resume();
@@ -66,7 +90,7 @@ void BluetoothManager::connect_callback(uint16_t conn_handle) {
  * Callback invoked when scanner pick up an advertising data
  * @param report Structural advertising data
  */
-void BluetoothManager::scan_callback(ble_gap_evt_adv_report_t* report) {
+void BluetoothSystem::scan_callback(ble_gap_evt_adv_report_t* report) {
     Serial.println("Found Device:");
     Serial.print("MAC: ");
     Serial.printBufferReverse(report->peer_addr.addr, 6, ':');
@@ -78,7 +102,7 @@ void BluetoothManager::scan_callback(ble_gap_evt_adv_report_t* report) {
     BT_Device* device = BT_Device::getDeviceWithMAC(report->peer_addr.addr);
     if (device != NULL) {
         Serial.println("Match!");
-        copyMAC(toConnectMAC, report->peer_addr.addr);
+        toConnectMAC = report->peer_addr.addr;
         Bluefruit.Central.connect(report);
     }
 }
@@ -87,10 +111,8 @@ void BluetoothManager::scan_callback(ble_gap_evt_adv_report_t* report) {
  * Callback invoked when scanner pick up an advertising data
  * @param report Structural advertising data
  */
-void BluetoothManager::scan_discovery(ble_gap_evt_adv_report_t* report) {
-    BluetoothDevice newDevice;
-    //get the MAC
-    copyMAC(newDevice.MAC, report->peer_addr.addr);
+void BluetoothSystem::scan_discovery(ble_gap_evt_adv_report_t* report) {
+    BluetoothDevice newDevice(report->peer_addr.addr);
     memset(&newDevice.name,0,32);
 
     Bluefruit.Scanner.parseReportByType(report, BLE_GAP_AD_TYPE_COMPLETE_LOCAL_NAME, (uint8_t*)newDevice.name, sizeof(newDevice.name));
@@ -101,7 +123,7 @@ void BluetoothManager::scan_discovery(ble_gap_evt_adv_report_t* report) {
         //iterate the list
         for (uint16_t i = 0; i < deviceList.size(); i++) {
             //check if the new found device matches any of the devices in the list
-            if (compareMAC(deviceList[i].MAC, newDevice.MAC)) {
+            if (deviceList[i].MAC==newDevice.MAC) {
             bMatch = 1;
             }
         }
@@ -123,29 +145,34 @@ void BluetoothManager::scan_discovery(ble_gap_evt_adv_report_t* report) {
     Bluefruit.Scanner.resume();
 }
 
-void BluetoothManager::connectDevice(BluetoothDevice* device) {
-    BT_Device* deviceptr = BT_Device::getDeviceWithMAC(device->MAC);
+void BluetoothSystem::createDevice(const BluetoothDevice& device) {
+    BT_Device* deviceptr = BT_Device::getDeviceWithMAC(device.MAC);
     if ( !deviceptr) {
-        switch(device->type) {
+        switch(device.type) {
             case E_Type_BT_Device::bt_csc:
-                csc::create_csc(device->name, 32, device->MAC);
+                csc::create_csc(device.name, 32, device.MAC);
                 break;
             case E_Type_BT_Device::bt_hrm:
-                hrm::create_hrm(device->name, 32, device->MAC);
+                hrm::create_hrm(device.name, 32, device.MAC);
                 break;
             case E_Type_BT_Device::bt_cps:
-                cps::create_cps(device->name, 32, device->MAC);
+                cps::create_cps(device.name, 32, device.MAC);
                 break;
         }
     }
 }
 
-void BluetoothManager::disconnectDevice(BluetoothDevice* device) {
-    device->connected = false;
-    BT_Device::removeDeviceWithMAC(device->MAC);
+void BluetoothSystem::disconnectDevice(const BluetoothDevice& device) {
+    BT_Device::removeDeviceWithMAC(device.MAC);
+    for (auto it = deviceList.begin(); it != deviceList.end(); it++ ) {
+        (*it).connected = BT_Device::deviceWithMacDiscovered((*it).MAC);
+    }
+    if (deviceListCallback) {
+        deviceListCallback(deviceList);
+    }
 }
 
-void BluetoothManager::loadDevices(SdFat32* SD) {
+void BluetoothSystem::loadDevices(SdFat32* SD) {
     if (SD->exists("devices.txt")) {
         // Open file for reading
         File32 dataFile = SD->open("/devices.txt", FILE_READ);
@@ -161,7 +188,6 @@ void BluetoothManager::loadDevices(SdFat32* SD) {
         }
 
         for (JsonObject device : jsonBuffer["devices"].as<JsonArray>()) {
-            BluetoothDevice newDevice;
             uint8_t MAC[6];
 
             JsonArray device_MAC = device["MAC"];
@@ -172,25 +198,26 @@ void BluetoothManager::loadDevices(SdFat32* SD) {
             MAC[4] = device_MAC[4];
             MAC[5] = device_MAC[5];
 
+            BluetoothDevice newDevice(MAC);
+
             device["name"].as<String>().toCharArray(newDevice.name, device["name"].as<String>().length() + 1);
             
-            copyMAC(newDevice.MAC, MAC);
             newDevice.type = device["type"];
 
-            connectDevice(&newDevice);
+            createDevice(newDevice);
             deviceList.push_back(newDevice);
         }
         dataFile.close();
     }
 }
 
-void BluetoothManager::saveDevices(SdFat32* SD) {
+void BluetoothSystem::saveDevices(SdFat32* SD) {
     JsonDocument doc;
     JsonArray devices = doc["devices"].to<JsonArray>();
     uint16_t j = 0;
 
     for (uint16_t i = 0; i < deviceList.size(); i++) {
-        if (deviceList[i].device != nullptr) {
+        if (deviceList[i].connected) {
             devices[j]["name"] = deviceList[i].name;
             devices[j]["type"] = deviceList[i].type;
             JsonArray device_MAC = devices[j]["MAC"].to<JsonArray>();

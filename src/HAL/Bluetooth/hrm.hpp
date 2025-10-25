@@ -25,10 +25,10 @@ private:
   }; 
 
 protected:
-  hrm(char* name, size_t nameLen, uint8_t* MAC) {
+  hrm(const char* name, size_t nameLen, MacAddress MAC) {
     this->bt_type = E_Type_BT_Device::bt_hrm;
     memcpy(this->name, name, nameLen);
-    copyMAC(this->MAC, MAC);
+    this->MAC=MAC;
     this->begin();
   };
 
@@ -37,7 +37,7 @@ public:
   float f32_bpm=0;
   virtual ~hrm(){};
 
-  static void create_hrm(char* name, size_t nameLen, uint8_t* MAC) {
+  static void create_hrm(const char* name, size_t nameLen, MacAddress MAC) {
     btDevices.emplace_back(std::unique_ptr<hrm>(new hrm(name, nameLen, MAC)));
   };
 

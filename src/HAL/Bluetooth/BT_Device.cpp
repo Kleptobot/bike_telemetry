@@ -3,29 +3,29 @@
 
 std::vector<std::unique_ptr<BT_Device>> BT_Device::btDevices;
 
-BT_Device* BT_Device::getDeviceWithMAC(uint8_t* MAC)
+BT_Device* BT_Device::getDeviceWithMAC(MacAddress MAC)
 {
   for (auto it = btDevices.begin(); it != btDevices.end(); it++)
   {
-    if(compareMAC((*it)->getMac(),MAC))
+    if((*it)->getMac()==MAC)
       return (*it).get();
   }
   return NULL;
 }
 
-bool BT_Device::deviceWithMacDiscovered(uint8_t* MAC) {
+bool BT_Device::deviceWithMacDiscovered(MacAddress MAC) {
   for (auto it = btDevices.begin(); it != btDevices.end(); it++)
   {
-    if(compareMAC((*it)->getMac(),MAC))
+    if((*it)->getMac()==MAC)
       return (*it)->discovered();
   }
   return false;
 }
 
-std::unique_ptr<BT_Device> BT_Device::removeDeviceWithMAC(uint8_t* MAC){
+std::unique_ptr<BT_Device> BT_Device::removeDeviceWithMAC(MacAddress MAC){
   for (auto it = btDevices.begin(); it != btDevices.end(); it++)
   {
-    if(compareMAC((*it)->getMac(),MAC)){
+    if((*it)->getMac()==MAC){
       auto retVal = std::move(*it);
       btDevices.erase(it);
       return std::move(retVal);
