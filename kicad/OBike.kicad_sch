@@ -6858,7 +6858,7 @@
 	)
 	(wire
 		(pts
-			(xy 261.62 163.83) (xy 261.62 173.99)
+			(xy 261.62 148.59) (xy 261.62 173.99)
 		)
 		(stroke
 			(width 0)
@@ -6955,26 +6955,6 @@
 			(type default)
 		)
 		(uuid "0de85ef0-3a04-4386-be8a-72eb5c4ac3cd")
-	)
-	(wire
-		(pts
-			(xy 281.94 166.37) (xy 276.86 166.37)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "0e489bc1-1ee5-4598-9ca0-1497e1ca5774")
-	)
-	(wire
-		(pts
-			(xy 261.62 148.59) (xy 261.62 156.21)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "1102576f-9757-4bbf-99fa-0d5dd5b709aa")
 	)
 	(wire
 		(pts
@@ -7135,16 +7115,6 @@
 			(type default)
 		)
 		(uuid "1f05c268-bc68-4f05-9be7-aa91637bae5f")
-	)
-	(wire
-		(pts
-			(xy 27.94 182.88) (xy 33.02 182.88)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "1f1ad4f8-e2d7-4abc-9d34-1e78cd7f5bfb")
 	)
 	(wire
 		(pts
@@ -7588,6 +7558,16 @@
 	)
 	(wire
 		(pts
+			(xy 27.94 185.42) (xy 33.02 185.42)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "3de53caa-40ea-471b-8196-065244262b1b")
+	)
+	(wire
+		(pts
 			(xy 293.37 116.84) (xy 297.18 116.84)
 		)
 		(stroke
@@ -7615,16 +7595,6 @@
 			(type default)
 		)
 		(uuid "41d215c6-c830-4df0-860f-8e019342f11b")
-	)
-	(wire
-		(pts
-			(xy 273.05 148.59) (xy 276.86 148.59)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "41da9561-73c7-4882-b972-c24d1b0676cf")
 	)
 	(wire
 		(pts
@@ -8125,16 +8095,6 @@
 			(type default)
 		)
 		(uuid "6ce35714-184e-45a0-ab89-90f84b328751")
-	)
-	(wire
-		(pts
-			(xy 276.86 148.59) (xy 276.86 166.37)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "6d75e179-2019-415c-912a-fe1b2d1211d5")
 	)
 	(wire
 		(pts
@@ -9640,7 +9600,7 @@
 	)
 	(global_label "INT"
 		(shape input)
-		(at 27.94 182.88 180)
+		(at 27.94 185.42 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -9650,7 +9610,7 @@
 		)
 		(uuid "1326000f-06d6-4b65-9bf0-f427360dc352")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 22.0519 182.88 0)
+			(at 22.0519 185.42 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -16289,93 +16249,6 @@
 			(project "OBike"
 				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
 					(reference "#PWR029")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:R")
-		(at 261.62 160.02 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "8ea6a12c-89a6-4e84-9967-73f1f3516b23")
-		(property "Reference" "R15"
-			(at 262.128 163.83 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "100K"
-			(at 261.62 162.052 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "Resistor_SMD:R_0603_1608Metric"
-			(at 259.842 160.02 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 261.62 160.02 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Resistor"
-			(at 261.62 160.02 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MANUFACTURER" ""
-			(at 261.62 160.02 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikiey PN" "RMCF0603FT100KCT-ND"
-			(at 261.62 160.02 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "1b4f0f08-c082-4d34-98f2-a7ff0de6cbbd")
-		)
-		(pin "2"
-			(uuid "15e1e8f1-2f1b-43e5-9ff8-dc4c289a2379")
-		)
-		(instances
-			(project "OBike"
-				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
-					(reference "R15")
 					(unit 1)
 				)
 			)
