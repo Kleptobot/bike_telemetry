@@ -1,11 +1,22 @@
 #include "TimeEditScreen.hpp"
 
 void TimeEditScreen::update(float dt) {
-    
+    switch (focusField) {
+        case EditField::Time:
+            _date = timeWidget.getDate();
+            break;
+
+        case EditField::Date:
+            _date = dateWidget.getDate();
+            break;
+        
+        default:
+            break;
+    }
 }
 
 void TimeEditScreen::handleInput(physIO input) {
-    if (anySelected()) {
+    if (!anySelected()) {
         if (input.Up.press)
             moveFocusUp();
         if (input.Down.press)
@@ -36,13 +47,11 @@ void TimeEditScreen::handleInput(physIO input) {
 void TimeEditScreen::moveFocusUp() {
     switch (focusField) {
         case EditField::Time:
-            _date = timeWidget.getDate();
             focusField = EditField::Back;
             timeWidget.setFocused(false);
             backWidget.setFocused(true);
             break;
         case EditField::Date:
-            _date = dateWidget.getDate();
             focusField = EditField::Time;
             dateWidget.setFocused(false);
             timeWidget.setFocused(true);

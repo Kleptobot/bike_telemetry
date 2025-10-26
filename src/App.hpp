@@ -7,14 +7,6 @@
 #include "HAL/BluetoothInterface.hpp"
 
 // Application-level states
-enum class AppState {
-    BOOT,
-
-
-    IDLE,
-    LOGGING,
-    PAUSED
-};
 
 class App : public UIEventBus{
 public:
@@ -51,6 +43,9 @@ public:
     bool isLogging() const { return state == AppState::LOGGING; }
 
     void handleAppEvent(const AppEvent& e);
+    
+    const DataModel& getModel() const { return model; }
+    DataModel& getModel() { return model; }
 
 private:
     App() = default; // private singleton
@@ -60,13 +55,9 @@ private:
     UIManager* ui = nullptr;
     IStorage* _storage = nullptr;
     TCXLogger* logger = nullptr;
-    AppState state = AppState::BOOT;
+    AppState state = AppState::BOOT, state_prev;
 
     float lastSpeed, f32_distance;
-    dps_data currentDps;
-
-    imu_data currentIMU;
-    physIO _inputs;
     bool _gpsEnableState = true;
 
     uint8_t lastSecond;

@@ -85,6 +85,7 @@ void DateWidget::decrementField(EditField field) {
 }
 
 void DateWidget::render() {
+    if (!visible) return;
     // update field visuals
     dayText.setFocused(focusField == EditField::Day && focused);
     dayText.setSelected(selected && focusField == EditField::Day);

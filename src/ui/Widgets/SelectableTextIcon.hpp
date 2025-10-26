@@ -1,11 +1,14 @@
 #pragma once
 #include <Arduino.h>
-#include <functional>
 #include "UI/Widgets/Widget.hpp"
+
+struct IconText {
+    const uint8_t* bitmap;
+    String text;
+};
 
 class SelectableTextIconWidget : public Widget {
 public:
-    using Callback = std::function<void()>;
 
     SelectableTextIconWidget(int x, int y, const String& text, const uint8_t* bitmap)
         : Widget(x, y), text(text) , bitmap(bitmap){}
@@ -17,15 +20,22 @@ public:
     bool isFocused() const { return focused; }
     bool isSelected() const { return selected; }
 
-    void setOnPress(Callback cb) { onPress = cb; }
-
     void render() override;
+    void render(int x, int y) override {
+        this->x = x;
+        this->y = y;
+        render();
+    }
     void handleInput(physIO input) override;
+
+    //callback for press events
+    using Callback = std::function<void()>;
+    virtual void setOnPress(Callback cb) { _onPress = cb; }
 
 private:
     String text;
     const uint8_t* bitmap;
     bool focused = false;
     bool selected = false;
-    Callback onPress = nullptr;
+    Callback _onPress = nullptr;
 };

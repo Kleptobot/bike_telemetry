@@ -20,6 +20,7 @@ struct BluetoothDevice {
   uint16_t batt;
   E_Type_BT_Device type;
   bool connected;
+  bool saved;
 
   BluetoothDevice(){}
   BluetoothDevice(uint8_t* macAddr) : MAC(macAddr) {}

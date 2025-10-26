@@ -78,4 +78,6 @@ namespace Disp {
     int16_t getCursorY() {
         return Display.getCursorY();
     }
+
+    void printFloat(float data, int precision) {Display.print(data, precision);};
 }

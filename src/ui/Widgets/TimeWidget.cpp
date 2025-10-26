@@ -89,6 +89,7 @@ void TimeWidget::decrementField(EditField field) {
 }
 
 void TimeWidget::render() {
+    if (!visible) return;
     // update field visuals
     hourText.setFocused(focusField == EditField::Hour && focused);
     hourText.setSelected(selected && focusField == EditField::Hour);

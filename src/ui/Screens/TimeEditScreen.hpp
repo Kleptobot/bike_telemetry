@@ -22,7 +22,7 @@ class TimeEditScreen : public UIScreen {
                 //register the save press event callback to send a change screen and app save event
                 saveWidget.setOnPress([this] () {
                     this->model.time().update(this->_date);
-                    emitAppEvent(AppEventType::SaveTime);
+                    emitAppEvent({AppEventType::SaveTime,0});
                     emitUIEvent(UIEventType::ChangeScreen, ScreenID::SettingsMenu);
                 });
             }
@@ -32,13 +32,17 @@ class TimeEditScreen : public UIScreen {
             timeWidget.setDate(_date);
         }
 
-        void onExit() override {
-
-        }
-
         void update(float dt) override;
 
         void handleInput(physIO input) override;
+
+        void render() override {
+            timeWidget.render();
+            dateWidget.render();
+            backWidget.render();
+            saveWidget.render();
+        }
+
     protected:
         DateTime _date;
     private:

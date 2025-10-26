@@ -41,7 +41,6 @@ class BT_Device {
     BLEClientService        bat_serv  = BLEClientService(GATT_BAT_UUID);
     BLEClientCharacteristic bat_meas  = BLEClientCharacteristic(GATT_BAT_MEASUREMENT_UUID);
     
-    char name[32];
     MacAddress MAC;
     uint8_t u8_Batt = 100;
     bool _begun;
@@ -71,7 +70,6 @@ class BT_Device {
     void bat_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len);
 
     MacAddress getMac() {return MAC;}
-    String getName() const {return (String)name;}
     E_Type_BT_Device getType() const {return bt_type;}
     bool begun() const {return _begun;}
     uint8_t readBatt() const {return u8_Batt;}

@@ -23,10 +23,8 @@ class HAL {
     static void sleep();
 
     using TelemetryCallback = std::function<void(imu_data imu, dps_data dps, float speed, float cadence, float temp, float alt, float bpm, TinyGPSLocation loc, DateTime now)>;
-    // using BluetoothCallback = std::function<void(std::vector<BluetoothDevice> devices)>;
 
     static void onTelemetry(TelemetryCallback cb) { telemetryCallback = cb; }
-    // static void onBluetooth(BluetoothCallback cb) { bluetoothCallback = cb; }
 
     static void setTime(DateTime date) { sensorSystem.setTime(date); }
 

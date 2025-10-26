@@ -32,7 +32,7 @@ void HAL::init() {
     Wire.setClock(50000); // 50kHz
     _LC76G.begin(&Wire);
     sensorSystem.init();
-    bluetoothSystem.init();
+    bluetoothSystem.init(&storageSystem);
     storageSystem.init();
     resetGPS();
 }

@@ -22,8 +22,8 @@ class UIScreen {
         void setEventBus(UIEventBus* bus) { eventBus = bus; }
 
     protected:
-        void emitAppEvent(AppEventType type) {
-            if (eventBus) eventBus->postAppEvent({type});
+        void emitAppEvent(AppEvent event) {
+            if (eventBus) eventBus->postAppEvent(event);
         }
 
         void emitUIEvent(UIEventType type, ScreenID target = ScreenID::None) {

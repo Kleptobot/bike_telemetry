@@ -4,7 +4,6 @@
 #include <Arduino.h>
 #include <RTClib.h>
 
-#include "GUI.hpp"
 #include "HAL/button.hpp"
 
 class body

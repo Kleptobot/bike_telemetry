@@ -2,6 +2,8 @@
 #pragma once
 #include "HAL/InputInterface.hpp"   // your struct for button state, etc.
 #include <stdint.h>
+#include <functional>
+
 
 class Widget {
 public:
@@ -12,6 +14,8 @@ public:
 
     // Core lifecycle methods
     virtual void render() {};
+    virtual void render(int x, int y) {};
+    virtual void update(float dt) {};
     virtual void handleInput(physIO input) {} // optional override
 
     // Positioning
@@ -26,8 +30,7 @@ public:
     int getHeight() const { return height; }
 
     // Visibility
-    void show() { visible = true; }
-    void hide() { visible = false; }
+    void setVisible(bool newVis) { visible = newVis; }
     bool isVisible() const { return visible; }
 
     //interaction

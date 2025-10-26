@@ -5,7 +5,8 @@ enum class ScreenID {
     MainMenu,
     Bluetooth,
     SettingsMenu,
-    BioStats,
+    Biometrics,
+    GPSSettings,
     TimeMenu,
     DisplayEdit
 };

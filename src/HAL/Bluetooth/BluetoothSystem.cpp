@@ -4,9 +4,11 @@ MacAddress BluetoothSystem::toConnectMAC;
 std::vector<BluetoothDevice> BluetoothSystem::deviceList;
 BluetoothSystem::DeviceListCallback BluetoothSystem::deviceListCallback;
 E_Type_BT_Mode BluetoothSystem::_mode, BluetoothSystem::_mode_prev;
+IStorage* BluetoothSystem::_storage;
 
-void BluetoothSystem::init() {
+void BluetoothSystem::init(IStorage* storage) {
     deviceList.clear();
+    _storage = storage;
     Bluefruit.begin(0, 10);
     Bluefruit.setName("OBike");
 
@@ -64,6 +66,10 @@ void BluetoothSystem::update() {
     _mode_prev = _mode;
     for (auto it = deviceList.begin(); it != deviceList.end(); it++ ) {
         (*it).connected = BT_Device::deviceWithMacDiscovered((*it).MAC);
+        if ((*it).connected) {
+            BT_Device* dev = BT_Device::getDeviceWithMAC((*it).MAC);
+            (*it).batt = dev->readBatt();
+        }
     }
 }
 
@@ -146,17 +152,27 @@ void BluetoothSystem::scan_discovery(ble_gap_evt_adv_report_t* report) {
 }
 
 void BluetoothSystem::createDevice(const BluetoothDevice& device) {
+    //check if the device has already been created
     BT_Device* deviceptr = BT_Device::getDeviceWithMAC(device.MAC);
-    if ( !deviceptr) {
+
+    //itterate the list of devices and set the save flage
+    for (auto it = deviceList.begin(); it != deviceList.end(); it++ ) {
+        if ((*it).MAC==device.MAC) {
+            (*it).saved = true;
+        }
+    }
+
+    //if not already in the list of bluetooth services create the appropriate one
+    if (!deviceptr) {
         switch(device.type) {
             case E_Type_BT_Device::bt_csc:
-                csc::create_csc(device.name, 32, device.MAC);
+                csc::create_csc(device.MAC);
                 break;
             case E_Type_BT_Device::bt_hrm:
-                hrm::create_hrm(device.name, 32, device.MAC);
+                hrm::create_hrm(device.MAC);
                 break;
             case E_Type_BT_Device::bt_cps:
-                cps::create_cps(device.name, 32, device.MAC);
+                cps::create_cps(device.MAC);
                 break;
         }
     }
@@ -165,17 +181,18 @@ void BluetoothSystem::createDevice(const BluetoothDevice& device) {
 void BluetoothSystem::disconnectDevice(const BluetoothDevice& device) {
     BT_Device::removeDeviceWithMAC(device.MAC);
     for (auto it = deviceList.begin(); it != deviceList.end(); it++ ) {
-        (*it).connected = BT_Device::deviceWithMacDiscovered((*it).MAC);
+        (*it).connected = false;
+        (*it).saved = false;
     }
     if (deviceListCallback) {
         deviceListCallback(deviceList);
     }
 }
 
-void BluetoothSystem::loadDevices(SdFat32* SD) {
-    if (SD->exists("devices.txt")) {
+void BluetoothSystem::loadDevices() {
+    if (_storage->exists("devices.txt")) {
         // Open file for reading
-        File32 dataFile = SD->open("/devices.txt", FILE_READ);
+        File32 dataFile = _storage->openFile("/devices.txt", FILE_READ);
         // Allocate the memory pool on the stack.
         JsonDocument jsonBuffer;
         // Parse the root object
@@ -203,6 +220,7 @@ void BluetoothSystem::loadDevices(SdFat32* SD) {
             device["name"].as<String>().toCharArray(newDevice.name, device["name"].as<String>().length() + 1);
             
             newDevice.type = device["type"];
+            newDevice.saved = true;
 
             createDevice(newDevice);
             deviceList.push_back(newDevice);
@@ -211,13 +229,13 @@ void BluetoothSystem::loadDevices(SdFat32* SD) {
     }
 }
 
-void BluetoothSystem::saveDevices(SdFat32* SD) {
+void BluetoothSystem::saveDevices() {
     JsonDocument doc;
     JsonArray devices = doc["devices"].to<JsonArray>();
     uint16_t j = 0;
 
     for (uint16_t i = 0; i < deviceList.size(); i++) {
-        if (deviceList[i].connected) {
+        if (deviceList[i].saved) {
             devices[j]["name"] = deviceList[i].name;
             devices[j]["type"] = deviceList[i].type;
             JsonArray device_MAC = devices[j]["MAC"].to<JsonArray>();
@@ -232,10 +250,10 @@ void BluetoothSystem::saveDevices(SdFat32* SD) {
         }
     }
 
-    if (SD->exists("/devices.txt"))
-        SD->remove("/devices.txt");
+    if (_storage->exists("/devices.txt"))
+        _storage->remove("/devices.txt");
 
-    File32 dataFile = SD->open("/devices.txt", FILE_WRITE);
+    File32 dataFile = _storage->openFile("/devices.txt", FILE_WRITE);
 
     serializeJson(doc, dataFile);
     dataFile.close();

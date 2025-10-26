@@ -1,6 +1,7 @@
 #pragma once
+
 #include <Arduino.h>
-#include <mpark/variant.hpp>
+#include <variant>
 #include "HAL/BluetoothInterface.hpp"
 
 enum class AppEventType {
@@ -8,12 +9,14 @@ enum class AppEventType {
     SaveTime,
     StartLogging,
     StopLogging,
+    PauseLogging,
     FactoryReset,
     ConnectBluetooth,
-    DisconnectBluetooth
+    DisconnectBluetooth,
+    Sleep
 };
 
 struct AppEvent {
     AppEventType type;
-    mpark::variant<int,float,BluetoothDevice> payload;
+    std::variant<int,float,BluetoothDevice> payload;
 };

@@ -27,7 +27,7 @@ void SelectableTextIconWidget::render() {
 }
 
 void SelectableTextIconWidget::handleInput(physIO input) {
-    if (input.Select.press && focused && onPress) {
-        onPress();  // fire callback
+    if (input.Select.press && focused && _onPress) {
+        _onPress();  // fire callback
     }
 }
