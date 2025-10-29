@@ -32,7 +32,7 @@ public:
     void update();
 
     // Data from HAL
-    void updateTelemetry(imu_data imu, dps_data dps, float speed, float cadence, float temp, float alt, float bpm, TinyGPSLocation loc, DateTime now);
+    void updateTelemetry(imu_data imu, dps_data dps, float speed, float cadence, float temp, float alt, float bpm, float pow, TinyGPSLocation loc, DateTime now);
     void updateBluetooth(std::vector<BluetoothDevice> devices);
     void updateGpsEnable(bool state);
 
@@ -63,4 +63,7 @@ private:
     uint8_t lastSecond;
 
     DataModel model;
+
+    void saveBiometrics();
+    void loadBiometrics();
 };

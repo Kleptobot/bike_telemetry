@@ -8,7 +8,7 @@ SDCardSystem HAL::storageSystem;
 
 HAL::TelemetryCallback HAL::telemetryCallback;
 
-float HAL::f32_kph, HAL::f32_cadence, HAL::f32_temp, HAL::f32_alt, HAL::f32_bpm;
+float HAL::f32_kph, HAL::f32_cadence, HAL::f32_temp, HAL::f32_alt, HAL::f32_bpm, HAL::f32_pow;
 float HAL::f32_GPS_speed, HAL::f32_GPS_Alt;
 uint8_t HAL::_rxBuffer[1024];
 uint32_t HAL::_resetTime;
@@ -105,6 +105,14 @@ void HAL::update() {
     if(heartrates.size()>0)
         f32_bpm = f32_bpm/heartrates.size();
 
+    //agregate power from sensors
+    std::vector<float> pow = cps::getPower();
+    for (auto it = pow.begin(); it != pow.end(); it++) {
+        f32_pow += (*it);
+    }
+    if(heartrates.size()>0)
+        f32_pow = f32_pow/pow.size();
+
     //agregate altitude from gps and dps
     f32_alt = sensorSystem.dps().f32_Alt;
     if (_gps.altitude.isValid()) {
@@ -121,6 +129,7 @@ void HAL::update() {
                           f32_temp,
                           f32_alt,
                           f32_bpm,
+                          f32_pow,
                           _gps.location,
                           sensorSystem.now());
     }

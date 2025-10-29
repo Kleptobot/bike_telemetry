@@ -5,7 +5,6 @@
 #include "HAL/InputInterface.hpp"
 #include "UI/Widgets/SelectableTextIcon.hpp"
 #include "UI/GFX.h"
-#include "App.hpp"
 
 class TimeEditScreen : public UIScreen {
     public:
@@ -43,8 +42,6 @@ class TimeEditScreen : public UIScreen {
             saveWidget.render();
         }
 
-    protected:
-        DateTime _date;
     private:
         enum class EditField { Time = 0, Date, Back, Save };
         EditField focusField = EditField::Time;
@@ -52,6 +49,7 @@ class TimeEditScreen : public UIScreen {
         DateWidget dateWidget;
         SelectableTextIconWidget backWidget;
         SelectableTextIconWidget saveWidget;
+        DateTime _date;
 
         void moveFocusUp();
         void moveFocusDown();

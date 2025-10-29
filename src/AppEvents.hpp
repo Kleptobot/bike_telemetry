@@ -7,6 +7,7 @@
 enum class AppEventType {
     None,
     SaveTime,
+    SaveBiometrics,
     StartLogging,
     StopLogging,
     PauseLogging,
