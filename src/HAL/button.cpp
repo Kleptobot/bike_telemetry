@@ -26,12 +26,13 @@ void button::process()
     _heldTime = current_time - _RETime;
     _releaseTime = 0;
   } else {
-    if (_heldTime<_nShortPressTime)
+    if (_heldTime>_nShortPressTime)
       _short = true;
     _heldTime = 0;
     _releaseTime = current_time - _FETime;
   }
 
+  _long_RE = _heldTime > _nHeldPressTime && !_long;
   _long = _heldTime > _nHeldPressTime;
 
   _state_prev = *_state;

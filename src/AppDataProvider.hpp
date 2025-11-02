@@ -46,6 +46,9 @@ inline String toString(CaloricProfile a) {
 
 inline CaloricProfile fromString(String s) {
     CaloricProfile c;
+    if(s=="F") c = CaloricProfile::Female;
+    else if(s=="M") c = CaloricProfile::Male;
+    else c = CaloricProfile::Other;
     return c;
 }
 
@@ -61,6 +64,7 @@ public:
     const AppData& get() const { return _data; }
     uint32_t version() const { return _version; }
 
+
     void update(const AppData& newData) {
         _data.birthday = newData.birthday;
         _data.mass = newData.mass;
@@ -69,6 +73,8 @@ public:
     }
 
 private:
+    friend class App;
+    void setState(AppState s) { _data.state = s; }
     AppData _data{};
     uint32_t _version = 0;
 };

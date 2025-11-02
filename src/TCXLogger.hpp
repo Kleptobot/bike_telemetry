@@ -7,6 +7,7 @@
 #include <RTClib.h>
 #include <SdFat.h>
 #include "HAL/StorageInterface.hpp"
+#include "DataModel.hpp"
 
 #define points_per_chunk 1800
 
@@ -37,12 +38,11 @@ class TCXLogger {
 
   private:
     IStorage* _storage;
+    DataModel& _model;
     File32 file;
     
     uint8_t buffer[512];  // Buffer for reading data
     size_t bytesRead = 0;
-    int _age = 34;
-    int _mass = 75;
     char lap_name[32];
 
     std::vector<Lap> laps;
@@ -64,20 +64,13 @@ class TCXLogger {
     void dataTransfer(File32 *from, File32 *to);
       
   public:
-    TCXLogger(IStorage* storage)
-    {
-      _storage = storage;
-    };
+    TCXLogger(IStorage* storage, DataModel& model) : _storage(storage), _model(model) {};
 
     void startLogging(DateTime currentTime);
     void addTrackpoint(const Trackpoint& tp);
     void newLap(DateTime currentTime);
     bool finaliseLogging();
 
-    void setMass(int mass) {_mass = mass;};
-    int getMass(){return _mass;};
-    void setAge(int age) {_age = age;};
-    int getAge(){return _age;};
     TimeSpan elapsed_Total(){return _currentTime-_startTime;};
     TimeSpan elapsed_Lap(){return _currentTime-laps.back().startTime;};
     String elapsedString_Total()

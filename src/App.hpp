@@ -18,14 +18,14 @@ public:
     DataModel& dataModel() { return model; }
 
     // Called at startup
-    void begin(UIManager* ui, IStorage* storage);
+    void begin(IStorage* storage);
 
     void postAppEvent(const AppEvent& e) override {
         appEvents.push(e);
     }
 
     void postUIEvent(const UIEvent& e) override {
-        ui->handleUIEvent(e);
+        ui.handleUIEvent(e);
     }
 
     // Called from loop()
@@ -48,11 +48,10 @@ public:
     DataModel& getModel() { return model; }
 
 private:
-    App() = default; // private singleton
+    App() : model(), ui(*this) {}
 
 private:
     std::queue<AppEvent> appEvents;
-    UIManager* ui = nullptr;
     IStorage* _storage = nullptr;
     TCXLogger* logger = nullptr;
     AppState state = AppState::BOOT, state_prev;
@@ -63,6 +62,8 @@ private:
     uint8_t lastSecond;
 
     DataModel model;
+    UIManager ui;
+    uint32_t _millis, _last_millis;
 
     void saveBiometrics();
     void loadBiometrics();

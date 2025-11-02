@@ -136,14 +136,16 @@ void BluetoothSystem::scan_discovery(ble_gap_evt_adv_report_t* report) {
     }
     //if the new device is unique add it
     if (!bMatch) {
-    if(Bluefruit.Scanner.checkReportForUuid(report, GATT_CSC_UUID))
-        newDevice.type = E_Type_BT_Device::bt_csc;
-    if(Bluefruit.Scanner.checkReportForUuid(report, UUID16_SVC_HEART_RATE))
-        newDevice.type = E_Type_BT_Device::bt_hrm;
-    if(Bluefruit.Scanner.checkReportForUuid(report, GATT_CPS_UUID))
-        newDevice.type = E_Type_BT_Device::bt_cps;
+        Serial.print("New device found: ");
+        if(Bluefruit.Scanner.checkReportForUuid(report, GATT_CSC_UUID))
+            newDevice.type = E_Type_BT_Device::bt_csc;
+        if(Bluefruit.Scanner.checkReportForUuid(report, UUID16_SVC_HEART_RATE))
+            newDevice.type = E_Type_BT_Device::bt_hrm;
+        if(Bluefruit.Scanner.checkReportForUuid(report, GATT_CPS_UUID))
+            newDevice.type = E_Type_BT_Device::bt_cps;
 
-    deviceList.push_back(newDevice);
+        Serial.println(newDevice.name);
+        deviceList.push_back(newDevice);
     }
 
     // For Softdevice v6: after received a report, scanner will be paused

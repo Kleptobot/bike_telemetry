@@ -115,7 +115,24 @@ void TCXLogger::addTrackpoint(const Trackpoint& tp){
   _currentTime = tp.currentTime;
   _elapsed_Lap = (tp.currentTime - _startTime);
 
-  laps.back().Calories = ((_age * 0.2017) - (_mass * 0.09036) + (laps.back().avgHRM * 0.6309) - 55.0969) * _elapsed_Lap.totalseconds() / 4.184;
+  auto& a = _model.app().get();
+  int age = TimeSpan(_currentTime - a.birthday).days()/356.25;
+
+  int f = ((age * 0.074) - (a.mass * 0.05741) + (laps.back().avgHRM * 0.4472) - 20.4022) * _elapsed_Lap.totalseconds() / 4.184;
+  int m = ((age * 0.2017) - (a.mass * 0.09036) + (laps.back().avgHRM * 0.6309) - 55.0969) * _elapsed_Lap.totalseconds() / 4.184;
+
+  switch(a.caloricProfile) {
+    case CaloricProfile::Female: 
+      laps.back().Calories = f;
+      break;
+    case CaloricProfile::Male:
+      laps.back().Calories = m;
+      break;
+    case CaloricProfile::Other:
+      laps.back().Calories = (m + f) /2;
+      break;
+  }
+  
   if(laps.back().Calories<0)
     laps.back().Calories=0;
 

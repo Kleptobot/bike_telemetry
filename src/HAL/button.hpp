@@ -14,8 +14,9 @@ class button
     uint32_t _RETime = 0, _FETime = 0;
     uint32_t _heldTime;
     uint32_t _releaseTime;
+    bool _long_RE;
     static const uint16_t _nHeldPressTime = 1500;
-    static const uint16_t _nShortPressTime = 400;
+    static const uint16_t _nShortPressTime = 200;
 
   public:
     button(bool* state)
@@ -26,7 +27,7 @@ class button
     void process();
 
     const buttonState state() const {
-      return {*_state,_RE,_FE,_short,_long,_heldTime,_releaseTime};
+      return {*_state,_RE,_FE,_short,_long_RE,_heldTime,_releaseTime};
     }
 };
 

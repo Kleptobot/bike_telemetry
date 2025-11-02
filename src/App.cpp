@@ -2,11 +2,24 @@
 #include "App.hpp"
 #include <variant>
 
-void App::begin(UIManager* uiManager, IStorage* storage) {
-    ui = uiManager;
+#include "UI/Screens/MainScreen.hpp"
+#include "UI/Screens/BluetoothScreen.hpp"
+#include "UI/Screens/TimeEditScreen.hpp"
+#include "UI/Screens/SettingsScreen.hpp"
+#include "UI/Screens/BiometricsScreen.hpp"
+
+void App::begin(IStorage* storage) {
     _storage = storage;
-    logger = new TCXLogger(_storage);
+    logger = new TCXLogger(_storage, model);
     state = AppState::IDLE;
+
+    ui.registerScreen<MainScreen>(ScreenID::MainMenu,App::instance().getModel());
+    ui.registerScreen<TimeEditScreen>(ScreenID::TimeMenu,App::instance().getModel());
+    ui.registerScreen<SettingsScreen>(ScreenID::SettingsMenu,App::instance().getModel());
+    ui.registerScreen<BluetoothScreen>(ScreenID::Bluetooth,App::instance().getModel());
+    ui.registerScreen<BiometricsScreen>(ScreenID::Biometrics,App::instance().getModel());
+
+    ui.begin(ScreenID::MainMenu);
 
     // Register callback with HAL
     HAL::onTelemetry([this](imu_data imu, dps_data dps, float speed, float cadence, float temp, float alt, float bpm, float pow, TinyGPSLocation loc, DateTime now) {
@@ -28,11 +41,22 @@ void App::update() {
     // Any periodic application-level behavior here
     Telemetry tel = model.telemetry().get();
     DateTime currentTime = model.time().get();
+
+    if (!appEvents.empty()) {
+        handleAppEvent(appEvents.front());
+        appEvents.pop();
+    }
+    _millis = millis();
+    ui.render();
+    ui.update((float)(_millis - _last_millis) / 1000.0);
+    ui.handleInput(HAL::inputs());
+    _last_millis = _millis;
+
+
     switch(state) {
         case AppState::BOOT:
             HAL::bluetooth().loadDevices();
             loadBiometrics();
-            logger->setAge(TimeSpan(currentTime - model.app().get().birthday).days()/356.25);
             state = AppState::IDLE;
             break;
 
@@ -40,7 +64,7 @@ void App::update() {
             if (!HAL::bluetooth().all_devices_discovered())
                 HAL::bluetooth().setMode(E_Type_BT_Mode::connect);
             else
-                HAL::bluetooth().setMode(E_Type_BT_Mode::idle);
+                HAL::bluetooth().setMode(E_Type_BT_Mode::scan);
             if(state_prev==AppState::LOGGING)
                 logger->finaliseLogging();
             break;
@@ -50,6 +74,9 @@ void App::update() {
             break;
 
         case AppState::LOGGING:
+            if (Bluefruit.Scanner.isRunning())
+                Bluefruit.Scanner.stop();
+                
             if(state != state_prev)
                 logger->startLogging(currentTime);
             
@@ -77,6 +104,7 @@ void App::update() {
     }
     lastSecond = currentTime.second();
     state_prev = state;
+    model.app().setState(state);
 }
 
 void App::updateTelemetry(imu_data imu, dps_data dps, float speed, float cadence, float temp, float alt, float bpm, float pow, TinyGPSLocation loc, DateTime now) {
@@ -105,10 +133,12 @@ void App::handleAppEvent(const AppEvent& e) {
         case AppEventType::StartLogging:
             HAL::bluetooth().setMode(E_Type_BT_Mode::idle);
             state = AppState::LOGGING;
+            Serial.println("Start Logging");
             break;
 
         case AppEventType::StopLogging:
-            
+            Serial.println("Stop Logging");
+            state = AppState::IDLE;
             break;
 
         case AppEventType::ConnectBluetooth:

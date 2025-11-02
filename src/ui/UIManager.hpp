@@ -3,6 +3,7 @@
 #include <memory>
 #include <type_traits>
 #include <unordered_map>
+#include "UIEventBus.hpp"
 
 #include "UI/Screens/UIScreen.hpp"
 #include "HAL/InputInterface.hpp"
@@ -11,10 +12,13 @@
 
 class UIManager {
 public:
+    UIManager(UIEventBus& bus) : eventBus(bus) {}
+
     template<typename T, typename... Args>
     void registerScreen(ScreenID id, Args&&... args) {
         static_assert(std::is_base_of<UIScreen, T>::value, "T must derive from UIScreen");
         screens[id] = std::make_unique<T>(std::forward<Args>(args)...);
+        screens[id]->setEventBus(&eventBus);
     }
 
     void begin(ScreenID startScreen) {
@@ -58,4 +62,5 @@ public:
 private:
     std::unordered_map<ScreenID, std::unique_ptr<UIScreen>> screens;
     UIScreen* activeScreen = nullptr;
+    UIEventBus& eventBus;
 };

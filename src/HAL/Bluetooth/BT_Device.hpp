@@ -51,7 +51,7 @@ class BT_Device {
     bool _disconnected;
 
   public:
-    virtual ~BT_Device();
+    virtual ~BT_Device() {};
     
     static BT_Device* getDeviceWithMAC(MacAddress MAC);
 
@@ -75,9 +75,9 @@ class BT_Device {
     uint8_t readBatt() const {return u8_Batt;}
     void disconnect(uint16_t conn_handle, uint8_t reason);
     uint16_t getConnHandle(){return _conn_handle;};
-    virtual void discover(uint16_t conn_handle){};
-    virtual bool discovered() const;
-    virtual void begin(){};
+    virtual void discover(uint16_t conn_handle) {};
+    virtual bool discovered() const {};
+    virtual void begin() {};
 };
 
  #endif /* BT_DEVICE */
