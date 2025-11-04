@@ -76,7 +76,7 @@ class BT_Device {
     void disconnect(uint16_t conn_handle, uint8_t reason);
     uint16_t getConnHandle(){return _conn_handle;};
     virtual void discover(uint16_t conn_handle) {};
-    virtual bool discovered() const {};
+    virtual bool discovered() const { return false; };
     virtual void begin() {};
 };
 

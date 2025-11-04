@@ -54,9 +54,9 @@ inline CaloricProfile fromString(String s) {
 
 struct AppData {
     AppState state;
-    DateTime birthday;
-    uint16_t mass;
-    CaloricProfile caloricProfile ;
+    DateTime birthday = DateTime(1990,6,18);
+    uint16_t mass = 75;
+    CaloricProfile caloricProfile = CaloricProfile::Other;
 };
 
 class AppDataProvider {

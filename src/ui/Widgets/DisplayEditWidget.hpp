@@ -28,16 +28,4 @@ class DisplayEditWidget : public SelectableTextWidget {
 
     private:
         TelemetryType _type;
-
-        const char* labelForType(TelemetryType t) const {
-            switch (t) {
-                case TelemetryType::Speed: return "Speed";
-                case TelemetryType::Cadence: return "Cadence";
-                case TelemetryType::HeartRate: return "HeartRate";
-                case TelemetryType::Temperature: return "Temperature";
-                case TelemetryType::Power: return "Power";
-                case TelemetryType::Altitude: return "Altitude";
-                default: return "-";
-            }
-        }
 };

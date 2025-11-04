@@ -63,7 +63,7 @@ private:
 
     DataModel model;
     UIManager ui;
-    uint32_t _millis, _last_millis;
+    uint32_t _millis, _last_millis, lastGPS;
 
     void saveBiometrics();
     void loadBiometrics();

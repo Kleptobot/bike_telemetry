@@ -72,6 +72,7 @@ inline TelemetryType TelemetryTypefromString(String s) {
     if (s == "Altitude") return TelemetryType::Altitude;
     if (s == "HeartRate") return TelemetryType::HeartRate;
     if (s == "Power") return TelemetryType::Power;
+    return TelemetryType::Undefined;
 }
 
 inline float GetTelemetryValue(const Telemetry& t, TelemetryType type) {

@@ -40,16 +40,15 @@ class DisplayEditScreen : public UIScreen {
         }
 
         void handleInput(physIO input) override {
-            if (anySelected) {
-                switch(_index) {
-                    case 0: disp1.handleInput(input);
-                    case 1: disp2.handleInput(input);
-                    case 2: disp3.handleInput(input);
-                    case 3: saveWidget.handleInput(input);
-                }
-            } else {
-                if (input.Up.press) (_index + 3) % 4;
-                else if (input.Down.press) (_index + 1) % 4;
+            if (!anySelected()) {
+                if (input.Up.press) _index = (_index + 3) % 4;
+                else if (input.Down.press) _index = (_index + 1) % 4;
+            }
+            switch(_index) {
+                case 0: disp1.handleInput(input);
+                case 1: disp2.handleInput(input);
+                case 2: disp3.handleInput(input);
+                case 3: saveWidget.handleInput(input);
             }
         }
 

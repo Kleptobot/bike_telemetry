@@ -7,6 +7,7 @@
 #include "UI/Screens/TimeEditScreen.hpp"
 #include "UI/Screens/SettingsScreen.hpp"
 #include "UI/Screens/BiometricsScreen.hpp"
+#include "UI/Screens/DisplayEditScreen.hpp"
 
 void App::begin(IStorage* storage) {
     _storage = storage;
@@ -18,6 +19,7 @@ void App::begin(IStorage* storage) {
     ui.registerScreen<SettingsScreen>(ScreenID::SettingsMenu,App::instance().getModel());
     ui.registerScreen<BluetoothScreen>(ScreenID::Bluetooth,App::instance().getModel());
     ui.registerScreen<BiometricsScreen>(ScreenID::Biometrics,App::instance().getModel());
+    ui.registerScreen<DisplayEditScreen>(ScreenID::DisplayEdit,App::instance().getModel());
 
     ui.begin(ScreenID::MainMenu);
 
@@ -69,6 +71,11 @@ void App::update() {
             if(state_prev==AppState::LOGGING)
                 logger->finaliseLogging();
 
+            if (millis() - lastGPS > 2000) {
+                HAL::displayGPSInfo();
+                lastGPS = millis();
+            }
+            
             f32_distance = 0;
             break;
 
@@ -87,7 +94,7 @@ void App::update() {
             if (currentTime.second() != lastSecond) {
                 f32_distance += (tel.speed + lastSpeed)*(0.5/3.6);
                 logger->addTrackpoint({ currentTime,
-                                        tel.longitude,
+                                        tel.latitude,
                                         tel.longitude,
                                         tel.altitude,
                                         tel.heartrate,
