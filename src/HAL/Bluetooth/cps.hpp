@@ -8,7 +8,6 @@
 #include <functional>
 
 #include "BT_Device.hpp"
-#include "Utils.hpp"
 
 // Cycling Speed and Cadence configuration
 #define     GATT_CPS_UUID                           0x1818
@@ -62,7 +61,7 @@ class cps : public BT_Device {
 
     void cps_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len);
     
-    bool discovered();
+    bool discovered() override;
 };
 
  #endif /* cps_H */

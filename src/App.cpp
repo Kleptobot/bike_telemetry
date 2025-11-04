@@ -12,7 +12,7 @@
 void App::begin(IStorage* storage) {
     _storage = storage;
     logger = new TCXLogger(_storage, model);
-    state = AppState::IDLE;
+    state = AppState::BOOT;
 
     ui.registerScreen<MainScreen>(ScreenID::MainMenu,App::instance().getModel());
     ui.registerScreen<TimeEditScreen>(ScreenID::TimeMenu,App::instance().getModel());
@@ -57,6 +57,7 @@ void App::update() {
 
     switch(state) {
         case AppState::BOOT:
+            Serial.println("Loading data from filesystem.");
             HAL::bluetooth().loadDevices();
             loadBiometrics();
             loadLayout();
@@ -67,11 +68,11 @@ void App::update() {
             if (!HAL::bluetooth().all_devices_discovered())
                 HAL::bluetooth().setMode(E_Type_BT_Mode::connect);
             else
-                HAL::bluetooth().setMode(E_Type_BT_Mode::scan);
+                HAL::bluetooth().setMode(E_Type_BT_Mode::idle);
             if(state_prev==AppState::LOGGING)
                 logger->finaliseLogging();
 
-            if (millis() - lastGPS > 2000) {
+            if (millis() - lastGPS > 5000) {
                 HAL::displayGPSInfo();
                 lastGPS = millis();
             }
@@ -188,6 +189,7 @@ void App::saveBiometrics() {
 void App::loadBiometrics() {
     
     if (_storage->exists("biometrics.txt")) {
+        Serial.println("Found biometrics.txt");
         // Open file for reading
         File32 dataFile = _storage->openFile("/biometrics.txt", FILE_READ);
         // Allocate the memory pool on the stack.
@@ -233,6 +235,7 @@ void App::saveLayout() {
 
 void App::loadLayout() {
     if (_storage->exists("layout.txt")) {
+        Serial.println("Found layout.txt");
         // Open file for reading
         File32 dataFile = _storage->openFile("/layout.txt", FILE_READ);
         // Allocate the memory pool on the stack.

@@ -141,8 +141,7 @@ std::vector<float> hrm::getHRM()
   {
     if((*it)->getType() == E_Type_BT_Device::bt_hrm)
     {
-      hrm* temp_hrm = static_cast<hrm*>((*it).get());
-      heartrates.push_back(temp_hrm->f32_bpm);
+      heartrates.push_back(static_cast<hrm*>((*it).get())->f32_bpm);
     }
   }
   return heartrates;

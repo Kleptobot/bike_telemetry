@@ -8,7 +8,6 @@
 #include <functional>
 
 #include "BT_Device.hpp"
-#include "Utils.hpp"
 
 // Cycling Speed and Cadence configuration
 #define     GATT_CSC_UUID                           0x1816
@@ -89,7 +88,7 @@ class csc : public BT_Device {
 
     void csc_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len);
     
-    bool discovered();
+    bool discovered() override;
 };
 
  #endif /* CSC_H */

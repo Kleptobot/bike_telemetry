@@ -16,6 +16,7 @@ void loop() {
         App::instance().begin(HAL::SD());
         started = true;
         
+        delay(2000);
         Serial.println("App started");
     }
     HAL::update();

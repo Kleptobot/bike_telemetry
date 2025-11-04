@@ -8,7 +8,6 @@
 #include <functional>
 
 #include "BT_Device.hpp"
-#include "Utils.hpp"
 
 class hrm : public BT_Device {
 private:
@@ -45,7 +44,7 @@ public:
   void hrm_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len);
   void disconnect(uint16_t conn_handle, uint8_t reason);
   void discover(uint16_t conn_handle);
-  bool discovered() {return hrm_meas.discovered();};
+  bool discovered() override {return hrm_meas.discovered();};
   void begin();
 };
 #endif

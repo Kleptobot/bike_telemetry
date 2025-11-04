@@ -81,6 +81,7 @@ void BluetoothSystem::connect_callback(uint16_t conn_handle) {
     BT_Device* device = BT_Device::getDeviceWithMAC(toConnectMAC);
     if (device != NULL) {
         if(!device->discovered()) {
+            Serial.println("Not discovered");
             device->discover(conn_handle);
             if (deviceListCallback) {
                 deviceListCallback(deviceList);
@@ -88,6 +89,7 @@ void BluetoothSystem::connect_callback(uint16_t conn_handle) {
         }
     }
     if (!BT_Device::all_devices_discovered()) {
+        Serial.println("Discovered");
         Bluefruit.Scanner.resume();
     }
 }
@@ -136,7 +138,7 @@ void BluetoothSystem::scan_discovery(ble_gap_evt_adv_report_t* report) {
     }
     //if the new device is unique add it
     if (!bMatch) {
-        Serial.print("New device found: ");
+        
         if(Bluefruit.Scanner.checkReportForUuid(report, GATT_CSC_UUID))
             newDevice.type = E_Type_BT_Device::bt_csc;
         if(Bluefruit.Scanner.checkReportForUuid(report, UUID16_SVC_HEART_RATE))
@@ -144,7 +146,7 @@ void BluetoothSystem::scan_discovery(ble_gap_evt_adv_report_t* report) {
         if(Bluefruit.Scanner.checkReportForUuid(report, GATT_CPS_UUID))
             newDevice.type = E_Type_BT_Device::bt_cps;
 
-        Serial.println(newDevice.name);
+        Serial.print("New device found: "); Serial.println(newDevice.name);
         deviceList.push_back(newDevice);
     }
 
@@ -193,6 +195,8 @@ void BluetoothSystem::disconnectDevice(const BluetoothDevice& device) {
 
 void BluetoothSystem::loadDevices() {
     if (_storage->exists("devices.txt")) {
+        Serial.println("Found devices.txt");
+
         // Open file for reading
         File32 dataFile = _storage->openFile("/devices.txt", FILE_READ);
         // Allocate the memory pool on the stack.
@@ -226,6 +230,7 @@ void BluetoothSystem::loadDevices() {
 
             createDevice(newDevice);
             deviceList.push_back(newDevice);
+            Serial.print("Loaded: "); Serial.println(newDevice.name);
         }
         dataFile.close();
     }
