@@ -1,0 +1,26 @@
+#pragma once
+#include <Arduino.h>
+#include "TelemetryDataProvider.hpp"
+
+struct LayoutData {
+    TelemetryType disp1 = TelemetryType::Speed;
+    TelemetryType disp2 = TelemetryType::Cadence;
+    TelemetryType disp3 = TelemetryType::HeartRate;
+};
+
+class LayoutDataProvider {
+public:
+    const LayoutData& get() const { return _data; }
+    uint32_t version() const { return _version; }
+
+
+    void update(const LayoutData& newData) {
+        _data = newData;
+        ++_version;
+    }
+
+private:
+    friend class App;
+    LayoutData _data{};
+    uint32_t _version = 0;
+};
