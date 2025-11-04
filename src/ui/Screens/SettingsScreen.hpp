@@ -22,15 +22,19 @@ public:
             {"GPS",         epd_bitmap_antenna_large,       ScreenID::GPSSettings}, 
             {"Time",        epd_bitmap_clock,               ScreenID::TimeMenu},
             {"Biometrics",  epd_bitmap_heart_large,         ScreenID::Biometrics},
+            {"Display",     epd_bitmap_heart_large,         ScreenID::DisplayEdit},
             {"Back",        epd_bitmap_left_arrow_large,    ScreenID::MainMenu}
         };
 
         for (const auto& i : _items)
             listView.addItem(std::make_unique<SelectableTextIconWidget>(0, 0, i.label, i.icon));
 
-        // listView.onItemSelected([this](const SettingsMenuItem& item) {
-        //     emitUIEvent(UIEventType::ChangeScreen, item.targetScreen);
-        // });
+        listView.onItemSelected([this](auto&) {
+            int index = listView.selectedIndex();
+            if (index >= 0 && index < static_cast<int>(_items.size())) {
+                emitUIEvent(UIEventType::ChangeScreen, _items[index].targetScreen);
+            }
+        });
     }
 
     void onEnter() override {
@@ -44,10 +48,14 @@ public:
 
     void handleInput(physIO input) override {
         listView.handleInput(input);
+        if (listView.selectedIndex() != _lastIndex) {
+        }
+        _lastIndex = listView.selectedIndex();
     }
 
 private:
     ListView<SelectableTextIconWidget> listView;
     std::vector<SettingsMenuItem> _items;
     uint32_t _version = 0;
+    int _lastIndex = 0;
 };

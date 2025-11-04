@@ -67,4 +67,7 @@ private:
 
     void saveBiometrics();
     void loadBiometrics();
+
+    void saveLayout();
+    void loadLayout();
 };

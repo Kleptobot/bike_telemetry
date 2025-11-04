@@ -3,6 +3,16 @@
 
 #include "HAL/SensorData.hpp"
 
+enum class TelemetryType : uint8_t {
+    Speed,
+    Cadence,
+    Temperature,
+    Altitude,
+    HeartRate,
+    Power,
+    Undefined
+};
+
 struct Telemetry {
     imu_data imu;
     dps_data dps;
@@ -16,6 +26,65 @@ struct Telemetry {
     double longitude;
     double latitude;
 };
+
+inline TelemetryType& operator++(TelemetryType& t) {
+    switch(t){
+        case TelemetryType::Speed : t = TelemetryType::Cadence; break;
+        case TelemetryType::Cadence : t = TelemetryType::Temperature; break;
+        case TelemetryType::Temperature : t = TelemetryType::Altitude; break;
+        case TelemetryType::Altitude : t = TelemetryType::HeartRate; break;
+        case TelemetryType::HeartRate : t = TelemetryType::Power; break;
+        case TelemetryType::Power : t = TelemetryType::Speed; break;
+        default: t = TelemetryType::Undefined;
+    }
+    return t;
+};
+
+inline TelemetryType& operator--(TelemetryType& t) {
+    switch(t){
+        case TelemetryType::Speed : t = TelemetryType::Power; break;
+        case TelemetryType::Cadence : t = TelemetryType::Speed; break;
+        case TelemetryType::Temperature : t = TelemetryType::Cadence; break;
+        case TelemetryType::Altitude : t = TelemetryType::Temperature; break;
+        case TelemetryType::HeartRate : t = TelemetryType::Altitude; break;
+        case TelemetryType::Power : t = TelemetryType::HeartRate; break;
+        default: t = TelemetryType::Undefined; break;
+    }
+    return t;
+};
+
+inline const char* toString(const TelemetryType& t) {
+    switch(t){
+        case TelemetryType::Speed : return "Speed"; break;
+        case TelemetryType::Cadence : return"Cadence"; break;
+        case TelemetryType::Temperature : return"Temperature"; break;
+        case TelemetryType::Altitude : return"Altitude"; break;
+        case TelemetryType::HeartRate : return"HeartRate"; break;
+        case TelemetryType::Power : return"Power"; break;
+        default: return "-"; break;
+    }
+}
+
+inline TelemetryType TelemetryTypefromString(String s) {
+    if (s == "Speed") return TelemetryType::Speed;
+    if (s == "Cadence") return TelemetryType::Cadence;
+    if (s == "Temperature") return TelemetryType::Temperature;
+    if (s == "Altitude") return TelemetryType::Altitude;
+    if (s == "HeartRate") return TelemetryType::HeartRate;
+    if (s == "Power") return TelemetryType::Power;
+}
+
+inline float GetTelemetryValue(const Telemetry& t, TelemetryType type) {
+    switch (type) {
+        case TelemetryType::Speed:        return t.speed;
+        case TelemetryType::Cadence:      return t.cadence;
+        case TelemetryType::Temperature:  return t.temperature;
+        case TelemetryType::Altitude:     return t.altitude;
+        case TelemetryType::HeartRate:    return t.heartrate;
+        case TelemetryType::Power:        return t.power;
+        default: return 0.0f;
+    }
+}
 
 class TelemetryDataProvider {
 public:

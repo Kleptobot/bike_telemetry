@@ -16,8 +16,10 @@ public:
 
     void render() override;
 
-private:
-    String text;
+protected:
     bool focused = false;
     bool selected = false;
+
+private:
+    String text;
 };

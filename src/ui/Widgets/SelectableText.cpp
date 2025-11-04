@@ -1,4 +1,3 @@
-// UI/SelectableTextWidget.cpp
 #include "SelectableText.hpp"
 #include "Display/Display.hpp"
 

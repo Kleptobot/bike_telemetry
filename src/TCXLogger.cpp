@@ -116,7 +116,7 @@ void TCXLogger::addTrackpoint(const Trackpoint& tp){
   _elapsed_Lap = (tp.currentTime - _startTime);
 
   auto& a = _model.app().get();
-  int age = TimeSpan(_currentTime - a.birthday).days()/356.25;
+  float age = TimeSpan(_currentTime - a.birthday).days()/356.25;
 
   int f = ((age * 0.074) - (a.mass * 0.05741) + (laps.back().avgHRM * 0.4472) - 20.4022) * _elapsed_Lap.totalseconds() / 4.184;
   int m = ((age * 0.2017) - (a.mass * 0.09036) + (laps.back().avgHRM * 0.6309) - 55.0969) * _elapsed_Lap.totalseconds() / 4.184;

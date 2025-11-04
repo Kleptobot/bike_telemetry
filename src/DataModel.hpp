@@ -3,6 +3,7 @@
 #include "BluetoothDataProvider.hpp"
 #include "TimeDataProvider.hpp"
 #include "AppDataProvider.hpp"
+#include "LayoutDataProvider.hpp"
 // #include "SettingsDataProvider.h"
 
 class DataModel {
@@ -11,12 +12,14 @@ public:
     BluetoothDataProvider& bluetooth() { return _bluetooth; }
     TimeDataProvider& time() { return _time; }
     AppDataProvider& app() { return _app; }
+    LayoutDataProvider& layout() { return _layout; }
     // SettingsDataProvider& settings() { return _settings; }
 
     const TelemetryDataProvider& telemetry() const { return _telemetry; }
     const BluetoothDataProvider& bluetooth() const { return _bluetooth; }
     const TimeDataProvider& time() const { return _time; }
     const AppDataProvider& app() const { return _app; }
+    const LayoutDataProvider& layout() const { return _layout; }
     // const SettingsDataProvider& settings() const { return _settings; }
 
 private:
@@ -24,5 +27,6 @@ private:
     BluetoothDataProvider _bluetooth;
     TimeDataProvider _time;
     AppDataProvider _app;
+    LayoutDataProvider _layout;
     // SettingsDataProvider _settings;
 };

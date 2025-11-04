@@ -23,15 +23,27 @@ class MainScreen : public UIScreen {
             loopIcon(56,80,16,16,epd_bitmap_loop),
             powerIcon(80,80,16,16,epd_bitmap_power) {}
 
+        void onEnter() override {
+            auto& l = model.layout().get();
+
+            bigData.setType(l.disp1);
+            auxData1.setType(l.disp2);
+            auxData2.setType(l.disp3);
+
+            auxData1.setSize(2);
+            auxData2.setSize(2);
+        }
+
         void update(float dt) override {
             //display if gps has a vlaid location
             gpsIcon.setVisible(model.telemetry().locationValid());
 
             //update numeric displays
             const auto& t = model.telemetry().get();
-            bigData.setData(t.speed);
-            auxData1.setData(t.cadence);
-            auxData2.setData(t.heartrate);
+
+            bigData.update(t);
+            auxData1.update(t);
+            auxData2.update(t);
 
             //display the current time
             timeWidget.setDate(model.time().get());
@@ -85,8 +97,8 @@ class MainScreen : public UIScreen {
     private:
         BatteryWidget batt;
         BigDataWidget bigData;
-        SmallDataWidget auxData1;
-        SmallDataWidget auxData2;
+        BigDataWidget auxData1;
+        BigDataWidget auxData2;
         TimeWidget timeWidget;
         IconWidget gpsIcon;
         IconWidget settingsIcon;

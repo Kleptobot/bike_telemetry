@@ -64,6 +64,8 @@ public:
         }
     }
 
+    int selectedIndex() const { return _selectedIndex; }
+
     void onItemSelected(ItemSelectedCallback cb) { _onSelected = std::move(cb); }
 
     WidgetT* getSelectedItem() {
@@ -87,8 +89,6 @@ private:
         if (_widgets.empty()) return;
         _selectedIndex = (_selectedIndex + delta + _widgets.size()) % _widgets.size();
         clampScroll();
-        
-        Serial.println("Selection ");
     }
 
     void clampScroll() {

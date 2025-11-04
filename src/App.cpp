@@ -57,6 +57,7 @@ void App::update() {
         case AppState::BOOT:
             HAL::bluetooth().loadDevices();
             loadBiometrics();
+            loadLayout();
             state = AppState::IDLE;
             break;
 
@@ -67,6 +68,8 @@ void App::update() {
                 HAL::bluetooth().setMode(E_Type_BT_Mode::scan);
             if(state_prev==AppState::LOGGING)
                 logger->finaliseLogging();
+
+            f32_distance = 0;
             break;
 
         case AppState::CONFIG:
@@ -74,16 +77,15 @@ void App::update() {
             break;
 
         case AppState::LOGGING:
-            if (Bluefruit.Scanner.isRunning())
-                Bluefruit.Scanner.stop();
-                
+            HAL::bluetooth().setMode(E_Type_BT_Mode::idle);
+
             if(state != state_prev)
                 logger->startLogging(currentTime);
             
-            f32_distance += (tel.speed + lastSpeed)*(0.5/3.6);
             lastSpeed = tel.speed;
             //check if seconds has changed for logging tick
-            if (currentTime.second() != lastSecond)
+            if (currentTime.second() != lastSecond) {
+                f32_distance += (tel.speed + lastSpeed)*(0.5/3.6);
                 logger->addTrackpoint({ currentTime,
                                         tel.longitude,
                                         tel.longitude,
@@ -93,6 +95,7 @@ void App::update() {
                                         tel.cadence,
                                         tel.speed,
                                         f32_distance});
+            }
             break;
         
         case AppState::PAUSED:
@@ -130,14 +133,16 @@ void App::handleAppEvent(const AppEvent& e) {
             saveBiometrics();
             break;
 
+        case AppEventType::SaveLayout:
+            saveBiometrics();
+            break;
+
         case AppEventType::StartLogging:
             HAL::bluetooth().setMode(E_Type_BT_Mode::idle);
             state = AppState::LOGGING;
-            Serial.println("Start Logging");
             break;
 
         case AppEventType::StopLogging:
-            Serial.println("Stop Logging");
             state = AppState::IDLE;
             break;
 
@@ -197,6 +202,48 @@ void App::loadBiometrics() {
         a.caloricProfile = fromString(jsonBuffer["caloricProfile"]);
 
         model.app().update(a);
+        dataFile.close();
+    }
+}
+
+void App::saveLayout() {
+    JsonDocument doc;
+
+    auto& l = model.layout().get();
+
+    doc["main"] = toString(l.disp1);
+    doc["aux1"] = toString(l.disp2);
+    doc["aux2"] = toString(l.disp3);
+
+    if (_storage->exists("/layout.txt"))
+        _storage->remove("/layout.txt");
+
+    File32 dataFile = _storage->openFile("/layout.txt", FILE_WRITE);
+
+    serializeJson(doc, dataFile);
+    dataFile.close();
+}
+
+void App::loadLayout() {
+    if (_storage->exists("layout.txt")) {
+        // Open file for reading
+        File32 dataFile = _storage->openFile("/layout.txt", FILE_READ);
+        // Allocate the memory pool on the stack.
+        JsonDocument jsonBuffer;
+        // Parse the root object
+
+        DeserializationError error = deserializeJson(jsonBuffer, dataFile);
+
+        if (error) {
+            Serial.print("deserializeJson() failed: ");
+            return;
+        }
+
+        TelemetryType disp1 = TelemetryTypefromString(jsonBuffer["main"]);
+        TelemetryType disp2 = TelemetryTypefromString(jsonBuffer["aux1"]);
+        TelemetryType disp3 = TelemetryTypefromString(jsonBuffer["aux2"]);
+
+        model.layout().update({disp1, disp2, disp3});
         dataFile.close();
     }
 }

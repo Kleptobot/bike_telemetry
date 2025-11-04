@@ -12,22 +12,42 @@ class BigDataWidget : public Widget {
         void render() override {
             if (!visible) return;
 
-            Disp::setTextSize(4);
+            Disp::setTextSize(_size);
             Disp::setCursor(x, y);
-            if (_data < 100)
+            if (_value < 100)
                 Disp::print(' ');
-            if (_data < 10)
+            if (_value < 10)
                 Disp::print(' ');
-            Disp::printFloat(_data, 0);
+            Disp::printFloat(_value, 0);
             Disp::setTextSize(1);
-            Disp::setCursor(x+96, y);
-            Disp::print(_units);
+            Disp::setCursor(x+24*_size, y);
+            Disp::print(labelForType(_type));
+        }
+
+        void setType(TelemetryType type) { _type = type; }
+        void setSize(uint8_t size) { _size = size; }
+
+        void update(const Telemetry& t) {
+            _value = GetTelemetryValue(t, _type);
         }
         
-        void setData(float data) { _data = data; }
         void setUnits(String units) { _units = units; }
 
     private:
-        float _data;
+        TelemetryType _type = TelemetryType::Speed;
+        float _value;
         String _units;
+        uint8_t _size = 4;
+
+        const char* labelForType(TelemetryType t) const {
+            switch (t) {
+                case TelemetryType::Speed: return "km/h";
+                case TelemetryType::Cadence: return "rpm";
+                case TelemetryType::HeartRate: return "bpm";
+                case TelemetryType::Temperature: return " C ";
+                case TelemetryType::Power: return " W ";
+                case TelemetryType::Altitude: return " m ";
+                default: return "-";
+            }
+        }
 };

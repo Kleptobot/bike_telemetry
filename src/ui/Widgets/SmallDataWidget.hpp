@@ -11,6 +11,7 @@ class SmallDataWidget : public Widget {
         void render() override {
             if (!visible) return;
             
+            Disp::setTextSize(2);
             if (_data < 10)
                 Disp::print(" ");
             if (_data < 100)

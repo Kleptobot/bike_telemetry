@@ -22,7 +22,10 @@ public:
         for (uint16_t i=0; i<visibleDevices ; i++) {
             deviceWidgets.push_back({0,i*32});
             deviceWidgets[i].setOnPress([this] () {
+                if (!_devices[_selectedIndex].saved)
                     emitAppEvent({AppEventType::ConnectBluetooth,this->_devices[_selectedIndex]});
+                else
+                    emitAppEvent({AppEventType::DisconnectBluetooth,this->_devices[_selectedIndex]});
                 });
         }
         totalHeight = deviceWidgets.size()*32;
