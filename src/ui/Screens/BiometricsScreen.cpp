@@ -6,29 +6,32 @@ void BiometricsScreen::handleInput(physIO input) {
         else if (input.Down.press) moveFocusDown();
         else if (input.Left.press) moveFocusLeft();
         else if (input.Right.press) moveFocusRight();
-    } else {
-        switch (focusField) {
-            case EditField::Birthday: 
-                dateWidget.handleInput(input);
-                break;
-            case EditField::Mass:
+    } 
+    switch (focusField) {
+        case EditField::Birthday: 
+            dateWidget.handleInput(input);
+            break;
+        case EditField::Mass:
+            if (massWidget.isSelected()) {
                 if (input.Up.press) ++_mass;
                 else if (input.Down.press) --_mass;
-                else if (input.Select.press) massWidget.setSelected(!massWidget.isSelected());
-                break;
-            case EditField::CaloricProfile:
+            }
+            massWidget.handleInput(input);
+            break;
+        case EditField::CaloricProfile:
+            if (calorieWidget.isSelected()) {
                 if (input.Up.press) ++_caloricProfile;
                 else if (input.Down.press) --_caloricProfile;
-                else if (input.Select.press) calorieWidget.setSelected(!calorieWidget.isSelected());
-                break;
-            case EditField::Back:
-                backWidget.handleInput(input);
-                break;
-            case EditField::Save:
-                saveWidget.handleInput(input);
-                break;
-            default: break;
-        }
+            }
+            calorieWidget.handleInput(input);
+            break;
+        case EditField::Back:
+            backWidget.handleInput(input);
+            break;
+        case EditField::Save:
+            saveWidget.handleInput(input);
+            break;
+        default: break;
     }
 }
 

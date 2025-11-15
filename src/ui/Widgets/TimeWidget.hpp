@@ -15,13 +15,31 @@ public:
     void render() override;
     void handleInput(physIO input);
 
-    void setDate(DateTime date) { _date=date; }
+    bool isSelected() const override { return hourText.isSelected() ||
+                                        minuteText.isSelected() ||
+                                        secondText.isSelected();}
+
+    void setFocused(bool f) override {
+        if( focusField == EditField::None) {
+            if(f) focusField = EditField::Hour;
+        }
+        else {
+            if(!f) focusField = EditField::None;
+        }
+    }
+
+    void setDate(DateTime date) { 
+        _date=date;
+        hourText.setText(String( _date.hour()));
+        minuteText.setText(String( _date.minute()));
+        secondText.setText(String( _date.second()));
+    }
     DateTime getDate() const { return _date; }
 
 private:
     enum class EditField { None = 0, Hour, Minute, Second };
     DateTime _date;
-    EditField focusField = EditField::Hour;
+    EditField focusField = EditField::None;
 
     SelectableTextWidget hourText;
     SelectableTextWidget minuteText;

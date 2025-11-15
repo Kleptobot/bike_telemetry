@@ -8,32 +8,34 @@ public:
     SelectableTextWidget(int x, int y, const String& text, uint8_t text_size=2 )
         : Widget(x, y), text(text), _text_size(text_size) {}
 
-    void setText(const String& t) { 
+    void setText(const String& t) {
+        if(t.length() > text.length()) 
+            invalidate();
         text = t; 
         int16_t x1,y1;
         uint16_t w,h;
         Disp::getTextBounds(text, x, y, &x1, &y1, &w, &h);
-        width = w;
+        _width = w;
+        _height = h;
+        invalidate();
     }
     void setSize(uint8_t size) { 
+        if(size > _text_size)
+            invalidate();
         _text_size = size;
-        height = 8*_text_size;
         int16_t x1,y1;
         uint16_t w,h;
         Disp::getTextBounds(text, x, y, &x1, &y1, &w, &h);
-        width = w;
+        _width = w;
+        _height = h;
+        invalidate();
     }
-    void setFocused(bool f) { focused = f; }
-    void setSelected(bool s) { selected = s; }
-
-    bool isFocused() const { return focused; }
-    bool isSelected() const { return selected; }
+        
+    void invalidate() override {
+        Disp::markDirty(x-2, y-2, width()+4, height()+4);
+    }
 
     void render() override;
-
-protected:
-    bool focused = false;
-    bool selected = false;
 
 private:
     String text;

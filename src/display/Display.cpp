@@ -1,76 +1,124 @@
 #include <Wire.h>
 #include "Display.hpp"
+#include <vector>
 
   #define TFT_CS         D0
   #define TFT_RST        -1
   #define TFT_DC         D2
 
 Adafruit_ST7789 Display = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
+GFXcanvas16 canvas(240, 320);
+
+std::vector<DirtyRect> dirtyRects;
 
 namespace Disp {
     void init() {
-        Display.init(240,320);
-        Display.setSPISpeed(40000000);
+        Display.init(240,320,SPI_MODE3);
+        Display.setSPISpeed(48000000);     // faster if stable
         Display.fillScreen(ST77XX_BLACK);
         Display.invertDisplay(false);
+        clear();
     }
 
-    void clear() {
-        Display.fillScreen(ST77XX_BLACK);
-        Display.setTextSize(1);
-        Display.setTextColor(ST77XX_WHITE);
+    void clear(uint16_t color) {
+        canvas.fillScreen(color);
     }
+
+    void markDirty(int16_t x, int16_t y, int16_t w, int16_t h) {
+        //if (dirtyRects.size() >= 16) return; // ignore overflow
+
+        dirtyRects.push_back({x, y, w, h});
+    }
+
+    void resetDirty() {
+        dirtyRects.clear();
+    }
+
+    void flush() {
+        // Display.startWrite();
+        // Display.setAddrWindow(0, 0, 240, 320);
+        // Display.writePixels(canvas.getBuffer(), 240*320);
+        // Display.endWrite();
+
+        for (uint8_t i = 0; i < dirtyRects.size(); i++) {
+            auto& r = dirtyRects[i];
+
+            Display.startWrite();
+            Display.setAddrWindow(r.x, r.y, r.w, r.h);
+
+            uint16_t* buf = canvas.getBuffer();
+            buf += (r.y * 240) + r.x;
+
+            uint32_t rows = r.h;
+            uint32_t cols = r.w;
+
+            for (uint32_t y = 0; y < rows; y++) {
+                Display.writePixels(buf, cols);
+                buf += 240; // skip to next full row
+            }
+
+            Display.endWrite();
+        }
+
+        dirtyRects.clear(); // reset the list after every frame
+    }
+
+    void setTextSize(uint8_t s) { canvas.setTextSize(s); }
+    void setCursor(int x, int y) { canvas.setCursor(x, y); }
+
+    void setTextColor(uint16_t c) { canvas.setTextColor(c,!c); }
+    void setTextColor(uint16_t c, uint16_t bg) { canvas.setTextColor(c, bg); }
 
     void text(int x, int y, const String& s, bool invert) {
         if (invert) {
-            Display.fillRect(0, y - 1, SCREEN_WIDTH, 10, ST77XX_WHITE);
-            Display.setTextColor(ST77XX_BLACK);
+            canvas.fillRect(0, y - 1, SCREEN_WIDTH, 10, ST77XX_WHITE);
+            canvas.setTextColor(ST77XX_BLACK);
         } else {
-            Display.setTextColor(ST77XX_WHITE);
+            canvas.setTextColor(ST77XX_WHITE);
         }
-        Display.setCursor(x, y);
-        Display.print(s);
-    }
-
-    void flush() { Display.fillScreen(ST77XX_BLACK); }
-
-    void setTextSize(uint8_t s) {
-    Display.setTextSize(s);
+        canvas.setCursor(x, y);
+        canvas.print(s);
     }
 
     void drawText(int x, int y, const String &s, uint16_t color) {
-        Display.setTextColor(color);
-        Display.setCursor(x, y);
-        Display.print(s);
+        canvas.setTextColor(color);
+        canvas.setCursor(x, y);
+        canvas.print(s);
+    }
+
+    void drawTextInverted(int x, int y, const String& s) {
+        int16_t x1, y1;
+        uint16_t w, h;
+        canvas.getTextBounds(s, x, y, &x1, &y1, &w, &h);
+        canvas.fillRect(x1, y1, w, h, ST77XX_WHITE);
+        canvas.setTextColor(ST77XX_BLACK);
+        canvas.setCursor(x, y);
+        canvas.print(s);
     }
 
     void fillRect(int x, int y, int w, int h, uint16_t color) {
-        Display.fillRect(x, y, w, h, color);
+        canvas.fillRect(x, y, w, h, color);
     }
 
     void drawRect(int x, int y, int w, int h, uint16_t color) {
-        Display.drawRect(x, y, w, h, color);
-    }
-
-    void setCursor(int x, int y) {
-        Display.setCursor(x, y);
+        canvas.drawRect(x, y, w, h, color);
     }
 
     void getTextBounds(const String text, int16_t x, int16_t y, int16_t* x1, int16_t* y1, uint16_t* w, uint16_t* h) {
-        Display.getTextBounds(text, x, y, x1, y1, w, h);
+        canvas.getTextBounds(text, x, y, x1, y1, w, h);
     }
 
-    void drawBitmap(int16_t x, int16_t y, const uint8_t bitmap[], int16_t w, int16_t h, uint16_t color) {
-        Display.drawBitmap(x,y,bitmap,w,h,color);
+    void drawBitmap(int16_t x, int16_t y, const uint8_t* bitmap, int16_t w, int16_t h, uint16_t color) {
+        canvas.drawBitmap(x,y,bitmap,w,h,color);
     }
 
     int16_t getCursorX() {
-        return Display.getCursorX();
+        return canvas.getCursorX();
     }
 
     int16_t getCursorY() {
-        return Display.getCursorY();
+        return canvas.getCursorY();
     }
 
-    void printFloat(float data, int precision) {Display.print(data, precision);};
+    void printFloat(float data, int precision) {canvas.print(data, precision);};
 }

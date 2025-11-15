@@ -15,7 +15,25 @@ class DateWidget : public Widget {
         void render() override;
         void handleInput(physIO input);
 
-        void setDate(DateTime date) { _date=date; }
+        void setDate(DateTime date) { 
+            _date=date;
+            dayText.setText(String( _date.day()));
+            monthText.setText(String( _date.month()));
+            yearText.setText(String( _date.year()));
+        }
+
+        bool isSelected() const override { return dayText.isSelected() ||
+                                            monthText.isSelected() ||
+                                            yearText.isSelected();}
+
+        void setFocused(bool f) override {
+            if( focusField == EditField::None) {
+                if(f) focusField = EditField::Day;
+            }
+            else {
+                if(!f) focusField = EditField::None;
+            }
+        }
         DateTime getDate() const { return _date; }
 
     private:

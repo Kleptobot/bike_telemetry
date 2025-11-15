@@ -10,7 +10,7 @@ class BatteryWidget : public Widget {
 
         void render() override {
             if (!visible) {
-                Disp::fillRect(x,y,width,height,ST77XX_BLACK);
+                Disp::fillRect(x,y,_width,_height,ST77XX_BLACK);
                 return;
             }
             Disp::setTextSize(1);
@@ -21,6 +21,7 @@ class BatteryWidget : public Widget {
 
         void setBat(uint8_t batt) {
             _batt = batt;
+            invalidate();
         }
 
     private:

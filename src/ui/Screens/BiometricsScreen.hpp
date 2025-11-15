@@ -29,14 +29,13 @@ class BiometricsScreen : public UIScreen {
                 });
             }
         void onEnter() override {
-            update(0);
-        }
-
-        void update(float dt) override {
             auto& a = model.app().get();
             _birthday = a.birthday;
             _mass = a.mass;
             _caloricProfile = a.caloricProfile;
+        }
+
+        void update(float dt) override {
 
             dateWidget.setDate(_birthday);
             massWidget.setText(String(_mass));
@@ -61,6 +60,7 @@ class BiometricsScreen : public UIScreen {
 
             Disp::print("Mass: ");
             massWidget.render();
+            calorieWidget.render();
 
             backWidget.render();
             saveWidget.render();

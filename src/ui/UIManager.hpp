@@ -7,6 +7,7 @@
 
 #include "UI/Screens/UIScreen.hpp"
 #include "HAL/InputInterface.hpp"
+#include "display/Display.hpp"
 
 
 
@@ -30,6 +31,7 @@ public:
             // Fallback or debug message
             activeScreen = nullptr;
         }
+        Disp::markDirty(0,0,240,320);
     }
 
     void showScreen(ScreenID id) {
@@ -37,6 +39,8 @@ public:
             activeScreen->onExit();
 
         activeScreen = screens[id].get();
+        Disp::clear();
+        Disp::markDirty(0,0,240,320);
         activeScreen->onEnter();
     }
 
@@ -46,8 +50,13 @@ public:
     }
 
     void render() {
+        canvas.fillScreen(ST77XX_BLACK); // clear once per frame
         if (activeScreen)
             activeScreen->render();
+
+        // push to hardware in one shot
+        Disp::flush();
+        Disp::resetDirty();
     }
 
     void handleInput(const physIO input){

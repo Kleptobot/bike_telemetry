@@ -42,6 +42,7 @@ void DateWidget::incrementField(EditField field) {
             _date = DateTime(_date.year(), _date.month(),
                             (_date.day() % 31) + 1,
                             _date.hour(), _date.minute(), _date.second());
+            dayText.setText(String( _date.day()));
             break;
 
         case EditField::Month:
@@ -49,11 +50,13 @@ void DateWidget::incrementField(EditField field) {
                             (_date.month() % 12) + 1,
                             _date.day(),
                             _date.hour(), _date.minute(), _date.second());
+            monthText.setText(String( _date.month()));
             break;
 
         case EditField::Year:
             _date = DateTime(_date.year() + 1, _date.month(), _date.day(),
                             _date.hour(), _date.minute(), _date.second());
+            yearText.setText(String( _date.year()));
             break;
 
         default: break;
@@ -66,6 +69,7 @@ void DateWidget::decrementField(EditField field) {
             _date = DateTime(_date.year(), _date.month(),
                             (_date.day() == 1 ? 31 : _date.day() - 1),
                             _date.hour(), _date.minute(), _date.second());
+            dayText.setText(String( _date.day()));
             break;
 
         case EditField::Month:
@@ -73,11 +77,13 @@ void DateWidget::decrementField(EditField field) {
                             (_date.month() == 1 ? 12 : _date.month() - 1),
                             _date.day(),
                             _date.hour(), _date.minute(), _date.second());
+            monthText.setText(String( _date.month()));
             break;
 
         case EditField::Year:
             _date = DateTime(_date.year() - 1, _date.month(), _date.day(),
                             _date.hour(), _date.minute(), _date.second());
+            yearText.setText(String( _date.year()));
             break;
 
         default: break;

@@ -76,6 +76,15 @@ public:
 
     size_t size() const { return _widgets.size(); }
 
+    void invalidate() {
+        int w=0,h=0;
+        int end = std::min(_scrollOffset + _visibleCount, (int)_widgets.size());
+        for (int i = _scrollOffset; i<end; i++){
+            w += (_widgets[i].get()->width() + margin);
+            if (_widgets[i].get()->height() > h) h = _widgets[i].get()->height();
+        }
+    }
+
 private:
     int _x, _y;
     int _selectedIndex = 0;
@@ -95,11 +104,11 @@ private:
     void clampScroll() {
         if (_selectedIndex < _scrollOffset) {
             _scrollOffset = _selectedIndex;
-            Disp::clear();
+            invalidate();
         }
         else if (_selectedIndex >= _scrollOffset + _visibleCount) {
             _scrollOffset = _selectedIndex - _visibleCount + 1;
-            Disp::clear();
+            invalidate();
         }
     }
 

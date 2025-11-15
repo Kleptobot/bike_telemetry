@@ -28,12 +28,17 @@ class BigDataWidget : public Widget {
             Disp::print(labelForType(_type));
         }
 
-        void setType(TelemetryType type) { _type = type; }
+        void setType(TelemetryType type) {
+            _type = type;
+            invalidate();
+        }
+        
         void setSize(uint8_t size) { _size = size; }
         void setColor(uint16_t color) { _color = color; }
 
         void update(const Telemetry& t) {
             _value = GetTelemetryValue(t, _type);
+            invalidate();
         }
         
         void setUnits(String units) { _units = units; }

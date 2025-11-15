@@ -42,6 +42,7 @@ void TimeWidget::incrementField(EditField field) {
             _date = DateTime(_date.second(), _date.minute(),
                             (_date.hour() + 1) % 24,
                             _date.hour(), _date.minute(), _date.second());
+            hourText.setText(String( _date.hour()));
             break;
 
         case EditField::Minute:
@@ -49,6 +50,7 @@ void TimeWidget::incrementField(EditField field) {
                             (_date.minute() +1) % 60,
                             _date.hour(),
                             _date.hour(), _date.minute(), _date.second());
+            minuteText.setText(String( _date.minute()));
             break;
 
         case EditField::Second:
@@ -56,6 +58,7 @@ void TimeWidget::incrementField(EditField field) {
                             _date.minute(), 
                             _date.hour(),
                             _date.hour(), _date.minute(), _date.second());
+            secondText.setText(String( _date.second()));
             break;
 
         default: break;
@@ -68,6 +71,7 @@ void TimeWidget::decrementField(EditField field) {
             _date = DateTime(_date.second(), _date.minute(),
                             (_date.hour() == 1 ? 23 : _date.hour() - 1),
                             _date.hour(), _date.minute(), _date.second());
+            hourText.setText(String( _date.hour()));
             break;
 
         case EditField::Minute:
@@ -75,6 +79,7 @@ void TimeWidget::decrementField(EditField field) {
                             (_date.minute() == 1 ? 59 : _date.minute() - 1),
                             _date.hour(),
                             _date.hour(), _date.minute(), _date.second());
+            minuteText.setText(String( _date.minute()));
             break;
 
         case EditField::Second:
@@ -82,6 +87,7 @@ void TimeWidget::decrementField(EditField field) {
                             _date.minute(), 
                             _date.hour(),
                             _date.hour(), _date.minute(), _date.second());
+            secondText.setText(String( _date.second()));
             break;
 
         default: break;
@@ -90,15 +96,6 @@ void TimeWidget::decrementField(EditField field) {
 
 void TimeWidget::render() {
     if (!visible) return;
-    // update field visuals
-    hourText.setFocused(focusField == EditField::Hour && focused);
-    hourText.setSelected(selected && focusField == EditField::Hour);
-
-    minuteText.setFocused(focusField == EditField::Minute && focused);
-    minuteText.setSelected(selected && focusField == EditField::Minute);
-
-    secondText.setFocused(focusField == EditField::Second && focused);
-    secondText.setSelected(selected && focusField == EditField::Second);
 
     // draw them
     hourText.render();
