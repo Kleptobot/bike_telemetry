@@ -7,10 +7,10 @@ class DisplayEditScreen : public UIScreen {
     public:
         DisplayEditScreen (DataModel& model) : 
             UIScreen(model),
-            disp1{0,0},
-            disp2{0,20},
-            disp3{0,40},
-            saveWidget{0,60,"Save",epd_bitmap_save} {
+            disp1{5,5},
+            disp2{5,30},
+            disp3{5,55},
+            saveWidget{5,80,"Save",epd_bitmap_save,2,16} {
                 //register the save press event callback to send a change screen and app save event
                 saveWidget.setOnPress([this] () {
                     this->model.layout().update( {  this->disp1.type(),
@@ -45,10 +45,10 @@ class DisplayEditScreen : public UIScreen {
                 else if (input.Down.press) _index = (_index + 1) % 4;
             }
             switch(_index) {
-                case 0: disp1.handleInput(input);
-                case 1: disp2.handleInput(input);
-                case 2: disp3.handleInput(input);
-                case 3: saveWidget.handleInput(input);
+                case 0: disp1.handleInput(input); break;
+                case 1: disp2.handleInput(input); break;
+                case 2: disp3.handleInput(input); break;
+                case 3: saveWidget.handleInput(input); break;
             }
         }
 

@@ -53,14 +53,14 @@ public:
             bool focused = (i == _selectedIndex);
             _widgets[i]->setFocused(focused);
             _widgets[i]->render(_x, y);
-            y += _widgets[i]->getHeight();
+            y += _widgets[i]->getHeight() + margin;
         }
 
         if (_widgets.size() > _visibleCount) {
             float ratio = (float)_visibleCount / _widgets.size();
             int barHeight = int(ratio * totalHeight);
             int barY = int((_scrollOffset / float(_widgets.size())) * totalHeight);
-            Disp::drawRect(SCREEN_WIDTH - 4, barY, 2, barHeight, DispCol::WHITE);
+            Disp::drawRect(240 - 4, barY, 2, barHeight, ST77XX_WHITE);
         }
     }
 
@@ -80,8 +80,9 @@ private:
     int _x, _y;
     int _selectedIndex = 0;
     int _scrollOffset = 0;
-    int _visibleCount;
+    uint16_t _visibleCount;
     int totalHeight=0;
+    int margin = 5;
     std::vector<std::unique_ptr<WidgetT>> _widgets;
     ItemSelectedCallback _onSelected;
 
@@ -92,10 +93,14 @@ private:
     }
 
     void clampScroll() {
-        if (_selectedIndex < _scrollOffset)
+        if (_selectedIndex < _scrollOffset) {
             _scrollOffset = _selectedIndex;
-        else if (_selectedIndex >= _scrollOffset + _visibleCount)
+            Disp::clear();
+        }
+        else if (_selectedIndex >= _scrollOffset + _visibleCount) {
             _scrollOffset = _selectedIndex - _visibleCount + 1;
+            Disp::clear();
+        }
     }
 
     void selectItem() {

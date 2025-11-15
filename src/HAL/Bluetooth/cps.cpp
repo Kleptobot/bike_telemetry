@@ -9,7 +9,7 @@ void cps::cps_notify_callback(BLEClientCharacteristic* chr, uint8_t* data, uint1
     //check the type of the member
     if((*it)->getType() == E_Type_BT_Device::bt_cps)
     {
-      //compare the conn handle of the evt with the conn handle of the device servic (static cast to an hrm safe because we know the type)
+      //compare the conn handle of the evt with the conn handle of the device servic (static cast to a cps safe because we know the type)
       if (chr->connHandle() == static_cast<cps*>((*it).get())->cps_serv.connHandle())
       {
         //call the underlying notify method for the instance (again static cast)

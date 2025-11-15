@@ -13,6 +13,8 @@ void App::begin(IStorage* storage) {
     _storage = storage;
     logger = new TCXLogger(_storage, model);
     state = AppState::BOOT;
+    Disp::init();
+    loadLayout();
 
     ui.registerScreen<MainScreen>(ScreenID::MainMenu,App::instance().getModel());
     ui.registerScreen<TimeEditScreen>(ScreenID::TimeMenu,App::instance().getModel());
@@ -54,13 +56,11 @@ void App::update() {
     ui.handleInput(HAL::inputs());
     _last_millis = _millis;
 
-
     switch(state) {
         case AppState::BOOT:
             Serial.println("Loading data from filesystem.");
             HAL::bluetooth().loadDevices();
             loadBiometrics();
-            loadLayout();
             state = AppState::IDLE;
             break;
 
@@ -142,7 +142,7 @@ void App::handleAppEvent(const AppEvent& e) {
             break;
 
         case AppEventType::SaveLayout:
-            saveBiometrics();
+            saveLayout();
             break;
 
         case AppEventType::StartLogging:

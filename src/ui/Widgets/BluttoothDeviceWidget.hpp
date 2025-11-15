@@ -8,40 +8,45 @@
 
 class BluetoothDeviceWidget :  public Widget {
 public:
-  BluetoothDeviceWidget(int x, int y) : Widget(x,y,128,30) {}
+  BluetoothDeviceWidget(int x, int y) : Widget(x,y,128,30) {visible = false;}
 
   void update(float dt) override {
   }
 
   void render() override {
-    if (!visible) return;
+    if (!visible && visible_last) {
+        Disp::fillRect(x,y,width,height,ST77XX_BLACK);
+    } 
+    else if(visible) {
 
-    Disp::setTextSize(1);
-    Disp::setCursor(x, y);
-    String tempString = _device.name;
+      Disp::setTextSize(1);
+      Disp::setCursor(x, y);
+      String tempString = _device.name;
 
-    int16_t x1, y1;
-    uint16_t w, h;
+      int16_t x1, y1;
+      uint16_t w, h;
 
-    Disp::getTextBounds(tempString, x, y, &x1, &y1, &w, &h);
+      Disp::getTextBounds(tempString, x, y, &x1, &y1, &w, &h);
 
-    Disp::setTextColor(DispCol::WHITE);
-    if (focused)
-        Disp::drawRect(x - 2, y - 3, 127, 30, DispCol::WHITE);
-    Disp::setCursor(x, y);
-    Disp::print(tempString);
-    Disp::drawBitmap(x, y + 10, epd_bitmap_down_right, 16, 16, DispCol::WHITE);
+      Disp::setTextColor(ST77XX_WHITE);
+      if (focused)
+          Disp::drawRect(x - 2, y - 3, 127, 30, ST77XX_WHITE);
+      Disp::setCursor(x, y);
+      Disp::print(tempString);
+      Disp::drawBitmap(x, y + 10, epd_bitmap_down_right, 16, 16, ST77XX_WHITE);
 
-    if (_device.saved) {
-      Disp::drawBitmap(x + 18, y + 10, epd_bitmap_save, 16, 16, DispCol::WHITE);
+      if (_device.saved) {
+        Disp::drawBitmap(x + 18, y + 10, epd_bitmap_save, 16, 16, ST77XX_WHITE);
 
-      if (_device.connected)
-          Disp::drawBitmap(x + 34, y + 10, epd_bitmap_Bluetooth, 16, 16, DispCol::WHITE);
+        if (_device.connected)
+            Disp::drawBitmap(x + 34, y + 10, epd_bitmap_Bluetooth, 16, 16, ST77XX_WHITE);
 
-      Disp::drawBitmap(x + 50, y + 10, epd_bitmap_battery, 32, 16, DispCol::WHITE);
-      Disp::setCursor(x + 57, y + 15);
+        Disp::drawBitmap(x + 50, y + 10, epd_bitmap_battery, 32, 16, ST77XX_WHITE);
+        Disp::setCursor(x + 57, y + 15);
+      }
+      Disp::print(_device.batt);
     }
-    Disp::print(_device.batt);
+    visible_last = visible;
   }
 
     using Callback = std::function<void()>;

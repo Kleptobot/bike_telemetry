@@ -9,7 +9,7 @@ void csc::csc_notify_callback(BLEClientCharacteristic* chr, uint8_t* data, uint1
     //check the type of the member
     if((*it)->getType() == E_Type_BT_Device::bt_csc)
     {
-      //compare the conn handle of the evt with the conn handle of the device servic (static cast to an hrm safe because we know the type)
+      //compare the conn handle of the evt with the conn handle of the device servic (static cast to a csc, safe because we know the type)
       if (chr->connHandle() == static_cast<csc*>((*it).get())->csc_serv.connHandle())
       {
         //call the underlying notify method for the instance (again static cast)
@@ -69,6 +69,7 @@ void csc::discover(uint16_t conn_handle)
       u16_CrankCount_Prev = 0;
       u16_CrankEvt_Prev = 0;
       f32_rpm = 0;
+      f32_cadence_raw = 0;
       f32_kph = 0;
       f32_cadence = 0;
 
@@ -126,7 +127,6 @@ void csc::csc_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len)
   uint8_t offset = 1;
   uint32_t u32_WheelCount, u32_WheelCount_delta;
   uint16_t u16_SpeedEvt, u16_CrankCount, u16_CrankCount_delta, u16_CrankEvt, u16_speed_delta, u16_crank_delta;
-  float f32_cadence_raw;
 
   float f32_circ = 2127;
 

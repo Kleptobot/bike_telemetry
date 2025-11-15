@@ -76,7 +76,7 @@ public:
             float ratio = (float)visibleDevices / _devices.size();
             int barHeight = int(ratio * totalHeight);
             int barY = int((_scrollOffset / float(_devices.size())) * totalHeight);
-            Disp::drawRect(SCREEN_WIDTH - 4, barY, 2, barHeight, DispCol::WHITE);
+            Disp::drawRect(SCREEN_WIDTH - 4, barY, 2, barHeight, ST77XX_WHITE);
         }
 
         //render the back button after all the BT widgets

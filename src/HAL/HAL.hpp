@@ -45,10 +45,11 @@ class HAL {
     static float f32_kph, f32_cadence, f32_temp, f32_alt, f32_bpm, f32_pow;
     static float f32_GPS_speed, f32_GPS_Alt;
     static uint8_t _rxBuffer[1024];
-    static uint32_t _resetTime;
+    static uint32_t _resetGPSTime, _resetDispTime;
     static LC76G::State lc76g_state_prev;
     static bool _sleep;
 
     //private methods
     static void resetGPS();
+    static void resetDisplay();
 };

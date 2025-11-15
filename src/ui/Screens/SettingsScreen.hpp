@@ -15,19 +15,20 @@ class SettingsScreen : public UIScreen {
 public:
     SettingsScreen(DataModel& model)
         : UIScreen(model),
-          listView(0, 0) {
+          listView(5, 5) {
         // Define your settings options statically
         _items = {
             {"Bluetooth",   epd_bitmap_bluetooth_large,     ScreenID::Bluetooth},
             {"GPS",         epd_bitmap_antenna_large,       ScreenID::GPSSettings}, 
-            {"Time",        epd_bitmap_clock,               ScreenID::TimeMenu},
+            {"Time",        epd_bitmap_clock_large,         ScreenID::TimeMenu},
             {"Biometrics",  epd_bitmap_heart_large,         ScreenID::Biometrics},
             {"Display",     epd_bitmap_heart_large,         ScreenID::DisplayEdit},
             {"Back",        epd_bitmap_left_arrow_large,    ScreenID::MainMenu}
         };
 
-        for (const auto& i : _items)
-            listView.addItem(std::make_unique<SelectableTextIconWidget>(0, 0, i.label, i.icon));
+        for (const auto& i : _items) {
+            listView.addItem(std::make_unique<SelectableTextIconWidget>(0, 0, i.label, i.icon,2,32));
+        }
 
         listView.onItemSelected([this](auto&) {
             int index = listView.selectedIndex();

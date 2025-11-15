@@ -5,6 +5,7 @@
 
 #include "HAL/InputInterface.hpp"
 #include "UI/Widgets/Widget.hpp"
+#include "display/Display.hpp"
 #include "UIEventBus.hpp"
 #include "DataModel.hpp"
 
@@ -14,7 +15,7 @@ class UIScreen {
         virtual ~UIScreen() = default;
 
         virtual void onEnter() {}
-        virtual void onExit() {}
+        virtual void onExit() {Disp::clear();}
         virtual void update(float dt) = 0;
         virtual void render() = 0;
         virtual void handleInput(const physIO input) = 0;

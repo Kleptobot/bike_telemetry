@@ -72,11 +72,6 @@ void BluetoothSystem::update() {
         }
     }
 }
-
-/**
- * Callback invoked when an connection is established
- * @param conn_handle
- */
 void BluetoothSystem::connect_callback(uint16_t conn_handle) {
     BT_Device* device = BT_Device::getDeviceWithMAC(toConnectMAC);
     if (device != NULL) {
@@ -93,11 +88,6 @@ void BluetoothSystem::connect_callback(uint16_t conn_handle) {
         Bluefruit.Scanner.resume();
     }
 }
-
-/**
- * Callback invoked when scanner pick up an advertising data
- * @param report Structural advertising data
- */
 void BluetoothSystem::scan_callback(ble_gap_evt_adv_report_t* report) {
     Serial.println("Found Device:");
     Serial.print("MAC: ");
@@ -114,11 +104,6 @@ void BluetoothSystem::scan_callback(ble_gap_evt_adv_report_t* report) {
         Bluefruit.Central.connect(report);
     }
 }
-
-/**
- * Callback invoked when scanner pick up an advertising data
- * @param report Structural advertising data
- */
 void BluetoothSystem::scan_discovery(ble_gap_evt_adv_report_t* report) {
     BluetoothDevice newDevice(report->peer_addr.addr);
     memset(&newDevice.name,0,32);

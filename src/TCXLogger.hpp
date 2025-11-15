@@ -31,7 +31,7 @@ struct Lap {
   double avgCadence;
   double maxSpeed;
   double totalDistance;     // Cumulative distance in meters
-  uint32_t parts;
+  uint16_t parts;
 };
 
 class TCXLogger {
@@ -59,7 +59,7 @@ class TCXLogger {
     int totalPoints=0;
 
     void updateTotals(const Trackpoint& tp);
-    void writeLapHeader(int lapIndex, File32 *file);
+    void writeLapHeader(uint16_t lapIndex, File32 *file);
     void resetTotals();
     void dataTransfer(File32 *from, File32 *to);
       

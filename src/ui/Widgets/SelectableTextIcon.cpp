@@ -5,24 +5,25 @@ void SelectableTextIconWidget::render() {
     if (!visible) return;
 
     Disp::setCursor(x, y);
-    Disp::setTextSize(2);
+    Disp::setTextSize(_text_size);
 
     int16_t x1, y1;
     uint16_t w, h;
-    Disp::getTextBounds(text, x + 16, y, &x1, &y1, &w, &h);
+    Disp::getTextBounds(text, x + _icon_height, y, &x1, &y1, &w, &h);
 
     if (selected) {
-        Disp::fillRect(x - 1, y - 1, w+17, h+1, DispCol::WHITE);
-        Disp::setTextColor(DispCol::BLACK);
+        Disp::fillRect(x - 1, y - 1, w+_icon_height + 1, h*2+1, ST77XX_WHITE);
+        Disp::setTextColor(ST77XX_BLACK);
     } else if (focused) {
-        Disp::drawRect(x - 2, y - 2, w + 18, h + 2, DispCol::WHITE);
-        Disp::setTextColor(DispCol::WHITE);
+        Disp::drawRect(x - 2, y - 2, w + _icon_height + 4, h*2 + 2, ST77XX_WHITE);
+        Disp::setTextColor(ST77XX_WHITE);
     } else {
-        Disp::setTextColor(DispCol::WHITE);
+        Disp::drawRect(x - 2, y - 2, w + _icon_height + 4, h*2 + 2, ST77XX_BLACK);
+        Disp::setTextColor(ST77XX_WHITE);
     }
     
-    Disp::drawBitmap(x, y, bitmap, 16, 16, DispCol::WHITE);
-    Disp::setCursor(x + 16, y);
+    Disp::drawBitmap(x, y, bitmap, _icon_height, _icon_height, ST77XX_WHITE);
+    Disp::setCursor(x + _icon_height, y);
     Disp::print(text);
 }
 

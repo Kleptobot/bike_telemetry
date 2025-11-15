@@ -11,7 +11,7 @@ void InputSystem::init() {
     Serial.println("MCP init Error");
   }
 
-  _mcp.setupInterrupts(true, false, HIGH);
+  _mcp.setupInterrupts(true, false, HIGH);  //configure interrupts
   _mcp.pinMode(GPIOA2, INPUT_PULLUP);
   _mcp.pinMode(GPIOA3, INPUT_PULLUP);
   _mcp.pinMode(GPIOA4, INPUT_PULLUP);
@@ -25,9 +25,12 @@ void InputSystem::init() {
   _mcp.pinMode(GPIOB7, OUTPUT);
   _mcp.setupInterruptPin(GPIOA5, HIGH);
 
-  //set the gps backup supply
-  _mcp.digitalWrite(GPIOB4, true);
-  _mcp.digitalWrite(GPIOB5, true);
+  _mcp.digitalWrite(GPIOB3, false);   //turn the gps backup supply off
+  _mcp.digitalWrite(GPIOB4, true);    //turn the gps enable supply on
+  
+  _mcp.digitalWrite(GPIOB5, true);    //set the reset pin of the gps
+  _mcp.digitalWrite(GPIOB6, false);   //turn the display off
+  //_mcp.digitalWrite(GPIOB7, true);    //set the reset pin of the display
 
 }
 
@@ -45,7 +48,7 @@ bool InputSystem::update(bool i2cBusy) {
         bSD_Det = (currentA >> 2) & 0x01;
         _mcp.clearInterrupts();
 
-        //run through the que of pin cmds
+        //run through the queue of pin cmds
         while (!pinCmds.empty()) {
           _mcp.digitalWrite(pinCmds.front().pin, pinCmds.front().cmd);
           pinCmds.pop();

@@ -29,7 +29,7 @@ public:
 
 private:
     static const uint16_t BAT_Read_Period = 30001;
-    static const uint16_t IMU_Read_Period = 51;
+    static const uint16_t IMU_Read_Period = 73;
     static const uint16_t DPS_Read_Period = 101;
     static const uint16_t RTC_Read_Period = 99;
 

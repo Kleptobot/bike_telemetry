@@ -11,17 +11,20 @@ class MainScreen : public UIScreen {
     public:
         MainScreen (DataModel& model) : 
             UIScreen(model),
-            batt(95,0),
-            bigData(0,16),
-            auxData1(47,48),
-            auxData2(47,64),
-            timeWidget(0,112),
-            gpsIcon(0,0,16,16,epd_bitmap_antenna),
-            settingsIcon(32,80,16,16,epd_bitmap_gear),
-            playIcon(56,80,16,16,epd_bitmap_play),
-            stopIcon(80,80,16,16,epd_bitmap_stop),
-            loopIcon(56,80,16,16,epd_bitmap_loop),
-            powerIcon(80,80,16,16,epd_bitmap_power) {}
+            batt(202,5),
+            gpsIcon(5,5,16,16,epd_bitmap_antenna),
+            
+            bigData(50,40),
+            auxData1(84,90),
+            auxData2(84,130),
+
+            settingsIcon    (88,300,16,16,epd_bitmap_gear),
+            playIcon        (112,300,16,16,epd_bitmap_play),
+            stopIcon        (136,300,16,16,epd_bitmap_stop),
+            loopIcon        (112,300,16,16,epd_bitmap_loop),
+            powerIcon       (136,300,16,16,epd_bitmap_power),
+
+            timeWidget(0,122) {}
 
         void onEnter() override {
             auto& l = model.layout().get();
@@ -30,8 +33,9 @@ class MainScreen : public UIScreen {
             auxData1.setType(l.disp2);
             auxData2.setType(l.disp3);
 
-            auxData1.setSize(2);
-            auxData2.setSize(2);
+            bigData.setSize(6);
+            auxData1.setSize(4);
+            auxData2.setSize(4);
         }
 
         void update(float dt) override {
@@ -55,6 +59,7 @@ class MainScreen : public UIScreen {
             stopIcon.setVisible(appState == AppState::LOGGING);
             playIcon.setVisible(appState != AppState::LOGGING);
             settingsIcon.setVisible(appState != AppState::LOGGING);
+            powerIcon.setVisible(appState != AppState::LOGGING);
         }
 
         void handleInput(physIO input) override {

@@ -47,8 +47,9 @@ class BT_Device {
     uint16_t _conn_handle;
     E_Type_BT_Device bt_type;
     static std::vector<std::unique_ptr<BT_Device>> btDevices;
-    BT_Device(){};
     bool _disconnected;
+
+    BT_Device(){};
 
   public:
     virtual ~BT_Device() {};
@@ -75,6 +76,7 @@ class BT_Device {
     uint8_t readBatt() const {return u8_Batt;}
     void disconnect(uint16_t conn_handle, uint8_t reason);
     uint16_t getConnHandle(){return _conn_handle;};
+    
     virtual void discover(uint16_t conn_handle) {};
     virtual bool discovered() { return false; };
     virtual void begin() {};

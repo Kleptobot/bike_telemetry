@@ -1,7 +1,6 @@
 #pragma once
 #include <Arduino.h>
 
-// Option 1: Lightweight MAC address struct (RECOMMENDED)
 struct MacAddress {
     uint8_t bytes[6];
     

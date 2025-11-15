@@ -10,8 +10,12 @@ class BigDataWidget : public Widget {
         
 
         void render() override {
-            if (!visible) return;
+            if (!visible) {
+                Disp::fillRect(x,y,24*_size+24,_size,ST77XX_BLACK);
+                return;
+            }
 
+            Disp::setTextColor(_color);
             Disp::setTextSize(_size);
             Disp::setCursor(x, y);
             if (_value < 100)
@@ -19,13 +23,14 @@ class BigDataWidget : public Widget {
             if (_value < 10)
                 Disp::print(' ');
             Disp::printFloat(_value, 0);
-            Disp::setTextSize(1);
-            Disp::setCursor(x+24*_size, y);
+            Disp::setTextSize(2);
+            Disp::setCursor(x+18*_size, y);
             Disp::print(labelForType(_type));
         }
 
         void setType(TelemetryType type) { _type = type; }
         void setSize(uint8_t size) { _size = size; }
+        void setColor(uint16_t color) { _color = color; }
 
         void update(const Telemetry& t) {
             _value = GetTelemetryValue(t, _type);
@@ -38,6 +43,7 @@ class BigDataWidget : public Widget {
         float _value;
         String _units;
         uint8_t _size = 4;
+        uint16_t _color = ST77XX_WHITE;
 
         const char* labelForType(TelemetryType t) const {
             switch (t) {

@@ -10,8 +10,13 @@ class IconWidget : public Widget {
         
 
         void render() override {
-            if (!visible) return;
-            Disp::drawBitmap(x,y,_icon,width,height,DispCol::WHITE);
+            if (!visible && visible_last) {
+                Disp::fillRect(x,y,width,height,ST77XX_BLACK);
+            } 
+            else if(visible) {
+                Disp::drawBitmap(x,y,_icon,width,height,ST77XX_WHITE);
+            }
+            visible_last = visible;
         }
 
     private:

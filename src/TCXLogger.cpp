@@ -9,14 +9,14 @@ void TCXLogger::startLogging(DateTime currentTime) {
 
   //open the first lap file
   memset(lap_name,0,32);
-  sprintf(lap_name, "lap_%d_%d", laps.size()-1, laps.back().parts);
+  sprintf(lap_name, "lap_%d_%u", laps.size()-1, laps.back().parts);
   if (!file.open(lap_name, O_WRITE | O_APPEND | O_CREAT)) {
     Serial.print("Error opening file: ");
     Serial.println(lap_name);
   }
 };
 
-void TCXLogger::writeLapHeader(int lapIndex, File32 *file){
+void TCXLogger::writeLapHeader(uint16_t lapIndex, File32 *file){
   if (!file->isOpen()) {
     Serial.println("Error file not open: ");
     return;
@@ -224,7 +224,7 @@ bool TCXLogger::finaliseLogging()
 
   //nested loop to add all laps and their parts into the main file
   char time[32];
-  sprintf(time, "%d-%02d-%02dT%02d:%02d:%02d", _startTime.day(),_startTime.month(),_startTime.year(),_startTime.hour(),_startTime.minute(),_startTime.second());
+  sprintf(time, "%u-%02u-%02uT%02u:%02u:%02u", _startTime.day(),_startTime.month(),_startTime.year(),_startTime.hour(),_startTime.minute(),_startTime.second());
 
   Serial.print("Writing head to "); Serial.println(_filename);
 
@@ -238,7 +238,7 @@ bool TCXLogger::finaliseLogging()
   Serial.println("Processing laps...");
   for(int i=0;i<lapSize;i++)
   {
-    char lapString[30];
+    char lapString[40];
     sprintf(lapString,"processing lap %d of %d", i+1, lapSize);
     Serial.println(lapString);
     writeLapHeader(i, &final_file);
@@ -255,7 +255,7 @@ bool TCXLogger::finaliseLogging()
       }
       memset(buffer, 0, sizeof(buffer)); // Clear buffer
       while ((bytesRead = file.read(buffer, sizeof(buffer)-1)) > 0) {
-        int written = final_file.write(buffer, bytesRead);
+        uint16_t written = final_file.write(buffer, bytesRead);
         memset(buffer, 0, sizeof(buffer)); // Clear buffer
         if (written != bytesRead) {
           Serial.println("Write error!");

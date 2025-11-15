@@ -16,7 +16,7 @@ class button
     uint32_t _releaseTime;
     bool _long_RE;
     static const uint16_t _nHeldPressTime = 1500;
-    static const uint16_t _nShortPressTime = 200;
+    static const uint16_t _nShortPressTime = 50;
 
   public:
     button(bool* state)

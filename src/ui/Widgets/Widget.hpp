@@ -1,6 +1,6 @@
 // UI/Widget.h
 #pragma once
-#include "HAL/InputInterface.hpp"   // your struct for button state, etc.
+#include "HAL/InputInterface.hpp"
 #include <stdint.h>
 #include <functional>
 
@@ -43,7 +43,7 @@ public:
 protected:
     int x, y;
     int width, height;
-    bool visible = true;
+    bool visible = true, visible_last = true;
     bool focused = false;
     bool selected = false;
 };

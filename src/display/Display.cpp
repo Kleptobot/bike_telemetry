@@ -1,21 +1,18 @@
 #include <Wire.h>
 #include "Display.hpp"
 
-  #define TFT_CS         4
-  #define TFT_RST        16
-  #define TFT_DC         5
+  #define TFT_CS         D0
+  #define TFT_RST        -1
+  #define TFT_DC         D2
 
 Adafruit_ST7789 Display = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
-
-static inline uint16_t toAdafruitColor(DispCol c) {
-  // Adafruit SSD1306 uses WHITE and BLACK macros; map our enum to those
-  return (c == DispCol::WHITE) ? ST77XX_WHITE : ST77XX_BLACK;
-}
 
 namespace Disp {
     void init() {
         Display.init(240,320);
+        Display.setSPISpeed(40000000);
         Display.fillScreen(ST77XX_BLACK);
+        Display.invertDisplay(false);
     }
 
     void clear() {
@@ -41,18 +38,18 @@ namespace Disp {
     Display.setTextSize(s);
     }
 
-    void drawText(int x, int y, const String &s, DispCol color) {
-        Display.setTextColor(toAdafruitColor(color));
+    void drawText(int x, int y, const String &s, uint16_t color) {
+        Display.setTextColor(color);
         Display.setCursor(x, y);
         Display.print(s);
     }
 
-    void fillRect(int x, int y, int w, int h, DispCol color) {
-        Display.fillRect(x, y, w, h, toAdafruitColor(color));
+    void fillRect(int x, int y, int w, int h, uint16_t color) {
+        Display.fillRect(x, y, w, h, color);
     }
 
-    void drawRect(int x, int y, int w, int h, DispCol color) {
-        Display.drawRect(x, y, w, h, toAdafruitColor(color));
+    void drawRect(int x, int y, int w, int h, uint16_t color) {
+        Display.drawRect(x, y, w, h, color);
     }
 
     void setCursor(int x, int y) {
@@ -63,12 +60,8 @@ namespace Disp {
         Display.getTextBounds(text, x, y, x1, y1, w, h);
     }
 
-    void setTextColor(DispCol color) {
-        Display.setTextColor(toAdafruitColor(color));
-    }
-
-    void drawBitmap(int16_t x, int16_t y, const uint8_t bitmap[], int16_t w, int16_t h, DispCol color) {
-        Display.drawBitmap(x,y,bitmap,w,h,toAdafruitColor(color));
+    void drawBitmap(int16_t x, int16_t y, const uint8_t bitmap[], int16_t w, int16_t h, uint16_t color) {
+        Display.drawBitmap(x,y,bitmap,w,h,color);
     }
 
     int16_t getCursorX() {

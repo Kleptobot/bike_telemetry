@@ -11,14 +11,14 @@ HAL::TelemetryCallback HAL::telemetryCallback;
 float HAL::f32_kph, HAL::f32_cadence, HAL::f32_temp, HAL::f32_alt, HAL::f32_bpm, HAL::f32_pow;
 float HAL::f32_GPS_speed, HAL::f32_GPS_Alt;
 uint8_t HAL::_rxBuffer[1024];
-uint32_t HAL::_resetTime;
+uint32_t HAL::_resetGPSTime, HAL::_resetDispTime;
 LC76G::State HAL::lc76g_state_prev;
 bool HAL::_sleep;
 
 void HAL::init_low() {
     inputSystem.init();
     sensorSystem.init_low();
-    _resetTime = 0;
+    _resetGPSTime = 0;
     _sleep = false;
 }
 
@@ -29,12 +29,17 @@ void HAL::init() {
     _LC76G.i2c_wait();
 
     Wire.begin();
-    Wire.setClock(50000); // 50kHz
+    Wire.setClock(100000); // 100kHz
     _LC76G.begin(&Wire);
     sensorSystem.init();
     bluetoothSystem.init(&storageSystem);
     storageSystem.init();
+
+    //reset some systems
     resetGPS();
+    resetDisplay();
+
+    inputSystem.setOutput(GPIOB6,true); //turn on the screen backlight
 }
 
 void HAL::update() {
@@ -51,7 +56,8 @@ void HAL::update() {
         ; //put a callback here when a sleep transmit has been queued
         if(_sleep)
         {
-            inputSystem.setOutput(GPIOB3,false);
+            inputSystem.setOutput(GPIOB3,false);    //turn of the GPS enable supply
+            inputSystem.setOutput(GPIOB6,false);    //turn of the screen backlight
             _sleep = false;
         }
     }
@@ -135,10 +141,16 @@ void HAL::update() {
     }
 
     //if reset time is non zero check if 100ms has passed since the trigger, then reset time to zero and write reset pin high
-    if (_resetTime > 0) {
-        if (millis() - _resetTime > 100) {
+    if (_resetGPSTime > 0) {
+        if (millis() - _resetGPSTime > 100) {
             inputSystem.setOutput(GPIOB5, true);
-            _resetTime = 0;
+            _resetGPSTime = 0;
+        }
+    }
+    if (_resetDispTime > 0) {
+        if (millis() - _resetDispTime > 100) {
+            inputSystem.setOutput(GPIOB7, true);
+            _resetDispTime = 0;
         }
     }
 
@@ -147,7 +159,12 @@ void HAL::update() {
 
 void HAL::resetGPS() {
     inputSystem.setOutput(GPIOB5, false);
-    _resetTime = millis();
+    _resetGPSTime = millis();
+}
+
+void HAL::resetDisplay() {
+    inputSystem.setOutput(GPIOB7, false);
+    _resetDispTime = millis();
 }
 
 void HAL::displayGPSInfo() {
