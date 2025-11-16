@@ -15,7 +15,7 @@ class SettingsScreen : public UIScreen {
 public:
     SettingsScreen(DataModel& model)
         : UIScreen(model),
-          listView(5, 5) {
+          listView(5, 5, 4) {
         // Define your settings options statically
         _items = {
             {"Bluetooth",   epd_bitmap_bluetooth_large,     ScreenID::Bluetooth},
@@ -41,7 +41,7 @@ public:
     void onEnter() override {
     }
 
-    void update(float dt) override { /* nothing dynamic */ }
+    void update(float dt) override { listView.update(dt); }
 
     void render() override {
         listView.render();

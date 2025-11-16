@@ -2,7 +2,7 @@
 #include "UI/Widgets/Widget.hpp"
 #include "SelectableText.hpp"
 #include "Display/Display.hpp"
-#include "DataModel.hpp"
+#include "DataModel/DataModel.hpp"
 #include "UI/GFX.h"
 
 class DisplayEditWidget : public SelectableTextWidget {
@@ -12,7 +12,7 @@ class DisplayEditWidget : public SelectableTextWidget {
 
         
     void handleInput(physIO input) override {
-        if (input.Select.press) selected = !selected;
+        if (input.Select.press) setSelected(!isSelected());
         else if (selected) {
             if (input.Up.press) --_type;
             else if (input.Down.press) ++_type;

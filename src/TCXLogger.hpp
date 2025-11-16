@@ -7,7 +7,7 @@
 #include <RTClib.h>
 #include <SdFat.h>
 #include "HAL/StorageInterface.hpp"
-#include "DataModel.hpp"
+#include "DataModel/DataModel.hpp"
 
 #define points_per_chunk 1800
 
@@ -71,14 +71,15 @@ class TCXLogger {
     void newLap(DateTime currentTime);
     bool finaliseLogging();
 
-    TimeSpan elapsed_Total(){return _currentTime-_startTime;};
-    TimeSpan elapsed_Lap(){return _currentTime-laps.back().startTime;};
-    String elapsedString_Total()
+    const TimeSpan elapsed_Total() const {return _currentTime-_startTime;};
+    const TimeSpan elapsed_Lap() const {return _currentTime-laps.back().startTime;};
+
+    const String elapsedString_Total() const
     {
       TimeSpan ts = elapsed_Total();
       return String(ts.hours())+":"+String(ts.minutes())+":"+String(ts.seconds());
     }
-    String elapsedString_Lap()
+    const String elapsedString_Lap() const
     {
       TimeSpan ts = elapsed_Lap();
       return String(ts.hours())+":"+String(ts.minutes())+":"+String(ts.seconds());

@@ -4,7 +4,7 @@
 #include "HAL/BluetoothInterface.hpp"
 #include "UI/GFX.h"
 #include "UIEventBus.hpp"
-#include "DataModel.hpp"
+#include "DataModel/DataModel.hpp"
 
 class BluetoothDeviceWidget :  public Widget {
 public:

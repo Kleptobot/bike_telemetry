@@ -12,11 +12,14 @@ class BiometricsScreen : public UIScreen {
     public:
         BiometricsScreen (DataModel& model) : 
             UIScreen(model),
-            dateWidget{16,0, &_birthday},
-            massWidget(16,32, ""),
-            calorieWidget(16,64, ""),
-            backWidget{0,96,"Back",epd_bitmap_left},
-            saveWidget{64,96,"Save",epd_bitmap_save} {
+            birthdayLabel(5,5,"Birthday"),
+            dateWidget{110,5, &_birthday},
+            massLabel(5,32,"mass"),
+            massWidget(110,32, String(0)),
+            calorieLabel(5,64,"Gender"),
+            calorieWidget(110,64, "-"),
+            backWidget{15,96,"Back",epd_bitmap_left},
+            saveWidget{90,96,"Save",epd_bitmap_save} {
                 //register press event callback to send a change screen event
                 backWidget.setOnPress([this] () {
                     emitUIEvent(UIEventType::ChangeScreen, ScreenID::SettingsMenu);
@@ -36,7 +39,7 @@ class BiometricsScreen : public UIScreen {
         }
 
         void update(float dt) override {
-
+            dateWidget.update(dt);
             massWidget.setText(String(_mass));
             switch(_caloricProfile) {
                 case CaloricProfile::Female:
@@ -49,16 +52,23 @@ class BiometricsScreen : public UIScreen {
                     calorieWidget.setText("-");
                     break;
             }
+            dateWidget.setFocused(focusField == EditField::Birthday);
+            massWidget.setFocused(focusField == EditField::Mass);
+            calorieWidget.setFocused(focusField == EditField::CaloricProfile);
+            backWidget.setFocused(focusField == EditField::Back);
+            saveWidget.setFocused(focusField == EditField::Save);
         }
 
         void handleInput(physIO input) override;
 
         void render() override {
-            Disp::print("Birthday: ");
+            birthdayLabel.render();
             dateWidget.render();
 
-            Disp::print("Mass: ");
+            massLabel.render();
             massWidget.render();
+
+            calorieLabel.render();
             calorieWidget.render();
 
             backWidget.render();
@@ -68,9 +78,16 @@ class BiometricsScreen : public UIScreen {
     private:
         enum class EditField { Birthday = 0, Mass, CaloricProfile, Back, Save };
         EditField focusField = EditField::Birthday;
+
+        SelectableTextWidget birthdayLabel;
         DateWidget dateWidget;
+
+        SelectableTextWidget massLabel;
         SelectableTextWidget massWidget;
+
+        SelectableTextWidget calorieLabel;
         SelectableTextWidget calorieWidget;
+
         SelectableTextIconWidget backWidget;
         SelectableTextIconWidget saveWidget;
         DateTime _birthday;

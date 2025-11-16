@@ -69,8 +69,10 @@ void App::update() {
                 HAL::bluetooth().setMode(E_Type_BT_Mode::connect);
             else
                 HAL::bluetooth().setMode(E_Type_BT_Mode::idle);
-            if(state_prev==AppState::LOGGING)
+            if(state_prev==AppState::LOGGING) {
                 logger->finaliseLogging();
+                model.logger().update({0,0});
+            }
 
             if (millis() - lastGPS > 5000) {
                 HAL::displayGPSInfo();
@@ -89,6 +91,8 @@ void App::update() {
 
             if(state != state_prev)
                 logger->startLogging(currentTime);
+
+            model.logger().update({logger->elapsed_Total(),logger->elapsed_Lap()});
             
             lastSpeed = tel.speed;
             //check if seconds has changed for logging tick

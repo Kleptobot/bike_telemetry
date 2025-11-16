@@ -44,8 +44,9 @@ class BigDataWidget : public Widget {
         void setColor(uint16_t color) { _color = color; }
 
         void update(const Telemetry& t) {
-            _value = GetTelemetryValue(t, _type);
-            invalidate();
+            float newVal = GetTelemetryValue(t, _type);
+            if (newVal != _value) invalidate();
+            _value = newVal;
         }
         
         void setUnits(String units) { _units = units; }

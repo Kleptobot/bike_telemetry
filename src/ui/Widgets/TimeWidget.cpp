@@ -24,10 +24,15 @@ void TimeWidget::update(float dt) {
     hourText.setSelected(focusField == EditField::Hour && selected);
     minuteText.setSelected(focusField == EditField::Minute && selected);
     secondText.setSelected(focusField == EditField::Second && selected);
-            
-    hourText.setText(String( _date->hour()));
-    minuteText.setText(String( _date->minute()));
-    secondText.setText(String( _date->second()));
+
+    if(_date->hour() < 10) hourText.setText("0"+String(_date->hour()));
+    else hourText.setText(String(_date->hour()));
+
+    if(_date->minute() < 10) minuteText.setText("0"+String(_date->minute()));
+    else minuteText.setText(String( _date->minute()));
+
+    if(_date->second() < 10) secondText.setText("0"+String(_date->second()));
+    else secondText.setText(String( _date->second()));
 }
 
 void TimeWidget::moveFocusLeft() {
@@ -111,10 +116,15 @@ void TimeWidget::decrementField(EditField field) {
 }
 
 void TimeWidget::render() {
-    if (!visible) return;
+    if (!visible){
+        Disp::fillRect(x,y,_width,_height,ST77XX_BLACK);
+        return;
+    }
 
     // draw them
     hourText.render();
+    Disp::print(":");
     minuteText.render();
+    Disp::print(":");
     secondText.render();
 }

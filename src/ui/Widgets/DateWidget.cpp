@@ -25,9 +25,14 @@ void DateWidget::update(float dt) {
     monthText.setSelected(selected && focusField == EditField::Month);
     yearText.setSelected(selected && focusField == EditField::Year);
     
-    dayText.setText(String( _date->day()));
-    monthText.setText(String( _date->month()));
-    yearText.setText(String( _date->year()));
+    if(_date->day() < 10) dayText.setText("0"+String(_date->day()));
+    else dayText.setText(String( _date->day()));
+
+    if(_date->month() < 10) monthText.setText("0"+String(_date->month()));
+    else monthText.setText(String( _date->month()));
+
+    if(_date->year() < 10) yearText.setText("0"+String(_date->year()));
+    else yearText.setText(String( _date->year()));
 }
 
 void DateWidget::moveFocusLeft() {
@@ -116,6 +121,8 @@ void DateWidget::render() {
 
     // draw them
     dayText.render();
+    Disp::print("/");
     monthText.render();
+    Disp::print("/");
     yearText.render();
 }

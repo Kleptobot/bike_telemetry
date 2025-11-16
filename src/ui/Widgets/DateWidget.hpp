@@ -10,8 +10,11 @@ class DateWidget : public Widget {
             : Widget(x, y),
             _date(date),
             dayText(x, y, ""),
-            monthText(x + 45, y, ""),
-            yearText(x + 90, y, "") {}
+            monthText(x + 12*3, y, ""),
+            yearText(x + 12*6, y, "") {
+            _width = 12*10;
+            _height = 16;
+        }
 
         void render() override;
         void handleInput(physIO input);
@@ -26,19 +29,10 @@ class DateWidget : public Widget {
                                             monthText.isSelected() ||
                                             yearText.isSelected();}
 
-        void setFocused(bool f) override {
-            if( focusField == EditField::None) {
-                if(f) focusField = EditField::Day;
-            }
-            else {
-                if(!f) focusField = EditField::None;
-            }
-            focused = f;
-        }
         DateTime getDate() const { return *_date; }
 
     private:
-        enum class EditField { None = 0, Day, Month, Year };
+        enum class EditField { Day, Month, Year };
         EditField focusField = EditField::Day;
         DateTime* _date;
 

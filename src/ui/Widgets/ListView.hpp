@@ -41,7 +41,7 @@ public:
         totalHeight = 0;
         for (auto& w : _widgets) {
             w->update(dt);
-            totalHeight += w->getHeight();
+            totalHeight += (w->height() + margin);
         }
     }
 
@@ -53,14 +53,14 @@ public:
             bool focused = (i == _selectedIndex);
             _widgets[i]->setFocused(focused);
             _widgets[i]->render(_x, y);
-            y += _widgets[i]->getHeight() + margin;
+            y += _widgets[i]->height() + margin;
         }
 
         if (_widgets.size() > _visibleCount) {
-            float ratio = (float)_visibleCount / _widgets.size();
-            int barHeight = int(ratio * totalHeight);
-            int barY = int((_scrollOffset / float(_widgets.size())) * totalHeight);
-            Disp::drawRect(240 - 4, barY, 2, barHeight, ST77XX_WHITE);
+            float ratio = _visibleCount /  float(_widgets.size());
+            barHeight = int(totalHeight / _widgets.size()) * ratio;
+            barY = int((_selectedIndex / float(_widgets.size())) * totalHeight * ratio);
+            Disp::fillRect(SCREEN_WIDTH - 4, barY+_y, 4, barHeight, ST77XX_WHITE);
         }
     }
 
@@ -84,7 +84,7 @@ public:
             if (_widgets[i].get()->width() > w) w = _widgets[i].get()->width();
             _widgets[i].get()->invalidate();
         }
-        //Disp::markDirty(_x,_y,w,h);
+        Disp::markDirty(SCREEN_WIDTH - 4,_y,4,totalHeight);
     }
 
 private:
@@ -94,6 +94,7 @@ private:
     uint16_t _visibleCount;
     int totalHeight=0;
     int margin = 5;
+    int barHeight = 0, barY = 0;
     std::vector<std::unique_ptr<WidgetT>> _widgets;
     ItemSelectedCallback _onSelected;
 

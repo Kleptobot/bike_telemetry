@@ -14,16 +14,17 @@ class MainScreen : public UIScreen {
             batt(202,5),
             gpsIcon(5,5,16,16,epd_bitmap_antenna),
             
-            bigData(50,40),
-            auxData1(84,90),
-            auxData2(84,130),
+            bigData(16,40),
+            auxData1(50,110),
+            auxData2(50,160),
 
             settingsIcon    (88,300,16,16,epd_bitmap_gear),
             playIcon        (112,300,16,16,epd_bitmap_play),
             stopIcon        (136,300,16,16,epd_bitmap_stop),
             powerIcon       (136,300,16,16,epd_bitmap_power),
 
-            timeWidget(0,122) {}
+            timeWidget(30,5,&_date),
+            lapTime(5,280,&_lap) {}
 
         void onEnter() override {
             auto& l = model.layout().get();
@@ -32,9 +33,9 @@ class MainScreen : public UIScreen {
             auxData1.setType(l.disp2);
             auxData2.setType(l.disp3);
 
-            bigData.setSize(6);
-            auxData1.setSize(4);
-            auxData2.setSize(4);
+            bigData.setSize(8);
+            auxData1.setSize(6);
+            auxData2.setSize(6);
         }
 
         void update(float dt) override {
@@ -49,11 +50,17 @@ class MainScreen : public UIScreen {
             auxData2.update(t);
 
             //display the current time
-            //timeWidget.setDate(model.time().get());
+            _date = model.time().get();
+            timeWidget.update(dt);
+            
+            //get the current lap time
+            auto& ts = model.logger().get().lapElapsed;
+            _lap = DateTime(0,0,0,ts.hours(),ts.minutes(),ts.seconds());
+            lapTime.update(dt);
 
             //show hide icons based on app state
             const auto& appState = model.app().get().state;
-            timeWidget.setVisible(appState == AppState::LOGGING);
+            lapTime.setVisible(appState == AppState::LOGGING);
             
             stopIcon.setVisible(appState == AppState::LOGGING);
             settingsIcon.setVisible(appState != AppState::LOGGING);
@@ -64,6 +71,7 @@ class MainScreen : public UIScreen {
             }else{
                 playIcon.setIcon(epd_bitmap_loop);
             }
+
         }
 
         void handleInput(physIO input) override {
@@ -95,6 +103,7 @@ class MainScreen : public UIScreen {
             auxData2.render();
             gpsIcon.render();
             timeWidget.render();
+            lapTime.render();
 
             settingsIcon.render();
             playIcon.render();
@@ -113,4 +122,8 @@ class MainScreen : public UIScreen {
         IconWidget playIcon;
         IconWidget stopIcon;
         IconWidget powerIcon;
+        TimeWidget lapTime;
+
+        DateTime _date;
+        DateTime _lap;
 };

@@ -10,8 +10,11 @@ public:
         : Widget(x, y),
           _date(date),
           hourText(x, y, ""),
-          minuteText(x + 45, y, ""),
-          secondText(x + 90, y, "") {}
+          minuteText(x + 12*3, y, ""),
+          secondText(x + 12*6, y, "") {
+            _width = 12*10;
+            _height = 16;
+          }
 
     void render() override;
     void handleInput(physIO input);
@@ -20,33 +23,20 @@ public:
                                         minuteText.isSelected() ||
                                         secondText.isSelected();}
 
-    void setFocused(bool f) override {
-        if( focusField == EditField::None) {
-            if(f) focusField = EditField::Hour;
-        }
-        else {
-            if(!f) focusField = EditField::None;
-        }
-        focused = f;
-    }
-
     void setDate(DateTime* date) { 
         _date=date;
-        hourText.setText(String( _date->hour()));
-        minuteText.setText(String( _date->minute()));
-        secondText.setText(String( _date->second()));
     }
     DateTime getDate() const { return *_date; }
 
     void update(float dt) override;
 
 private:
-    enum class EditField { None = 0, Hour, Minute, Second };
-    EditField focusField = EditField::None;
+    enum class EditField { Hour, Minute, Second };
+    EditField focusField = EditField::Hour;
     DateTime *_date;
 
     SelectableTextWidget hourText;
-    SelectableTextWidget minuteText;
+    SelectableTextWidget minuteText;;
     SelectableTextWidget secondText;
 
     void incrementField(EditField field);

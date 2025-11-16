@@ -31,8 +31,6 @@ public:
 
     // Sizing
     void setSize(int w, int h) { _width = w; _height = h; }
-    int getWidth() const { return _width; }
-    int getHeight() const { return _height; }
 
     // Visibility
     void setVisible(bool newVis) {

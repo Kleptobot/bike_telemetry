@@ -1,5 +1,6 @@
 #pragma once
 #include <Arduino.h>
+#include <RTClib.h>
 
 enum class AppState {
     BOOT,
@@ -54,7 +55,7 @@ inline CaloricProfile fromString(String s) {
 
 struct AppData {
     AppState state;
-    DateTime birthday = DateTime(1990,6,18);
+    DateTime birthday = DateTime(1993,5,21);
     uint16_t mass = 75;
     CaloricProfile caloricProfile = CaloricProfile::Other;
 };

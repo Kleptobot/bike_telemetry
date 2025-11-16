@@ -3,7 +3,7 @@
 #include "HAL/HAL.hpp"
 #include "TCXLogger.hpp"
 #include "AppEvents.hpp"
-#include "DataModel.hpp"
+#include "DataModel/DataModel.hpp"
 #include "HAL/BluetoothInterface.hpp"
 
 // Application-level states

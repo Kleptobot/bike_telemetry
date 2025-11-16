@@ -44,11 +44,6 @@ void BiometricsScreen::moveFocusUp() {
         case EditField::Save: focusField = EditField::CaloricProfile; break;
         default: break;
     }
-    dateWidget.setFocused(focusField == EditField::Birthday);
-    massWidget.setFocused(focusField == EditField::Mass);
-    calorieWidget.setFocused(focusField == EditField::CaloricProfile);
-    backWidget.setFocused(focusField == EditField::Back);
-    saveWidget.setFocused(focusField == EditField::Save);
 }
 
 void BiometricsScreen::moveFocusDown() {
@@ -60,11 +55,6 @@ void BiometricsScreen::moveFocusDown() {
         case EditField::Save: focusField = EditField::Birthday; break;
         default: break;
     }
-    dateWidget.setFocused(focusField == EditField::Birthday);
-    massWidget.setFocused(focusField == EditField::Mass);
-    calorieWidget.setFocused(focusField == EditField::CaloricProfile);
-    backWidget.setFocused(focusField == EditField::Back);
-    saveWidget.setFocused(focusField == EditField::Save);
 }
 
 void BiometricsScreen::moveFocusLeft() {
@@ -73,11 +63,6 @@ void BiometricsScreen::moveFocusLeft() {
         case EditField::Save: focusField = EditField::Back; break;
         default: break;
     }
-    dateWidget.setFocused(focusField == EditField::Birthday);
-    massWidget.setFocused(focusField == EditField::Mass);
-    calorieWidget.setFocused(focusField == EditField::CaloricProfile);
-    backWidget.setFocused(focusField == EditField::Back);
-    saveWidget.setFocused(focusField == EditField::Save);
 }
 
 void BiometricsScreen::moveFocusRight() {
@@ -86,9 +71,4 @@ void BiometricsScreen::moveFocusRight() {
         case EditField::Save: focusField = EditField::Back; break;
         default: break;
     }
-    dateWidget.setFocused(focusField == EditField::Birthday);
-    massWidget.setFocused(focusField == EditField::Mass);
-    calorieWidget.setFocused(focusField == EditField::CaloricProfile);
-    backWidget.setFocused(focusField == EditField::Back);
-    saveWidget.setFocused(focusField == EditField::Save);
 }

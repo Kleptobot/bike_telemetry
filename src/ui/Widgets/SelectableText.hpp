@@ -9,6 +9,7 @@ public:
         : Widget(x, y), text(text), _text_size(text_size) {}
 
     void setText(const String& t) {
+        if (t==text) return;
         if(t.length() < text.length()) 
             invalidate();
         text = t; 

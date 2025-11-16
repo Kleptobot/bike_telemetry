@@ -11,9 +11,9 @@ class TimeEditScreen : public UIScreen {
         TimeEditScreen (DataModel& model) : 
             UIScreen(model),
             timeWidget{5,5, &_date},
-            dateWidget{5,24, &_date},
-            backWidget{5,48,"Back",epd_bitmap_left},
-            saveWidget{75,48,"Save",epd_bitmap_save} {
+            dateWidget{5,30, &_date},
+            backWidget{5,55,"Back",epd_bitmap_left},
+            saveWidget{75,55,"Save",epd_bitmap_save} {
                 //register press event callback to send a change screen event
                 backWidget.setOnPress([this] () {
                     emitUIEvent(UIEventType::ChangeScreen, ScreenID::SettingsMenu);
