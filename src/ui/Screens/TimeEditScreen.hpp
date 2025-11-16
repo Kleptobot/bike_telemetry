@@ -10,8 +10,8 @@ class TimeEditScreen : public UIScreen {
     public:
         TimeEditScreen (DataModel& model) : 
             UIScreen(model),
-            timeWidget{5,5},
-            dateWidget{5,24},
+            timeWidget{5,5, &_date},
+            dateWidget{5,24, &_date},
             backWidget{5,48,"Back",epd_bitmap_left},
             saveWidget{75,48,"Save",epd_bitmap_save} {
                 //register press event callback to send a change screen event
@@ -21,14 +21,12 @@ class TimeEditScreen : public UIScreen {
                 //register the save press event callback to send a change screen and app save event
                 saveWidget.setOnPress([this] () {
                     this->model.time().update(this->_date);
-                    emitAppEvent({AppEventType::SaveTime,0});
+                    emitAppEvent({AppEventType::SaveTime,_date});
                     emitUIEvent(UIEventType::ChangeScreen, ScreenID::SettingsMenu);
                 });
             }
         void onEnter() override {
             _date = model.time().get();
-            dateWidget.setDate(_date);
-            timeWidget.setDate(_date);
         }
 
         void update(float dt) override;

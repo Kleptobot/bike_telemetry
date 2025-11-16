@@ -80,9 +80,11 @@ public:
         int w=0,h=0;
         int end = std::min(_scrollOffset + _visibleCount, (int)_widgets.size());
         for (int i = _scrollOffset; i<end; i++){
-            w += (_widgets[i].get()->width() + margin);
-            if (_widgets[i].get()->height() > h) h = _widgets[i].get()->height();
+            h += (_widgets[i].get()->height() + margin);
+            if (_widgets[i].get()->width() > w) w = _widgets[i].get()->width();
+            _widgets[i].get()->invalidate();
         }
+        //Disp::markDirty(_x,_y,w,h);
     }
 
 private:
@@ -97,18 +99,18 @@ private:
 
     void moveSelection(int delta) {
         if (_widgets.empty()) return;
+        invalidate();
         _selectedIndex = (_selectedIndex + delta + _widgets.size()) % _widgets.size();
         clampScroll();
+        invalidate();
     }
 
     void clampScroll() {
         if (_selectedIndex < _scrollOffset) {
             _scrollOffset = _selectedIndex;
-            invalidate();
         }
         else if (_selectedIndex >= _scrollOffset + _visibleCount) {
             _scrollOffset = _selectedIndex - _visibleCount + 1;
-            invalidate();
         }
     }
 

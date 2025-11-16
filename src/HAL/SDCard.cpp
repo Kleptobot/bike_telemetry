@@ -30,6 +30,6 @@ bool SDCardSystem::exists(const char* path) {
 }
 
 bool SDCardSystem::remove(const char* path) {
-    if (!mounted || busy) return false;
+    if (!mounted) return false;
     return sd.remove(path);
 }

@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 #include <variant>
+#include <RTClib.h>
 #include "HAL/BluetoothInterface.hpp"
 
 enum class AppEventType {
@@ -20,5 +21,5 @@ enum class AppEventType {
 
 struct AppEvent {
     AppEventType type;
-    std::variant<int,float,BluetoothDevice> payload;
+    std::variant<int,float,BluetoothDevice,DateTime> payload;
 };

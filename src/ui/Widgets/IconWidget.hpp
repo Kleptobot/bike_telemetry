@@ -17,6 +17,11 @@ class IconWidget : public Widget {
             Disp::drawBitmap(x,y,_icon,_width,_height,ST77XX_WHITE);
         }
 
+        void setIcon(const uint8_t* icon) {
+            _icon = icon;
+            invalidate();
+        }
+
     private:
         const uint8_t* _icon;
 };

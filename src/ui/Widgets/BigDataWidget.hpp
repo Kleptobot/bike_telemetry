@@ -11,7 +11,7 @@ class BigDataWidget : public Widget {
 
         void render() override {
             if (!visible) {
-                Disp::fillRect(x,y,24*_size+24,_size,ST77XX_BLACK);
+                Disp::fillRect(x,y,_width,_height,ST77XX_BLACK);
                 return;
             }
 
@@ -33,7 +33,14 @@ class BigDataWidget : public Widget {
             invalidate();
         }
         
-        void setSize(uint8_t size) { _size = size; }
+        void setSize(uint8_t size) { 
+            _size = size;
+            int16_t x1,y1;
+            uint16_t w,h;
+            _width = 18*size + 6;
+            _height= 8*_size;
+        }
+
         void setColor(uint16_t color) { _color = color; }
 
         void update(const Telemetry& t) {
@@ -55,7 +62,7 @@ class BigDataWidget : public Widget {
                 case TelemetryType::Speed: return "km/h";
                 case TelemetryType::Cadence: return "rpm";
                 case TelemetryType::HeartRate: return "bpm";
-                case TelemetryType::Temperature: return " C ";
+                case TelemetryType::Temperature: return " C ";  //° cannot be rendered
                 case TelemetryType::Power: return " W ";
                 case TelemetryType::Altitude: return " m ";
                 default: return "-";

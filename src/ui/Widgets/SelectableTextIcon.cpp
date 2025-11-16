@@ -30,7 +30,5 @@ void SelectableTextIconWidget::render() {
 void SelectableTextIconWidget::handleInput(physIO input) {
     if (input.Select.press && focused && _onPress) {
         _onPress();  // fire callback
-    } else if (input.Select.press && focused) {
-        selected = !selected;
     }
 }

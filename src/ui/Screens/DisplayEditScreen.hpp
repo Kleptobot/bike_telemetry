@@ -10,7 +10,7 @@ class DisplayEditScreen : public UIScreen {
             disp1{5,5},
             disp2{5,30},
             disp3{5,55},
-            saveWidget{5,80,"Save",epd_bitmap_save,2,16} {
+            saveWidget{5,80,"Save",epd_bitmap_save} {
                 //register the save press event callback to send a change screen and app save event
                 saveWidget.setOnPress([this] () {
                     this->model.layout().update( {  this->disp1.type(),

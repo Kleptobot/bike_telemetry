@@ -16,14 +16,14 @@ void BiometricsScreen::handleInput(physIO input) {
                 if (input.Up.press) ++_mass;
                 else if (input.Down.press) --_mass;
             }
-            massWidget.handleInput(input);
+            if(input.Select.press) massWidget.setSelected(!massWidget.isSelected());
             break;
         case EditField::CaloricProfile:
             if (calorieWidget.isSelected()) {
                 if (input.Up.press) ++_caloricProfile;
                 else if (input.Down.press) --_caloricProfile;
             }
-            calorieWidget.handleInput(input);
+            if(input.Select.press) calorieWidget.setSelected(!calorieWidget.isSelected());
             break;
         case EditField::Back:
             backWidget.handleInput(input);

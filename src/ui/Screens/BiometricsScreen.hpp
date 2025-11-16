@@ -12,7 +12,7 @@ class BiometricsScreen : public UIScreen {
     public:
         BiometricsScreen (DataModel& model) : 
             UIScreen(model),
-            dateWidget{16,0},
+            dateWidget{16,0, &_birthday},
             massWidget(16,32, ""),
             calorieWidget(16,64, ""),
             backWidget{0,96,"Back",epd_bitmap_left},
@@ -37,7 +37,6 @@ class BiometricsScreen : public UIScreen {
 
         void update(float dt) override {
 
-            dateWidget.setDate(_birthday);
             massWidget.setText(String(_mass));
             switch(_caloricProfile) {
                 case CaloricProfile::Female:

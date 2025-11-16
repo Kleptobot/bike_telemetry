@@ -16,6 +16,20 @@ void DateWidget::handleInput(physIO input) {
     }
 }
 
+void DateWidget::update(float dt) {
+    dayText.setFocused(focusField == EditField::Day && focused);
+    monthText.setFocused(focusField == EditField::Month && focused);
+    yearText.setFocused(focusField == EditField::Year && focused);
+
+    dayText.setSelected(selected && focusField == EditField::Day);
+    monthText.setSelected(selected && focusField == EditField::Month);
+    yearText.setSelected(selected && focusField == EditField::Year);
+    
+    dayText.setText(String( _date->day()));
+    monthText.setText(String( _date->month()));
+    yearText.setText(String( _date->year()));
+}
+
 void DateWidget::moveFocusLeft() {
     if (selected) return; // can't move focus while editing
     switch (focusField) {
@@ -39,24 +53,27 @@ void DateWidget::moveFocusRight() {
 void DateWidget::incrementField(EditField field) {
     switch (field) {
         case EditField::Day:
-            _date = DateTime(_date.year(), _date.month(),
-                            (_date.day() % 31) + 1,
-                            _date.hour(), _date.minute(), _date.second());
-            dayText.setText(String( _date.day()));
+            *_date = DateTime(_date->year(),
+                            _date->month(),
+                            (_date->day() % 31) + 1,
+                            _date->hour(), _date->minute(), _date->second());
+            dayText.setText(String( _date->day()));
             break;
 
         case EditField::Month:
-            _date = DateTime(_date.year(),
-                            (_date.month() % 12) + 1,
-                            _date.day(),
-                            _date.hour(), _date.minute(), _date.second());
-            monthText.setText(String( _date.month()));
+            *_date = DateTime(_date->year(),
+                            (_date->month() % 12) + 1,
+                            _date->day(),
+                            _date->hour(), _date->minute(), _date->second());
+            monthText.setText(String( _date->month()));
             break;
 
         case EditField::Year:
-            _date = DateTime(_date.year() + 1, _date.month(), _date.day(),
-                            _date.hour(), _date.minute(), _date.second());
-            yearText.setText(String( _date.year()));
+            *_date = DateTime(_date->year() + 1, 
+                            _date->month(),
+                            _date->day(),
+                            _date->hour(), _date->minute(), _date->second());
+            yearText.setText(String( _date->year()));
             break;
 
         default: break;
@@ -66,24 +83,27 @@ void DateWidget::incrementField(EditField field) {
 void DateWidget::decrementField(EditField field) {
     switch (field) {
         case EditField::Day:
-            _date = DateTime(_date.year(), _date.month(),
-                            (_date.day() == 1 ? 31 : _date.day() - 1),
-                            _date.hour(), _date.minute(), _date.second());
-            dayText.setText(String( _date.day()));
+            *_date = DateTime(_date->year(),
+                            _date->month(),
+                            (_date->day() == 1 ? 31 : _date->day() - 1),
+                            _date->hour(), _date->minute(), _date->second());
+            dayText.setText(String( _date->day()));
             break;
 
         case EditField::Month:
-            _date = DateTime(_date.year(),
-                            (_date.month() == 1 ? 12 : _date.month() - 1),
-                            _date.day(),
-                            _date.hour(), _date.minute(), _date.second());
-            monthText.setText(String( _date.month()));
+            *_date = DateTime(_date->year(),
+                            (_date->month() == 1 ? 12 : _date->month() - 1),
+                            _date->day(),
+                            _date->hour(), _date->minute(), _date->second());
+            monthText.setText(String( _date->month()));
             break;
 
         case EditField::Year:
-            _date = DateTime(_date.year() - 1, _date.month(), _date.day(),
-                            _date.hour(), _date.minute(), _date.second());
-            yearText.setText(String( _date.year()));
+            *_date = DateTime(_date->year() - 1,
+                            _date->month(),
+                            _date->day(),
+                            _date->hour(), _date->minute(), _date->second());
+            yearText.setText(String( _date->year()));
             break;
 
         default: break;
@@ -93,14 +113,6 @@ void DateWidget::decrementField(EditField field) {
 void DateWidget::render() {
     if (!visible) return;
     // update field visuals
-    dayText.setFocused(focusField == EditField::Day && focused);
-    dayText.setSelected(selected && focusField == EditField::Day);
-
-    monthText.setFocused(focusField == EditField::Month && focused);
-    monthText.setSelected(selected && focusField == EditField::Month);
-
-    yearText.setFocused(focusField == EditField::Year && focused);
-    yearText.setSelected(selected && focusField == EditField::Year);
 
     // draw them
     dayText.render();

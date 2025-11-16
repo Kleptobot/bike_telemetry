@@ -9,7 +9,7 @@ public:
         : Widget(x, y), text(text), _text_size(text_size) {}
 
     void setText(const String& t) {
-        if(t.length() > text.length()) 
+        if(t.length() < text.length()) 
             invalidate();
         text = t; 
         int16_t x1,y1;
@@ -20,7 +20,7 @@ public:
         invalidate();
     }
     void setSize(uint8_t size) { 
-        if(size > _text_size)
+        if(size < _text_size)
             invalidate();
         _text_size = size;
         int16_t x1,y1;

@@ -17,40 +17,41 @@ public:
         bitmap(bitmap),
         _text_size(text_size),
         _icon_height(icon_height){
-            _height = _icon_height;
-            int16_t x1,y1;
-            uint16_t w,h;
-            Disp::getTextBounds(text, x, y, &x1, &y1, &w, &h);
-            _width = icon_height+w;
+        _height = max(_icon_height,8*_text_size);
+        _width = _icon_height+6*_text_size*text.length();
         }
 
     void invalidate() override {
-        Disp::markDirty(x-2, y-2, width()+4+_icon_height, height()+4);
+        int x_safe = max(x-2,0);
+        int y_safe = max(y-2,0);
+        Disp::markDirty(x_safe, y_safe, width()+4, height()+4);
     }
 
     void setText(const String& t) { 
+        if(t.length() < text.length()) 
+            invalidate();
         text = t;
-        int16_t x1,y1;
-        uint16_t w,h;
-        Disp::getTextBounds(text, x, y, &x1, &y1, &w, &h);
-        _width = _icon_height+w;
+        _height = max(_icon_height,8*_text_size);
+        _width = _icon_height+6*_text_size*text.length();
         invalidate();
     }
     void setSize(uint8_t size) { 
+        if(size < _text_size)
+            invalidate();
         _text_size = size;
-        _height = _icon_height;
-        int16_t x1,y1;
-        uint16_t w,h;
-        Disp::getTextBounds(text, x, y, &x1, &y1, &w, &h);
-        _width = _icon_height+w;
+        _height = max(_icon_height,8*_text_size);
+        _width = _icon_height+6*_text_size*text.length();
         invalidate();
     }
+
     void setColor(uint16_t color) { _color = color; }
 
     void render() override;
     void render(int x, int y) override {
+        bool invalidateAftermove = (x != this->x) || (y != this->y);
         this->x = x;
         this->y = y;
+        if(invalidateAftermove) invalidate();
         render();
     }
     void handleInput(physIO input) override;

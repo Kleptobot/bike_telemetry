@@ -134,7 +134,7 @@ void App::updateGpsEnable(bool state) {
 void App::handleAppEvent(const AppEvent& e) {
     switch (e.type) {
         case AppEventType::SaveTime:
-            HAL::setTime(model.time().get());
+            HAL::setTime(std::get<DateTime>(e.payload));
             break;
 
         case AppEventType::SaveBiometrics:

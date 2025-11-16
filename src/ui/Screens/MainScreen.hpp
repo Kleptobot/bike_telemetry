@@ -21,7 +21,6 @@ class MainScreen : public UIScreen {
             settingsIcon    (88,300,16,16,epd_bitmap_gear),
             playIcon        (112,300,16,16,epd_bitmap_play),
             stopIcon        (136,300,16,16,epd_bitmap_stop),
-            loopIcon        (112,300,16,16,epd_bitmap_loop),
             powerIcon       (136,300,16,16,epd_bitmap_power),
 
             timeWidget(0,122) {}
@@ -50,16 +49,21 @@ class MainScreen : public UIScreen {
             auxData2.update(t);
 
             //display the current time
-            timeWidget.setDate(model.time().get());
+            //timeWidget.setDate(model.time().get());
 
             //show hide icons based on app state
             const auto& appState = model.app().get().state;
             timeWidget.setVisible(appState == AppState::LOGGING);
-            loopIcon.setVisible(appState == AppState::LOGGING);
+            
             stopIcon.setVisible(appState == AppState::LOGGING);
-            playIcon.setVisible(appState != AppState::LOGGING);
             settingsIcon.setVisible(appState != AppState::LOGGING);
             powerIcon.setVisible(appState != AppState::LOGGING);
+
+            if (appState != AppState::LOGGING){
+                playIcon.setIcon(epd_bitmap_play);
+            }else{
+                playIcon.setIcon(epd_bitmap_loop);
+            }
         }
 
         void handleInput(physIO input) override {
@@ -95,7 +99,6 @@ class MainScreen : public UIScreen {
             settingsIcon.render();
             playIcon.render();
             stopIcon.render();
-            loopIcon.render();
             powerIcon.render();
         }
     
@@ -109,6 +112,5 @@ class MainScreen : public UIScreen {
         IconWidget settingsIcon;
         IconWidget playIcon;
         IconWidget stopIcon;
-        IconWidget loopIcon;
         IconWidget powerIcon;
 };

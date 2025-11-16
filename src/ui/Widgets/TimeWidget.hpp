@@ -6,8 +6,9 @@
 
 class TimeWidget : public Widget {
 public:
-    TimeWidget(int x, int y)
+    TimeWidget(int x, int y, DateTime* date=nullptr)
         : Widget(x, y),
+          _date(date),
           hourText(x, y, ""),
           minuteText(x + 45, y, ""),
           secondText(x + 90, y, "") {}
@@ -26,20 +27,23 @@ public:
         else {
             if(!f) focusField = EditField::None;
         }
+        focused = f;
     }
 
-    void setDate(DateTime date) { 
+    void setDate(DateTime* date) { 
         _date=date;
-        hourText.setText(String( _date.hour()));
-        minuteText.setText(String( _date.minute()));
-        secondText.setText(String( _date.second()));
+        hourText.setText(String( _date->hour()));
+        minuteText.setText(String( _date->minute()));
+        secondText.setText(String( _date->second()));
     }
-    DateTime getDate() const { return _date; }
+    DateTime getDate() const { return *_date; }
+
+    void update(float dt) override;
 
 private:
     enum class EditField { None = 0, Hour, Minute, Second };
-    DateTime _date;
     EditField focusField = EditField::None;
+    DateTime *_date;
 
     SelectableTextWidget hourText;
     SelectableTextWidget minuteText;

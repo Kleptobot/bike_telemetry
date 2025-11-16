@@ -1,18 +1,8 @@
 #include "TimeEditScreen.hpp"
 
 void TimeEditScreen::update(float dt) {
-    switch (focusField) {
-        case EditField::Time:
-            _date = timeWidget.getDate();
-            break;
-
-        case EditField::Date:
-            _date = dateWidget.getDate();
-            break;
-        
-        default:
-            break;
-    }
+    timeWidget.update(dt);
+    dateWidget.update(dt);
 
     timeWidget.setFocused (focusField == EditField::Time);
     dateWidget.setFocused (focusField == EditField::Date);

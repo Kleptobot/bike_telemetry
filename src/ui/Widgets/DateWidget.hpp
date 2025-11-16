@@ -6,8 +6,9 @@
 
 class DateWidget : public Widget {
     public:
-        DateWidget(int x, int y)
+        DateWidget(int x, int y, DateTime* date=nullptr)
             : Widget(x, y),
+            _date(date),
             dayText(x, y, ""),
             monthText(x + 45, y, ""),
             yearText(x + 90, y, "") {}
@@ -15,11 +16,10 @@ class DateWidget : public Widget {
         void render() override;
         void handleInput(physIO input);
 
-        void setDate(DateTime date) { 
+        void update(float dt) override;
+
+        void setDate(DateTime* date) { 
             _date=date;
-            dayText.setText(String( _date.day()));
-            monthText.setText(String( _date.month()));
-            yearText.setText(String( _date.year()));
         }
 
         bool isSelected() const override { return dayText.isSelected() ||
@@ -33,13 +33,14 @@ class DateWidget : public Widget {
             else {
                 if(!f) focusField = EditField::None;
             }
+            focused = f;
         }
-        DateTime getDate() const { return _date; }
+        DateTime getDate() const { return *_date; }
 
     private:
         enum class EditField { None = 0, Day, Month, Year };
-        DateTime _date;
         EditField focusField = EditField::Day;
+        DateTime* _date;
 
         SelectableTextWidget dayText;
         SelectableTextWidget monthText;
