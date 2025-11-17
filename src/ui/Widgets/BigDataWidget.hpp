@@ -5,8 +5,13 @@
 
 class BigDataWidget : public Widget {
     public:
-        BigDataWidget(int x, int y)
-            : Widget(x, y) {}
+        BigDataWidget(int x, int y, int size=4, TelemetryType type=TelemetryType::Speed)
+            : Widget(x, y),
+            _size(size),
+            _type(type) {
+            _width = 18*size + 6;
+            _height= 8*_size;
+        }
         
 
         void render() override {
@@ -52,10 +57,10 @@ class BigDataWidget : public Widget {
         void setUnits(String units) { _units = units; }
 
     private:
-        TelemetryType _type = TelemetryType::Speed;
+        TelemetryType _type;
+        uint8_t _size;
         float _value;
         String _units;
-        uint8_t _size = 4;
         uint16_t _color = ST77XX_WHITE;
 
         const char* labelForType(TelemetryType t) const {

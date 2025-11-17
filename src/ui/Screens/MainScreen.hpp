@@ -13,10 +13,6 @@ class MainScreen : public UIScreen {
             UIScreen(model),
             batt(202,5),
             gpsIcon(5,5,16,16,epd_bitmap_antenna),
-            
-            bigData(16,40),
-            auxData1(50,110),
-            auxData2(50,160),
 
             settingsIcon    (88,300,16,16,epd_bitmap_gear),
             playIcon        (112,300,16,16,epd_bitmap_play),
@@ -28,14 +24,12 @@ class MainScreen : public UIScreen {
 
         void onEnter() override {
             auto& l = model.layout().get();
-
-            bigData.setType(l.disp1);
-            auxData1.setType(l.disp2);
-            auxData2.setType(l.disp3);
-
-            bigData.setSize(8);
-            auxData1.setSize(6);
-            auxData2.setSize(6);
+            
+            int size = 256/(8*l.displays.size());
+            dataDisplays.clear();
+            for ( int i = 0; i<l.displays.size(); i++) {
+                dataDisplays.push_back({5,30+i*8*size,size,l.displays[i]});
+            }
         }
 
         void update(float dt) override {
@@ -45,9 +39,9 @@ class MainScreen : public UIScreen {
             //update numeric displays
             const auto& t = model.telemetry().get();
 
-            bigData.update(t);
-            auxData1.update(t);
-            auxData2.update(t);
+            for (auto& disp:dataDisplays) {
+                disp.update(t);
+            }
 
             //display the current time
             _date = model.time().get();
@@ -98,9 +92,11 @@ class MainScreen : public UIScreen {
 
         void render() override {
             batt.render();
-            bigData.render();
-            auxData1.render();
-            auxData2.render();
+
+            for (auto& disp : dataDisplays) {
+                disp.render();
+            }
+
             gpsIcon.render();
             timeWidget.render();
             lapTime.render();
@@ -113,9 +109,6 @@ class MainScreen : public UIScreen {
     
     private:
         BatteryWidget batt;
-        BigDataWidget bigData;
-        BigDataWidget auxData1;
-        BigDataWidget auxData2;
         TimeWidget timeWidget;
         IconWidget gpsIcon;
         IconWidget settingsIcon;
@@ -123,6 +116,8 @@ class MainScreen : public UIScreen {
         IconWidget stopIcon;
         IconWidget powerIcon;
         TimeWidget lapTime;
+
+        std::vector<BigDataWidget> dataDisplays;
 
         DateTime _date;
         DateTime _lap;

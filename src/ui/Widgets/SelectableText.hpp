@@ -6,7 +6,10 @@
 class SelectableTextWidget : public Widget {
 public:
     SelectableTextWidget(int x, int y, const String& text, uint8_t text_size=2 )
-        : Widget(x, y), text(text), _text_size(text_size) {}
+        : Widget(x, y), text(text), _text_size(text_size) {
+        _height = 8*_text_size;
+        _width = 6*_text_size*text.length();
+        }
 
     void setText(const String& t) {
         if (t==text) return;

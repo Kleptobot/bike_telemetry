@@ -3,9 +3,7 @@
 #include "TelemetryDataProvider.hpp"
 
 struct LayoutData {
-    TelemetryType disp1 = TelemetryType::Speed;
-    TelemetryType disp2 = TelemetryType::Cadence;
-    TelemetryType disp3 = TelemetryType::HeartRate;
+    std::vector<TelemetryType> displays;
 };
 
 class LayoutDataProvider {

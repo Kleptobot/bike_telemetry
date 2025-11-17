@@ -7,8 +7,9 @@
 
 class DisplayEditWidget : public SelectableTextWidget {
     public:
-        DisplayEditWidget(int x, int y)
-            : SelectableTextWidget(x, y, "") {}
+        DisplayEditWidget(int x, int y, TelemetryType type=TelemetryType::Speed)
+            : SelectableTextWidget(x, y, "Speed"),
+            _type(type) {}
 
         
     void handleInput(physIO input) override {

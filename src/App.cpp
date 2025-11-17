@@ -224,9 +224,11 @@ void App::saveLayout() {
 
     auto& l = model.layout().get();
 
-    doc["main"] = toString(l.disp1);
-    doc["aux1"] = toString(l.disp2);
-    doc["aux2"] = toString(l.disp3);
+    JsonArray d = doc["displays"].to<JsonArray>();
+
+    for (auto member : l.displays) {
+        d.add(toString(member));
+    }
 
     if (_storage->exists("/layout.txt"))
         _storage->remove("/layout.txt");
@@ -253,11 +255,13 @@ void App::loadLayout() {
             return;
         }
 
-        TelemetryType disp1 = TelemetryTypefromString(jsonBuffer["main"]);
-        TelemetryType disp2 = TelemetryTypefromString(jsonBuffer["aux1"]);
-        TelemetryType disp3 = TelemetryTypefromString(jsonBuffer["aux2"]);
+        std::vector<TelemetryType> displays;
+        JsonArray d = jsonBuffer["displays"];
+        for (const auto& member : d) {
+            displays.push_back(TelemetryTypefromString(member));
+        }
 
-        model.layout().update({disp1, disp2, disp3});
+        model.layout().update({displays});
         dataFile.close();
     }
 }
