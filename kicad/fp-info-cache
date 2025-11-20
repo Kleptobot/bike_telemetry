@@ -1,4 +1,4 @@
-26057846147777810
+26061372285536265
 Audio_Module
 Reverb_BTDR-1H
 Digital Reverberation Unit, http://www.belton.co.kr/inc/downfile.php?seq=17&file=pdf (footprint from http://www.uk-electronic.de/PDF/BTDR-1.pdf)
@@ -104117,6 +104117,13 @@ AMPHENOL_62684-402100ALF
 0
 42
 42
+amphenol
+AMPHENOL_F34G-1A7Q1-E8C40
+
+
+0
+42
+42
 quectel
 L86-M33
 
@@ -104138,6 +104145,13 @@ XCVR_YC0013AA
 0
 3
 3
+seeed
+XIAO-nRF52840-Plus-SMD
+
+
+0
+29
+29
 windbond
 SON127P800X600X80-9N
 
