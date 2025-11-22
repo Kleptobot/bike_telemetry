@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include "App.hpp"
 #include <variant>
+#include <cmath>
 
 #include "UI/Screens/MainScreen.hpp"
 #include "UI/Screens/BluetoothScreen.hpp"
@@ -94,10 +95,9 @@ void App::update() {
 
             model.logger().update({logger->elapsed_Total(),logger->elapsed_Lap()});
             
-            lastSpeed = tel.speed;
             //check if seconds has changed for logging tick
             if (currentTime.second() != lastSecond) {
-                f32_distance += (tel.speed + lastSpeed)*(0.5/3.6);
+                f32_distance += tel.distance;
                 logger->addTrackpoint({ currentTime,
                                         tel.latitude,
                                         tel.longitude,
@@ -106,7 +106,7 @@ void App::update() {
                                         tel.power,
                                         tel.cadence,
                                         tel.speed,
-                                        f32_distance});
+                                        tel.distance});
             }
             break;
         
@@ -123,7 +123,26 @@ void App::update() {
 }
 
 void App::updateTelemetry(imu_data imu, dps_data dps, float speed, float cadence, float temp, float alt, float bpm, float pow, TinyGPSLocation loc, DateTime now) {
-    model.telemetry().update({imu,dps,speed,cadence,temp,alt,bpm,pow,loc.isValid(),loc.lng(),loc.lat()});
+    float distance = 0;
+
+    // /Haversine formula
+    if ( loc.isValid() && _lastLocation.isValid()) {
+        double deg2rad = M_PI/180;
+        double theta1 = _lastLocation.lat()*deg2rad;
+        double theta2 = loc.lat()*deg2rad;
+        double phi1 = _lastLocation.lng()*deg2rad;
+        double phi2 = loc.lng()*deg2rad;
+
+        double s1 = sin((theta2 - theta1)/2);
+        s1 = s1*s1;
+        double c1 = cos(theta1) * cos(theta2);
+        double s2 = sin((phi2-phi1)/2);
+        s2 = s2*s2;
+
+        distance = 2*6371*asin(sqrt(s1+c1*s2));
+    }
+    _lastLocation = loc;
+    model.telemetry().update({imu,dps,speed,cadence,temp,alt,bpm,pow,loc.isValid(),loc.lng(),loc.lat(), distance});
     model.time().update(now);
 }
 

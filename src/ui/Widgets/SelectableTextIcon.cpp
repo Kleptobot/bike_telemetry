@@ -10,15 +10,16 @@ void SelectableTextIconWidget::render() {
     int16_t x1, y1;
     uint16_t w, h;
     Disp::getTextBounds(text, x + _icon_height, y, &x1, &y1, &w, &h);
+    h = max(_icon_height,h);
 
     if (selected) {
-        Disp::fillRect(x - 1, y - 1, w+_icon_height + 1, h*2+1, ST77XX_WHITE);
+        Disp::fillRect(x - 2, y - 2, w+_icon_height + 4, h + 4, ST77XX_WHITE);
         Disp::setTextColor(ST77XX_BLACK);
     } else if (focused) {
-        Disp::drawRect(x - 2, y - 2, w + _icon_height + 4, h*2 + 2, ST77XX_WHITE);
+        Disp::drawRect(x - 2, y - 2, w + _icon_height + 4, h + 4, ST77XX_WHITE);
         Disp::setTextColor(ST77XX_WHITE);
     } else {
-        Disp::drawRect(x - 2, y - 2, w + _icon_height + 4, h*2 + 2, ST77XX_BLACK);
+        Disp::drawRect(x - 2, y - 2, w + _icon_height + 4, h + 4, ST77XX_BLACK);
         Disp::setTextColor(ST77XX_WHITE);
     }
     

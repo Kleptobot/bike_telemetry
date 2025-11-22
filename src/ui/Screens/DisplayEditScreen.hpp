@@ -25,14 +25,14 @@ class DisplayEditScreen : public UIScreen {
         void onEnter() override {
             auto& l = model.layout().get();
             dispEdits.clear();
-            for ( int i = 0; i<l.displays.size(); i++) {
-                dispEdits.push_back({5,21+i*16,l.displays[i]});
+            for ( uint i = 0; i<l.displays.size(); i++) {
+                dispEdits.push_back({5,26+int(i)*21,l.displays[i]});
             }
             numDisplays.setText(String(dispEdits.size()));
         }
 
         void update(float dt) override {
-            for ( int i = 0; i<dispEdits.size(); i++) {
+            for ( uint i = 0; i<dispEdits.size(); i++) {
                 dispEdits[i].update(dt);
                 dispEdits[i].setFocused( _index == (i+1) );
             }
@@ -53,11 +53,14 @@ class DisplayEditScreen : public UIScreen {
                     if (input.Up.press){
                         if (dispEdits.size()>7) return;
                         int d = dispEdits.size();
-                        dispEdits.push_back({5,21+d*16});
+                        dispEdits.push_back({5,26+d*21});
                         dispEdits.back().invalidate();
+                        saveWidget.invalidate();
                     }
                     if (input.Down.press) {
                         if (dispEdits.size()<1) return;
+                        saveWidget.invalidate();
+                        dispEdits.back().invalidate();
                         dispEdits.pop_back();
                     }
                 }
@@ -76,7 +79,7 @@ class DisplayEditScreen : public UIScreen {
             for ( auto& disp : dispEdits) {
                 disp.render();
             }
-            saveWidget.render(5,21+dispEdits.size()*16);
+            saveWidget.render(5,26+dispEdits.size()*21);
         }
     
     private:
@@ -86,7 +89,7 @@ class DisplayEditScreen : public UIScreen {
         std::vector<DisplayEditWidget> dispEdits;
         SelectableTextIconWidget saveWidget;
 
-        int _index = 0;
+        uint _index = 0;
         bool anySelected() {
             bool dispSelected = false;
             for (auto& disp : dispEdits) {

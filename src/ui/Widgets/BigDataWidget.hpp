@@ -40,8 +40,6 @@ class BigDataWidget : public Widget {
         
         void setSize(uint8_t size) { 
             _size = size;
-            int16_t x1,y1;
-            uint16_t w,h;
             _width = 18*size + 6;
             _height= 8*_size;
         }
@@ -57,8 +55,8 @@ class BigDataWidget : public Widget {
         void setUnits(String units) { _units = units; }
 
     private:
-        TelemetryType _type;
         uint8_t _size;
+        TelemetryType _type;
         float _value;
         String _units;
         uint16_t _color = ST77XX_WHITE;
@@ -71,6 +69,7 @@ class BigDataWidget : public Widget {
                 case TelemetryType::Temperature: return " C ";  //° cannot be rendered
                 case TelemetryType::Power: return " W ";
                 case TelemetryType::Altitude: return " m ";
+                case TelemetryType::Distance: return " km";
                 default: return "-";
             }
         }

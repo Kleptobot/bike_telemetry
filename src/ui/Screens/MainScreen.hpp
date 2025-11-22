@@ -27,8 +27,8 @@ class MainScreen : public UIScreen {
             
             int size = 256/(8*l.displays.size());
             dataDisplays.clear();
-            for ( int i = 0; i<l.displays.size(); i++) {
-                dataDisplays.push_back({5,30+i*8*size,size,l.displays[i]});
+            for ( uint i = 0; i<l.displays.size(); i++) {
+                dataDisplays.push_back({5,30+int(i)*8*size,size,l.displays[i]});
             }
         }
 
@@ -109,12 +109,12 @@ class MainScreen : public UIScreen {
     
     private:
         BatteryWidget batt;
-        TimeWidget timeWidget;
         IconWidget gpsIcon;
         IconWidget settingsIcon;
         IconWidget playIcon;
         IconWidget stopIcon;
         IconWidget powerIcon;
+        TimeWidget timeWidget;
         TimeWidget lapTime;
 
         std::vector<BigDataWidget> dataDisplays;

@@ -14,10 +14,12 @@ public:
 
     void addItem(std::unique_ptr<WidgetT> widget) {
         _widgets.push_back(std::move(widget));
+        totalHeight += (_widgets.back()->height() + margin);
     }
 
     void removeItem(size_t index) {
         if (index < _widgets.size()) {
+            totalHeight += (_widgets[index]->height() + margin);
             _widgets.erase(_widgets.begin() + index);
             if (_selectedIndex >= _widgets.size())
                 _selectedIndex = _widgets.empty() ? 0 : _widgets.size() - 1;
@@ -56,12 +58,10 @@ public:
             y += _widgets[i]->height() + margin;
         }
 
-        if (_widgets.size() > _visibleCount) {
-            float ratio = _visibleCount /  float(_widgets.size());
-            barHeight = int(totalHeight / _widgets.size()) * ratio;
-            barY = int((_selectedIndex / float(_widgets.size())) * totalHeight * ratio);
-            Disp::fillRect(SCREEN_WIDTH - 4, barY+_y, 4, barHeight, ST77XX_WHITE);
-        }
+        float ratio = _visibleCount /  float(_widgets.size());
+        barHeight = int(totalHeight / _widgets.size()) * ratio;
+        barY = int((_selectedIndex / float(_widgets.size())) * totalHeight * ratio);
+        Disp::fillRect(SCREEN_WIDTH - 4, barY+_y, 4, barHeight, ST77XX_WHITE);
     }
 
     int selectedIndex() const { return _selectedIndex; }

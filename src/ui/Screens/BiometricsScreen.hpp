@@ -12,11 +12,11 @@ class BiometricsScreen : public UIScreen {
     public:
         BiometricsScreen (DataModel& model) : 
             UIScreen(model),
-            birthdayLabel(5,5,"Birthday"),
+            birthdayLabel(5,5,"Birthday:"),
             dateWidget{110,5, &_birthday},
-            massLabel(5,32,"mass"),
+            massLabel(5,32,"Mass:"),
             massWidget(110,32, String(0)),
-            calorieLabel(5,64,"Gender"),
+            calorieLabel(5,64,"Calory Calc:"),
             calorieWidget(110,64, "-"),
             backWidget{15,96,"Back",epd_bitmap_left},
             saveWidget{90,96,"Save",epd_bitmap_save} {

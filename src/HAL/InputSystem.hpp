@@ -66,7 +66,7 @@ private:
       uint8_t pin;
       bool cmd;
     };
-    static const uint16_t MCP_Period = 37;
+    static const uint16_t MCP_Period = 21;
     Adafruit_MCP23X17 _mcp;
     bool bUp, bDown, bLeft, bRight, bSelect, bSD_Det;
     uint32_t lastMCPTime = 0;
