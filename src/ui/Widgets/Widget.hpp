@@ -20,7 +20,11 @@ public:
     virtual void handleInput(physIO input) {} // optional override
 
     // Positioning
-    void setPosition(int nx, int ny) { x = nx; y = ny; }
+    void setPosition(int nx, int ny) { 
+       if((x != nx) || (y != ny)) invalidate();
+        x = nx; 
+        y = ny; 
+    }
     void move(int dx, int dy) { x += dx; y += dy; }
     int getX() const { return x; }
     int getY() const { return y; }

@@ -9,6 +9,7 @@
 #include "UI/Screens/SettingsScreen.hpp"
 #include "UI/Screens/BiometricsScreen.hpp"
 #include "UI/Screens/DisplayEditScreen.hpp"
+#include "UI/Screens/GPSScreen.hpp"
 
 void App::begin(IStorage* storage) {
     _storage = storage;
@@ -23,6 +24,7 @@ void App::begin(IStorage* storage) {
     ui.registerScreen<BluetoothScreen>(ScreenID::Bluetooth,App::instance().getModel());
     ui.registerScreen<BiometricsScreen>(ScreenID::Biometrics,App::instance().getModel());
     ui.registerScreen<DisplayEditScreen>(ScreenID::DisplayEdit,App::instance().getModel());
+    ui.registerScreen<GPSScreen>(ScreenID::GPSSettings,App::instance().getModel());
 
     ui.begin(ScreenID::MainMenu);
 
@@ -106,7 +108,7 @@ void App::update() {
                                         tel.power,
                                         tel.cadence,
                                         tel.speed,
-                                        tel.distance});
+                                        f32_distance});
             }
             break;
         
@@ -127,19 +129,19 @@ void App::updateTelemetry(imu_data imu, dps_data dps, float speed, float cadence
 
     // /Haversine formula
     if ( loc.isValid() && _lastLocation.isValid()) {
-        double deg2rad = M_PI/180;
+        double deg2rad = M_PI/180.0;
         double theta1 = _lastLocation.lat()*deg2rad;
         double theta2 = loc.lat()*deg2rad;
         double phi1 = _lastLocation.lng()*deg2rad;
         double phi2 = loc.lng()*deg2rad;
 
-        double s1 = sin((theta2 - theta1)/2);
+        double s1 = sin((theta2 - theta1)/2.0);
         s1 = s1*s1;
         double c1 = cos(theta1) * cos(theta2);
-        double s2 = sin((phi2-phi1)/2);
+        double s2 = sin((phi2-phi1)/2.0);
         s2 = s2*s2;
 
-        distance = 2*6371*asin(sqrt(s1+c1*s2));
+        distance = 2.0*6371.0*asin(sqrt(s1+c1*s2));
     }
     _lastLocation = loc;
     model.telemetry().update({imu,dps,speed,cadence,temp,alt,bpm,pow,loc.isValid(),loc.lng(),loc.lat(), distance});

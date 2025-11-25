@@ -70,6 +70,8 @@ class BT_Device {
 
     void bat_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len);
 
+    virtual void update(uint32_t now) {};
+
     MacAddress getMac() {return MAC;}
     E_Type_BT_Device getType() const {return bt_type;}
     bool begun() const {return _begun;}

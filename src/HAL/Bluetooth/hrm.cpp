@@ -29,7 +29,6 @@ void hrm::hrm_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len)
   {
     u16_bpm = data[1];
   }
-  f32_bpm = 0.7 * f32_bpm + 0.3 * (float)u16_bpm;
 }
 
 void hrm::begin()

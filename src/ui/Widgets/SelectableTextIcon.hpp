@@ -48,10 +48,11 @@ public:
 
     void render() override;
     void render(int x, int y) override {
-        bool invalidateAftermove = (x != this->x) || (y != this->y);
+        bool _invalidate = (x != this->x) || (y != this->y);
+        if(_invalidate) invalidate();
         this->x = x;
         this->y = y;
-        if(invalidateAftermove) invalidate();
+        if(_invalidate) invalidate();
         render();
     }
     void handleInput(physIO input) override;

@@ -46,5 +46,9 @@ public:
   void discover(uint16_t conn_handle);
   bool discovered() override {return hrm_meas.discovered();};
   void begin();
+
+  void update(uint32_t now) override {
+    f32_bpm = 0.8 * f32_bpm + 0.2 * (float)u16_bpm;
+  }
 };
 #endif

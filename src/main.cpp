@@ -27,8 +27,8 @@ void loop() {
     HAL::update();
     App::instance().update();
 
-    Serial.println(millis()-last);
-    last = millis();
+    //Serial.println(millis()-last);
+    //last = millis();
 
     //read the state of the gps enable pin, if its low then sleep
     if ( !App::instance().getGpsEnableState() ) {

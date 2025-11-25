@@ -68,7 +68,7 @@ void csc::discover(uint16_t conn_handle)
       u16_SpeedEvt_Prev = 0;
       u16_CrankCount_Prev = 0;
       u16_CrankEvt_Prev = 0;
-      f32_rpm = 0;
+      f32_kph_raw = 0;
       f32_cadence_raw = 0;
       f32_kph = 0;
       f32_cadence = 0;
@@ -125,10 +125,8 @@ void csc::csc_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len)
   // https://github.com/oesmith/gatt-xml/blob/master/org.bluetooth.service.cycling_speed_and_cadence.xml
   
   uint8_t offset = 1;
-  uint32_t u32_WheelCount, u32_WheelCount_delta;
-  uint16_t u16_SpeedEvt, u16_CrankCount, u16_CrankCount_delta, u16_CrankEvt, u16_speed_delta, u16_crank_delta;
-
-  float f32_circ = 2127;
+  uint32_t u32_WheelCount;
+  uint16_t u16_SpeedEvt, u16_CrankCount, u16_CrankEvt;
 
   if ((data[0] & 0x01) ==1)
   {
@@ -146,6 +144,7 @@ void csc::csc_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len)
     }
   
     //check for overflow of speed evt
+    u16_speed_delta = 0;
     if (u16_SpeedEvt>u16_SpeedEvt_Prev)
     {
       u16_speed_delta = u16_SpeedEvt - u16_SpeedEvt_Prev;
@@ -156,12 +155,11 @@ void csc::csc_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len)
       u16_speed_delta = u16_SpeedEvt + (65535 - u16_SpeedEvt_Prev);
       u16_SpeedEvt_Prev = u16_SpeedEvt;
     }
-    else
-    {
-      u16_speed_delta = 0;
-    }
+    millis_at_spd_evt = millis();
+    exp_next_spd_evt = millis_at_spd_evt + uint(u16_speed_delta*1.024);
 
      //check for overflow of speed count
+    u32_WheelCount_delta=0;
     if (u32_WheelCount >= u32_WheelCount_Prev)
     {
       u32_WheelCount_delta = u32_WheelCount-u32_WheelCount_Prev;
@@ -172,26 +170,12 @@ void csc::csc_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len)
     }
     u32_WheelCount_Prev = u32_WheelCount;
 
+    //calculate the rate of change and convert to km/h
+    f32_kph_raw = 0;
     if (u16_speed_delta > 0)
     {
-      f32_rpm = 61140.0 *float(u32_WheelCount_delta)/float(u16_speed_delta);
-    }else if (f32_rpm>200){
-      f32_rpm -= 200;
-    }else if (f32_rpm>100){
-      f32_rpm -= 100;
-    }else if (f32_rpm>50){
-      f32_rpm -= 50;
-    }else if (f32_rpm>20){
-      f32_rpm -= 20;
-    }else if (f32_rpm>5){
-      f32_rpm -= 5;
-    }else if (f32_rpm>1){
-      f32_rpm -= 1;
-    }else if (f32_rpm<1){
-      if (f32_rpm >0.1)
-        f32_rpm -= 0.1;
+      f32_kph_raw = f32_circ * 3.6684 *float(u32_WheelCount_delta)/float(u16_speed_delta);
     }
-    f32_kph = (f32_circ * 0.00006 * f32_rpm) * 0.3 + 0.7*f32_kph;
   }
   if ((data[0] & 0x02) == 2)
   {
@@ -209,57 +193,37 @@ void csc::csc_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len)
     }
 
     //check for overflow of crank evt
+    u16_crank_delta = 0;
     if (u16_CrankEvt>u16_CrankEvt_Prev)
     {
       u16_crank_delta = u16_CrankEvt - u16_CrankEvt_Prev;
-      u16_CrankEvt_Prev = u16_CrankEvt;
     }
     else if(u16_CrankEvt_Prev>u16_CrankEvt)
     {
       u16_crank_delta = u16_CrankEvt + (65535 - u16_CrankEvt_Prev);
-      u16_CrankEvt_Prev = u16_CrankEvt;
     }
-    else
-    {
-      u16_crank_delta = 0;
-    }
+    millis_at_cad_evt = millis();
+    exp_next_cad_evt = millis_at_cad_evt + uint(u16_crank_delta/1024.0);
+    u16_CrankEvt_Prev = u16_CrankEvt;
 
     //check for overflow of crank count
+    u16_CrankCount_delta = 0;
     if (u16_CrankCount>u16_CrankCount_Prev)
     {
       u16_CrankCount_delta = u16_CrankCount - u16_CrankCount_Prev;
-      u16_CrankCount_Prev = u16_CrankCount;
     }
     else if(u16_CrankCount_Prev>u16_CrankCount)
     {
       u16_CrankCount_delta = u16_CrankCount + (65535 - u16_CrankCount_Prev);
-      u16_CrankCount_Prev = u16_CrankCount;
     }
-    else
-    {
-      u16_CrankCount_delta = 0;
-    }
+    u16_CrankCount_Prev = u16_CrankCount;
     
+    //calculate rate of change and convert to rpm
+    f32_cadence_raw = 0;
     if (u16_crank_delta>0)
     {
       f32_cadence_raw = 61140.0 *float(u16_CrankCount_delta)/float(u16_crank_delta);
-    }else if (f32_cadence_raw>200){
-      f32_cadence_raw -= 200;
-    }else if (f32_cadence_raw>100){
-      f32_cadence_raw -= 100;
-    }else if (f32_cadence_raw>50){
-      f32_cadence_raw -= 50;
-    }else if (f32_cadence_raw>20){
-      f32_cadence_raw -= 20;
-    }else if (f32_cadence_raw>5){
-      f32_cadence_raw -= 5;
-    }else if (f32_cadence_raw>1){
-      f32_cadence_raw -= 1;
-    }else if (f32_cadence_raw<1){
-      if (f32_cadence_raw >0.1)
-      f32_cadence_raw -= 0.1;
     }
-    f32_cadence = f32_cadence * 0.7 + f32_cadence_raw*0.3;
   }
 }
 

@@ -62,6 +62,10 @@ class cps : public BT_Device {
     void cps_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len);
     
     bool discovered() override;
+
+    void update(uint32_t now) override {
+      
+    }
 };
 
  #endif /* cps_H */

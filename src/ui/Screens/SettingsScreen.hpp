@@ -22,7 +22,7 @@ public:
             {"GPS",         epd_bitmap_antenna_large,       ScreenID::GPSSettings}, 
             {"Time",        epd_bitmap_clock_large,         ScreenID::TimeMenu},
             {"Biometrics",  epd_bitmap_heart_large,         ScreenID::Biometrics},
-            {"Display",     epd_bitmap_heart_large,         ScreenID::DisplayEdit},
+            {"Display",     epd_bitmap_disp_edit,           ScreenID::DisplayEdit},
             {"Back",        epd_bitmap_left_arrow_large,    ScreenID::MainMenu}
         };
 
@@ -39,6 +39,7 @@ public:
     }
 
     void onEnter() override {
+        listView.setIndex(0);
     }
 
     void update(float dt) override { listView.update(dt); }

@@ -87,6 +87,14 @@ public:
         Disp::markDirty(SCREEN_WIDTH - 4,_y,4,totalHeight);
     }
 
+    void setIndex(uint index) {
+        if(index >= _widgets.size()) return;
+        invalidate();
+        _selectedIndex = index;
+        clampScroll();
+        invalidate();
+    }
+
 private:
     int _x, _y;
     int _selectedIndex = 0;

@@ -52,9 +52,14 @@ class csc : public BT_Device {
 
     // Body sensor location value is 8 bit
     const char* feat_str[4] = {"other", "Speed", "Cadence", "Speed & Cadence"};
+    const float f32_circ = 2127;
     uint32_t u32_WheelCount_Prev;
     uint16_t u16_SpeedEvt_Prev, u16_CrankCount_Prev, u16_CrankEvt_Prev;
     uint8_t u8_feature, u8_location;
+    uint32_t millis_at_spd_evt = 0, millis_at_cad_evt = 0;
+    uint32_t exp_next_spd_evt= 0, exp_next_cad_evt=0;
+    uint32_t u32_WheelCount_delta = 0;
+    uint16_t u16_CrankCount_delta = 0, u16_speed_delta = 0, u16_crank_delta = 0;
     
     csc(){
       this->bt_type = E_Type_BT_Device::bt_csc;
@@ -69,7 +74,7 @@ class csc : public BT_Device {
 
   public:
     bool b_speed_present, b_cadence_present;
-    float f32_rpm, f32_kph, f32_cadence_raw, f32_cadence;
+    float f32_kph_raw, f32_kph, f32_cadence_raw, f32_cadence;
     virtual ~csc(){};
     
     static void create_csc(MacAddress MAC)
@@ -89,6 +94,34 @@ class csc : public BT_Device {
     void csc_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len);
     
     bool discovered() override;
+
+    void update(uint32_t now) override {
+      float f32_kph_est = 0, f32_cad_est = 0;
+      
+      //use the last known u16_CrankCount_delta delta and an adjusted time delta to come up with an actual cadance estimate
+      if (now>exp_next_cad_evt) {
+        uint32_t diff = now - exp_next_cad_evt;
+        uint32_t delta_adjusted = u16_crank_delta + diff * 0.9765625; //convert milliseconds into 1/1024ths of a second
+        f32_cad_est = 61140.0 *float(u16_CrankCount_delta)/float(delta_adjusted);
+      }else{
+        f32_cad_est = f32_cadence_raw;
+      }
+      
+      //low pass filter the cadance estimate
+      f32_cadence = f32_cad_est * 0.2 + f32_cadence * 0.8;
+
+      //use the last known wheelcount delta and an adjusted time delta to come up with an actual speed estimate
+      if(now>exp_next_spd_evt) {
+        uint32_t diff = now - exp_next_spd_evt;
+        uint32_t delta_adjusted = u16_speed_delta + diff * 0.9765625;
+        f32_kph_est = f32_circ * 3.6684 *float(u32_WheelCount_delta)/float(delta_adjusted);
+      }else{
+        f32_kph_est = f32_kph_raw;
+      }
+      
+      //low pass filter the speed estimate
+      f32_kph = f32_kph_est * 0.2 + f32_kph * 0.8;
+    };
 };
 
  #endif /* CSC_H */

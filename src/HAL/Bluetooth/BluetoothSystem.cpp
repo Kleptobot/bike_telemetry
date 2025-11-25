@@ -69,6 +69,7 @@ void BluetoothSystem::update() {
         if ((*it).connected) {
             BT_Device* dev = BT_Device::getDeviceWithMAC((*it).MAC);
             (*it).batt = dev->readBatt();
+            dev->update(millis());
         }
     }
 }
