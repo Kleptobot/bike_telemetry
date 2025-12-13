@@ -14,6 +14,7 @@ uint32_t last = millis();
 void loop() {
     //check if we need to run the higher level init functions (only once started)
     if (!started) {
+        digitalWrite(D6, true); //turn on the auxilary supply
         Serial.begin(115200);
         HAL::init();
         App::instance().begin(HAL::SD());
@@ -26,9 +27,6 @@ void loop() {
     //update the HAL and App
     HAL::update();
     App::instance().update();
-
-    //Serial.println(millis()-last);
-    //last = millis();
 
     //read the state of the gps enable pin, if its low then sleep
     if ( !App::instance().getGpsEnableState() ) {

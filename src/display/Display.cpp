@@ -25,8 +25,6 @@ namespace Disp {
     }
 
     void markDirty(int16_t x, int16_t y, int16_t w, int16_t h) {
-        //if (dirtyRects.size() >= 16) return; // ignore overflow
-
         dirtyRects.push_back({x, y, w, h});
     }
 
@@ -35,11 +33,6 @@ namespace Disp {
     }
 
     void flush() {
-        // Display.startWrite();
-        // Display.setAddrWindow(0, 0, 240, 320);
-        // Display.writePixels(canvas.getBuffer(), 240*320);
-        // Display.endWrite();
-
         for (uint8_t i = 0; i < dirtyRects.size(); i++) {
             auto& r = dirtyRects[i];
 

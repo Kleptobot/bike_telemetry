@@ -6,6 +6,8 @@ void InputSystem::init() {
 // Set up the sense mechanism to generate the DETECT signal to wake from system_off
   pinMode(WAKEUP_PIN, INPUT_PULLDOWN_SENSE);  // this pin (WAKE_HIGH_PIN) is pulled down and wakes up the feather when externally connected to 3.3v.
   pinMode(D2, INPUT);
+  pinMode(D6, OUTPUT);
+  digitalWrite(D6, false);    //turn off the auxilary supply
 
   if (!_mcp.begin_I2C()) {
     Serial.println("MCP init Error");
