@@ -33,7 +33,10 @@ void HAL::init() {
     _LC76G.begin(&Wire);
     sensorSystem.init();
     bluetoothSystem.init(&storageSystem);
-    storageSystem.init();
+    while (not storageSystem.init()) {
+        delay(200);
+        Serial.println("retrying...");
+    }
 
     //reset some systems
     resetGPS();
