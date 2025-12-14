@@ -57,7 +57,7 @@ void HAL::update() {
         if(_sleep)
         {
             inputSystem.setOutput(GPIOB3,false);    //turn of the GPS enable supply
-            inputSystem.setOutput(GPIOB6,false);    //turn of the screen backlight
+            inputSystem.setOutput(GPIOB6,false);    //turn off the screen backlight
             _sleep = false;
         }
     }

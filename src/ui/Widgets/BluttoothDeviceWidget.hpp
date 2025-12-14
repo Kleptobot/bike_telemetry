@@ -8,9 +8,15 @@
 
 class BluetoothDeviceWidget :  public Widget {
 public:
-  BluetoothDeviceWidget(int x, int y) : Widget(x,y,128,30) {visible = false;}
+  BluetoothDeviceWidget(int x, int y, BluetoothDevice& device) : 
+    Widget(x,y,128,30),
+    _device(device) {visible = false;}
 
   void update(float dt) override {
+  }
+        
+  void invalidate() override {
+      Disp::markDirty(x-2, y-2, width()+4, height()+4);
   }
 
   void render() override {
@@ -30,7 +36,7 @@ public:
 
     Disp::setTextColor(ST77XX_WHITE);
     if (focused)
-        Disp::drawRect(x - 2, y - 3, 127, 30, ST77XX_WHITE);
+        Disp::drawRect(x - 2, y - 2, 127, 30, ST77XX_WHITE);
     Disp::setCursor(x, y);
     Disp::print(tempString);
     Disp::drawBitmap(x, y + 10, epd_bitmap_down_right, 16, 16, ST77XX_WHITE);
@@ -47,25 +53,15 @@ public:
     Disp::print(_device.batt);
   }
 
-    using Callback = std::function<void()>;
-    virtual void setOnPress(Callback cb) { _onPress = cb; }
-
   void render(int x, int y) override {
-      this->x = x;
-      this->y = y;
-      render();
+    bool _invalidate = (x != this->x) || (y != this->y);
+    if(_invalidate) invalidate();
+    this->x = x;
+    this->y = y;
+    if(_invalidate) invalidate();
+    render();
   }
-
-  void handleInput (physIO input) override {
-    if (input.Select.press && focused && _onPress) {
-        _onPress();  // fire callback
-    }
-  }
-
-  BluetoothDevice device() const { return _device; }
-  void device(BluetoothDevice* device) { _device = *device; }
 
 private:
-  BluetoothDevice _device;
-  Callback _onPress;
+  BluetoothDevice& _device;
 };

@@ -166,13 +166,18 @@ void BluetoothSystem::createDevice(const BluetoothDevice& device) {
                 break;
         }
     }
+    if (deviceListCallback) {
+        deviceListCallback(deviceList);
+    }
 }
 
 void BluetoothSystem::disconnectDevice(const BluetoothDevice& device) {
     BT_Device::removeDeviceWithMAC(device.MAC);
     for (auto it = deviceList.begin(); it != deviceList.end(); it++ ) {
-        (*it).connected = false;
-        (*it).saved = false;
+        if ( (*it).MAC == device.MAC) {
+            (*it).connected = false;
+            (*it).saved = false;
+        }
     }
     if (deviceListCallback) {
         deviceListCallback(deviceList);

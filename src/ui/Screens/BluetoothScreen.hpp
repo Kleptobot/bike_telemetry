@@ -17,58 +17,63 @@ public:
         backWidget.setOnPress([this] () {
             emitUIEvent(UIEventType::ChangeScreen, ScreenID::SettingsMenu);
         });
+    }
 
-        //populate the wdiget list the number of visible devices
-        for (uint16_t i=0; i<visibleDevices ; i++) {
-            deviceWidgets.push_back({0,i*32});
-            deviceWidgets[i].setOnPress([this] () {
-                if (!_devices[_selectedIndex].saved)
-                    emitAppEvent({AppEventType::ConnectBluetooth,this->_devices[_selectedIndex]});
-                else
-                    emitAppEvent({AppEventType::DisconnectBluetooth,this->_devices[_selectedIndex]});
-                });
+    void refreshDevices() {
+        _devices = model.bluetooth().get();
+        _version = model.bluetooth().version();
+        
+        deviceWidgets.clear();
+        totalHeight = 0;
+        for(int i = 0; i<_devices.size(); i++) {
+            deviceWidgets.push_back({10, 10+i*32, _devices[i]});
+            totalHeight += (deviceWidgets.back().height() + 5);
         }
-        totalHeight = deviceWidgets.size()*32;
+    }
+
+    void onEnter() override {
+        refreshDevices();
+        _selectedIndex = 0;
+        _scrollOffset = 0;
     }
 
     void update(float dt) override {
         //update the device list
-        _devices = model.bluetooth().get();
-
-        for (uint32_t i =0 ; i<_devices.size(); i++) {
-            //guard against overrun
-            if (i<deviceWidgets.size()) {
-                //set the visiblity of the device widgets,
-                deviceWidgets[i].setVisible(i<deviceWidgets.size());
-
-                //update the widget with the scroll offset
-                deviceWidgets[i].device(&_devices[i+_scrollOffset]);
-            }
+        if (_version != model.bluetooth().version()) {
+            refreshDevices();
         }
 
+        for (uint32_t i =0 ; i<deviceWidgets.size(); i++) {
+            //set the visiblity of the device widgets,
+            deviceWidgets[i].setVisible((i>=_scrollOffset) && ((i-_scrollOffset) < visibleDevices));
+            deviceWidgets[i].setFocused(i==_selectedIndex);
+        }
+        
+        backWidget.setFocused(_selectedIndex == _devices.size());
     }
 
     void handleInput(physIO input) override {
         if (input.Select.press) {
-            for (uint32_t i =0 ; i<deviceWidgets.size(); i++) {
-                deviceWidgets[i].handleInput(input);
+            if (_selectedIndex < _devices.size()) {
+                if (!_devices[_selectedIndex].saved) {
+                    emitAppEvent({AppEventType::ConnectBluetooth,this->_devices[_selectedIndex]});
+                } else {
+                    emitAppEvent({AppEventType::DisconnectBluetooth,this->_devices[_selectedIndex]});
+                }
+                return;
+            } else {
+                backWidget.handleInput(input);
             }
-            backWidget.handleInput(input);
-            return;
         }
         else if (input.Up.press) moveSelection(-1);
         else if (input.Down.press) moveSelection(+1);
-
-        //check if a widget is focused
-        for (uint32_t i =0 ; i<deviceWidgets.size(); i++) {
-            deviceWidgets[i].setFocused(i == (_selectedIndex-_scrollOffset));
-        }
-        backWidget.setFocused(_selectedIndex == _devices.size());
     }
 
     void render() override {
-        for (uint32_t i=0; i<visibleDevices ; i++) {
-            deviceWidgets[i].render();
+        for (uint32_t i=0; i<deviceWidgets.size() ; i++) {
+            if (deviceWidgets[i].isVisible()) {
+                deviceWidgets[i].render(10, 10 + (i-_scrollOffset)*32);
+            }
         }
 
         //draw a scroll bar
@@ -80,7 +85,7 @@ public:
         }
 
         //render the back button after all the BT widgets
-        backWidget.render(0,min(visibleDevices,_devices.size())*32);
+        backWidget.render(5, 10 + min(visibleDevices, deviceWidgets.size())*32);
     }
 
 private:
@@ -91,14 +96,16 @@ private:
     std::vector<BluetoothDeviceWidget> deviceWidgets;
     SelectableTextIconWidget backWidget;
     std::vector<BluetoothDevice> _devices;
+    uint32_t _version;
+
 
     void moveSelection(int delta) {
         if (_devices.empty()) return;
 
+        uint32_t length = _devices.size() + 1;
+
         //scroll index must b 0 to _devices.size() to allow one more for the back button
-        if (_selectedIndex<_devices.size() && _selectedIndex>0) {
-            _selectedIndex += delta;
-        }
+        _selectedIndex = (_selectedIndex + delta + length) % length;
 
         if (_selectedIndex<_scrollOffset+visibleDevices && _scrollOffset<0) {
             _scrollOffset += delta;

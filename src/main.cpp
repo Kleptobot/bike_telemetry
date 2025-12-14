@@ -15,12 +15,12 @@ void loop() {
     //check if we need to run the higher level init functions (only once started)
     if (!started) {
         digitalWrite(D6, true); //turn on the auxilary supply
+        delay(500);
+        
         Serial.begin(115200);
         HAL::init();
         App::instance().begin(HAL::SD());
         started = true;
-        
-        delay(500);
         Serial.println("App started");
     }
 
@@ -30,6 +30,7 @@ void loop() {
 
     //read the state of the gps enable pin, if its low then sleep
     if ( !App::instance().getGpsEnableState() ) {
-      NRF_POWER->SYSTEMOFF = 1;
+        digitalWrite(D6, false); //turn off the auxilary supply
+        NRF_POWER->SYSTEMOFF = 1;
     }
 }

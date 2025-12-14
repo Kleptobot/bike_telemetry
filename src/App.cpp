@@ -76,11 +76,6 @@ void App::update() {
                 logger->finaliseLogging();
                 model.logger().update({0,0});
             }
-
-            if (millis() - lastGPS > 5000) {
-                HAL::displayGPSInfo();
-                lastGPS = millis();
-            }
             
             f32_distance = 0;
             break;
@@ -185,6 +180,7 @@ void App::handleAppEvent(const AppEvent& e) {
 
         case AppEventType::DisconnectBluetooth:
             HAL::bluetooth().disconnectDevice(std::get<BluetoothDevice>(e.payload));
+            break;
 
         case AppEventType::Sleep:
             HAL::sleep();

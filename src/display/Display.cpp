@@ -7,7 +7,7 @@
   #define TFT_DC         D2
 
 Adafruit_ST7789 Display = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
-GFXcanvas16 canvas(240, 320);
+GFXcanvas16 canvas(SCREEN_WIDTH, SCREEN_HEIGHT);
 
 std::vector<DirtyRect> dirtyRects;
 
@@ -36,8 +36,13 @@ namespace Disp {
         for (uint8_t i = 0; i < dirtyRects.size(); i++) {
             auto& r = dirtyRects[i];
 
+            int16_t x = max(0,r.x);
+            int16_t y = max(0,r.y);
+            int16_t w = min(r.w, SCREEN_WIDTH-x);
+            int16_t h = min(r.h, SCREEN_HEIGHT-y);
+
             Display.startWrite();
-            Display.setAddrWindow(r.x, r.y, r.w, r.h);
+            Display.setAddrWindow(x, y, w, h);
 
             uint16_t* buf = canvas.getBuffer();
             buf += (r.y * 240) + r.x;
