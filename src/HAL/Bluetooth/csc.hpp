@@ -102,7 +102,8 @@ class csc : public BT_Device {
       if (now>exp_next_cad_evt) {
         uint32_t diff = now - exp_next_cad_evt;
         uint32_t delta_adjusted = u16_crank_delta + diff * 0.9765625; //convert milliseconds into 1/1024ths of a second
-        f32_cad_est = 61140.0 *float(u16_CrankCount_delta)/float(delta_adjusted);
+        if ( delta_adjusted > 0)
+          f32_cad_est = 61140.0 *float(u16_CrankCount_delta)/float(delta_adjusted);
       }else{
         f32_cad_est = f32_cadence_raw;
       }
@@ -114,7 +115,8 @@ class csc : public BT_Device {
       if(now>exp_next_spd_evt) {
         uint32_t diff = now - exp_next_spd_evt;
         uint32_t delta_adjusted = u16_speed_delta + diff * 0.9765625;
-        f32_kph_est = f32_circ * 3.6684 *float(u32_WheelCount_delta)/float(delta_adjusted);
+        if ( delta_adjusted > 0)
+          f32_kph_est = f32_circ * 3.6684 *float(u32_WheelCount_delta)/float(delta_adjusted);
       }else{
         f32_kph_est = f32_kph_raw;
       }
