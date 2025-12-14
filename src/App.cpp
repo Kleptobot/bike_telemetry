@@ -183,6 +183,7 @@ void App::handleAppEvent(const AppEvent& e) {
             break;
 
         case AppEventType::ScanBluetooth:
+            HAL::bluetooth().saveDevices();
             state = AppState::IDLE;
             break;
 
