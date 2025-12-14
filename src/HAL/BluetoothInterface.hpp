@@ -23,5 +23,10 @@ struct BluetoothDevice {
   bool saved;
 
   BluetoothDevice(){}
-  BluetoothDevice(uint8_t* macAddr) : MAC(macAddr) {}
+  BluetoothDevice(uint8_t* macAddr, bool conn = false, bool save=false) : 
+    MAC(macAddr),
+    connected(conn),
+    saved(save) {
+      batt = 100;
+    }
 } ;

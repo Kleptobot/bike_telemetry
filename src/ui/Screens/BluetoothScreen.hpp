@@ -25,7 +25,7 @@ public:
         
         deviceWidgets.clear();
         totalHeight = 0;
-        for(int i = 0; i<_devices.size(); i++) {
+        for(uint i = 0; i<_devices.size(); i++) {
             deviceWidgets.push_back({10, 10+i*32, _devices[i]});
             totalHeight += (deviceWidgets.back().height() + 5);
         }
@@ -33,8 +33,13 @@ public:
 
     void onEnter() override {
         refreshDevices();
+        emitAppEvent({AppEventType::DiscoverBluetooth});
         _selectedIndex = 0;
         _scrollOffset = 0;
+    }
+
+    void onExit() override {
+        emitAppEvent({AppEventType::ScanBluetooth});
     }
 
     void update(float dt) override {

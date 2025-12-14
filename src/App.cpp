@@ -182,6 +182,14 @@ void App::handleAppEvent(const AppEvent& e) {
             HAL::bluetooth().disconnectDevice(std::get<BluetoothDevice>(e.payload));
             break;
 
+        case AppEventType::ScanBluetooth:
+            state = AppState::IDLE;
+            break;
+
+        case AppEventType::DiscoverBluetooth:
+            state = AppState::CONFIG;
+            break;
+
         case AppEventType::Sleep:
             HAL::sleep();
         default:

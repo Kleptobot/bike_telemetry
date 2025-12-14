@@ -16,6 +16,8 @@ enum class AppEventType {
     FactoryReset,
     ConnectBluetooth,
     DisconnectBluetooth,
+    DiscoverBluetooth,
+    ScanBluetooth,
     Sleep
 };
 

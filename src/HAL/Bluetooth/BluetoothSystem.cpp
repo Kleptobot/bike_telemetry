@@ -35,6 +35,7 @@ void BluetoothSystem::update() {
     switch (_mode) {
         case E_Type_BT_Mode::connect:
             if (_mode != _mode_prev) {
+                Bluefruit.Scanner.stop();
                 Bluefruit.Scanner.setRxCallback(scan_callback);
                 Bluefruit.Scanner.filterUuid(GATT_CSC_UUID, UUID16_SVC_HEART_RATE, GATT_CPS_UUID, GATT_BAT_UUID);
                 Bluefruit.Scanner.useActiveScan(true);
@@ -44,6 +45,7 @@ void BluetoothSystem::update() {
 
         case E_Type_BT_Mode::scan:
             if (_mode != _mode_prev) {
+                Bluefruit.Scanner.stop();
                 Bluefruit.Scanner.setRxCallback(scan_discovery);
                 Bluefruit.Scanner.filterUuid(GATT_CSC_UUID, UUID16_SVC_HEART_RATE, GATT_CPS_UUID);
                 Bluefruit.Scanner.useActiveScan(true);
@@ -85,8 +87,8 @@ void BluetoothSystem::connect_callback(uint16_t conn_handle) {
         }
     }
     if (!BT_Device::all_devices_discovered()) {
-        Serial.println("Discovered");
-        Bluefruit.Scanner.resume();
+        Serial.println("More to discover");
+        Bluefruit.Scanner.start(0);
     }
 }
 void BluetoothSystem::scan_callback(ble_gap_evt_adv_report_t* report) {
@@ -103,22 +105,25 @@ void BluetoothSystem::scan_callback(ble_gap_evt_adv_report_t* report) {
         Serial.println("Match!");
         toConnectMAC = report->peer_addr.addr;
         Bluefruit.Central.connect(report);
+    }else{
+        Bluefruit.Scanner.resume();
     }
 }
+
 void BluetoothSystem::scan_discovery(ble_gap_evt_adv_report_t* report) {
     BluetoothDevice newDevice(report->peer_addr.addr);
     memset(&newDevice.name,0,32);
 
     Bluefruit.Scanner.parseReportByType(report, BLE_GAP_AD_TYPE_COMPLETE_LOCAL_NAME, (uint8_t*)newDevice.name, sizeof(newDevice.name));
 
-    bool bMatch = 0;
-    //check if the list contains anyhting
+    bool bMatch = false;
+    //check if the list contains anything
     if (deviceList.size() > 0) {
         //iterate the list
         for (uint16_t i = 0; i < deviceList.size(); i++) {
             //check if the new found device matches any of the devices in the list
             if (deviceList[i].MAC==newDevice.MAC) {
-            bMatch = 1;
+                bMatch = true;
             }
         }
     }
@@ -134,6 +139,10 @@ void BluetoothSystem::scan_discovery(ble_gap_evt_adv_report_t* report) {
 
         Serial.print("New device found: "); Serial.println(newDevice.name);
         deviceList.push_back(newDevice);
+        
+        if (deviceListCallback) {
+            deviceListCallback(deviceList);
+        }
     }
 
     // For Softdevice v6: after received a report, scanner will be paused

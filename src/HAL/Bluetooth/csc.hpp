@@ -108,7 +108,7 @@ class csc : public BT_Device {
       }
       
       //low pass filter the cadance estimate
-      f32_cadence = f32_cad_est * 0.2 + f32_cadence * 0.8;
+      f32_cadence = f32_cad_est * 0.05 + f32_cadence * 0.95;
 
       //use the last known wheelcount delta and an adjusted time delta to come up with an actual speed estimate
       if(now>exp_next_spd_evt) {
@@ -120,7 +120,7 @@ class csc : public BT_Device {
       }
       
       //low pass filter the speed estimate
-      f32_kph = f32_kph_est * 0.2 + f32_kph * 0.8;
+      f32_kph = f32_kph_est * 0.05 + f32_kph * 0.95;
     };
 };
 
