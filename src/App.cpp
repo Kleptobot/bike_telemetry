@@ -1,7 +1,7 @@
 #include <Arduino.h>
-#include "App.hpp"
 #include <variant>
 #include <cmath>
+#include "App.hpp"
 
 #include "UI/Screens/MainScreen.hpp"
 #include "UI/Screens/BluetoothScreen.hpp"
@@ -235,7 +235,9 @@ void App::loadBiometrics() {
 
         AppData a;
         uint32_t unix = jsonBuffer["birthday"];
+        Serial.print("unix date is: "); Serial.println(unix);
         DateTime bd(unix);
+        Serial.print("dateTime date is: "); Serial.println(bd.timestamp());
         a.birthday = bd;
         a.mass = jsonBuffer["mass"];
         a.caloricProfile = fromString(jsonBuffer["caloricProfile"]);

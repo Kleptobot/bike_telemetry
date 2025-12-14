@@ -33,7 +33,7 @@ void HAL::init() {
     _LC76G.begin(&Wire);
     sensorSystem.init();
     bluetoothSystem.init(&storageSystem);
-    while (not storageSystem.init()) {
+    while (!storageSystem.init()) {
         delay(200);
         Serial.println("retrying...");
     }

@@ -31,7 +31,7 @@ private:
     static const uint16_t BAT_Read_Period = 30001;
     static const uint16_t IMU_Read_Period = 73;
     static const uint16_t DPS_Read_Period = 101;
-    static const uint16_t RTC_Read_Period = 99;
+    static const uint16_t RTC_Read_Period = 97;
 
     LSM6DS3* _myIMU;
     RTC_DS3231 _rtc;

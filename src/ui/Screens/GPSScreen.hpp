@@ -9,16 +9,30 @@
 class GPSScreen : public UIScreen {
     public:
         GPSScreen (DataModel& model) : 
-            UIScreen(model) {}
+        UIScreen(model),
+        backWidget{0,0,"Back",epd_bitmap_left} {
 
-    void onEnter() override {}
+            //register press event callback to send a change screen event
+            backWidget.setOnPress([this] () {
+                emitUIEvent(UIEventType::ChangeScreen, ScreenID::SettingsMenu);
+            });
+        }
 
-    void render() override {}
+    void onEnter() override {
+        backWidget.setFocused(true);
+    }
+
+    void render() override {
+        backWidget.render();
+    }
 
     void update(float dt) override {}
 
-    void handleInput(physIO input) override {}
+    void handleInput(physIO input) override {
+        backWidget.handleInput(input);
+    }
 
     private:
+        SelectableTextIconWidget backWidget;
 
 };
