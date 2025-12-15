@@ -69,7 +69,8 @@ class BigDataWidget : public Widget {
                 case TelemetryType::Temperature: return " C ";  //° cannot be rendered
                 case TelemetryType::Power: return " W ";
                 case TelemetryType::Altitude: return " m ";
-                case TelemetryType::Distance: return " km";
+                case TelemetryType::Distance: return " m ";
+                case TelemetryType::TotalDist: return " km";
                 default: return "-";
             }
         }

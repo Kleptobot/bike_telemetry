@@ -11,22 +11,76 @@ enum class TelemetryType : uint8_t {
     HeartRate,
     Power,
     Distance,
+    TotalDist,
     Undefined
 };
 
 struct Telemetry {
     imu_data imu;
     dps_data dps;
-    float speed;
-    float cadence;
-    float temperature;
-    float altitude;
-    float heartrate;
-    float power;
+    float speed;            //km/h
+    float cadence;          //RPM
+    float temperature;      //celcius
+    float altitude;         //meters
+    float heartrate;        //BPM
+    float power;            //Watts
     bool validLocation;
-    double longitude;
-    double latitude;
-    float distance;
+    double longitude;       //degrees
+    double latitude;        //degrees
+    float distance;         //meters
+    float totalDistance;    //meters
+
+    Telemetry(){}
+    Telemetry(
+        const imu_data& imu_,
+        const dps_data& dps_,
+        float speed_,
+        float cadence_,
+        float temperature_,
+        float altitude_,
+        float heartrate_,
+        float power_,
+        bool validLocation_,
+        double longitude_,
+        double latitude_,
+        float distance_
+    )
+        : imu(imu_)
+        , dps(dps_)
+        , speed(speed_)
+        , cadence(cadence_)
+        , temperature(temperature_)
+        , altitude(altitude_)
+        , heartrate(heartrate_)
+        , power(power_)
+        , validLocation(validLocation_)
+        , longitude(longitude_)
+        , latitude(latitude_)
+        , distance(distance_)
+        , totalDistance(0.0f)
+    {}
+
+    Telemetry& operator=(const Telemetry& _new) {
+        if (this == &_new) {
+            return *this;
+        }
+
+        imu            = _new.imu;
+        dps            = _new.dps;
+        speed          = _new.speed;
+        cadence        = _new.cadence;
+        temperature    = _new.temperature;
+        altitude       = _new.altitude;
+        heartrate      = _new.heartrate;
+        power          = _new.power;
+        validLocation  = _new.validLocation;
+        longitude      = _new.longitude;
+        latitude       = _new.latitude;
+        distance       = _new.distance;
+        totalDistance  += _new.distance;
+
+        return *this;
+    }
 };
 
 inline TelemetryType& operator++(TelemetryType& t) {
@@ -37,7 +91,8 @@ inline TelemetryType& operator++(TelemetryType& t) {
         case TelemetryType::Altitude : t = TelemetryType::HeartRate; break;
         case TelemetryType::HeartRate : t = TelemetryType::Power; break;
         case TelemetryType::Power : t = TelemetryType::Distance; break;
-        case TelemetryType::Distance : t = TelemetryType::Speed; break;
+        case TelemetryType::Distance : t = TelemetryType::TotalDist; break;
+        case TelemetryType::TotalDist : t = TelemetryType::Speed; break;
         default: t = TelemetryType::Undefined;
     }
     return t;
@@ -52,6 +107,7 @@ inline TelemetryType& operator--(TelemetryType& t) {
         case TelemetryType::HeartRate : t = TelemetryType::Altitude; break;
         case TelemetryType::Power : t = TelemetryType::HeartRate; break;
         case TelemetryType::Distance : t = TelemetryType::Power; break;
+        case TelemetryType::TotalDist : t = TelemetryType::Distance; break;
         default: t = TelemetryType::Undefined; break;
     }
     return t;
@@ -66,6 +122,7 @@ inline const char* toString(const TelemetryType& t) {
         case TelemetryType::HeartRate : return"HeartRate"; break;
         case TelemetryType::Power : return"Power"; break;
         case TelemetryType::Distance : return"Distance"; break;
+        case TelemetryType::TotalDist : return"TotalDist"; break;
         default: return "-"; break;
     }
 }
@@ -78,6 +135,7 @@ inline TelemetryType TelemetryTypefromString(String s) {
     if (s == "HeartRate") return TelemetryType::HeartRate;
     if (s == "Power") return TelemetryType::Power;
     if (s == "Distance") return TelemetryType::Distance;
+    if (s == "TotalDist") return TelemetryType::TotalDist;
     return TelemetryType::Undefined;
 }
 
@@ -90,6 +148,7 @@ inline float GetTelemetryValue(const Telemetry& t, TelemetryType type) {
         case TelemetryType::HeartRate:    return t.heartrate;
         case TelemetryType::Power:        return t.power;
         case TelemetryType::Distance:     return t.distance;
+        case TelemetryType::TotalDist:    return t.totalDistance / 1000.0;  //convert to km
         default: return 0.0f;
     }
 }
@@ -104,6 +163,8 @@ public:
         _data = newData;
         ++_version;
     }
+
+    void resetDistance() { _data.totalDistance = 0;}
 
 private:
     Telemetry _data{};

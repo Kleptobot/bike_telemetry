@@ -94,7 +94,7 @@ void HAL::update() {
         f32_kph += (*it);
     }
     if(speed.size()>0)
-    f32_kph = f32_kph/speed.size();
+    f32_kph = f32_kph/float(speed.size());
 
     //agregate cadence from sensors
     std::vector<float> cadence = csc::getCadence();

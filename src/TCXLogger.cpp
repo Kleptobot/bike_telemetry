@@ -4,7 +4,8 @@
 void TCXLogger::startLogging(DateTime currentTime) {
   _startTime = currentTime;
   laps.clear();
-  laps.push_back({currentTime, 1, 1, 0, 0, 0, 0, 0});
+  laps.push_back({currentTime, 1, 1, 0, 0, 0, 0});
+  resetTotals();
   sprintf(_filename, "%d-%d-%d_%02d-%02d-%02d.tcx", _startTime.day(),_startTime.month(),_startTime.year(),_startTime.hour(),_startTime.minute(),_startTime.second());
 
   //open the first lap file
@@ -32,21 +33,48 @@ void TCXLogger::writeLapHeader(uint16_t lapIndex, File32 *file){
     ts = elapsed_Lap();
   }
 
+  auto& a = _model.app().get();
+  float age = TimeSpan(_currentTime - a.birthday).days()/356.25;
+
+  float avgHRM = float(lp.totalHRM) / float(ts.totalseconds());
+  float avgCAD = lp.totalCadence / ts.totalseconds();
+
+  int f = ((age * 0.074) - (float(a.mass) * 0.1265672342) + (avgHRM * 0.4472) - 20.4022) * float(_elapsed_Lap.totalseconds()) / 251.1;
+  int m = ((age * 0.2017) - (float(a.mass) * 0.1992094632) + (avgHRM * 0.6309) - 55.0969) * float(_elapsed_Lap.totalseconds()) / 251.1;
+
+  uint32_t Calories;
+  switch(a.caloricProfile) {
+    case CaloricProfile::Female: 
+      Calories = f;
+      break;
+    case CaloricProfile::Male:
+      Calories = m;
+      break;
+    case CaloricProfile::Other:
+      Calories = (m + f) /2;
+      break;
+    default:
+      Calories = 0;
+  }
+  
+  if(Calories<0)
+    Calories=0;
+
   sprintf(time, "%d-%02d-%02dT%02d:%02d:%02d", lp.startTime.year(), lp.startTime.month(), lp.startTime.day(), lp.startTime.hour(), lp.startTime.minute(), lp.startTime.second());
   file->print("      <Lap StartTime=\"");file->print(time);file->println("\">");
   // Initialize total time, distance, etc. 
   file->print("        <TotalTimeSeconds>");file->print(ts.totalseconds());file->print("</TotalTimeSeconds>\n");
   file->print("        <DistanceMeters>");file->print(lp.totalDistance);file->print("</DistanceMeters>\n");
   file->print("        <MaximumSpeed>");file->print(lp.maxSpeed);file->print("</MaximumSpeed>\n");
-  file->print("        <Calories>");file->print(lp.Calories);file->print("</Calories>\n");
+  file->print("        <Calories>");file->print(Calories);file->print("</Calories>\n");
   file->print("        <AverageHeartRateBpm>\n");
-  file->print("          <Value>");file->print(lp.avgHRM);file->print("</Value>\n"); // Set to at least 1
+  file->print("          <Value>");file->print(avgHRM);file->print("</Value>\n"); // Set to at least 1
   file->print("        </AverageHeartRateBpm>\n");
   file->print("        <MaximumHeartRateBpm>\n");
   file->print("          <Value>");file->print(lp.maxHRM);file->print("</Value>\n"); // Set to at least 1
   file->print("        </MaximumHeartRateBpm>\n");
   file->print("        <Intensity>Active</Intensity>\n"); // Add intensity element
-  file->print("        <Cadence>");file->print(lp.avgCadence,2);file->print("</Cadence>\n"); // Placeholder value
+  file->print("        <Cadence>");file->print(avgCAD,2);file->print("</Cadence>\n"); // Placeholder value
   file->print("        <TriggerMethod>Manual</TriggerMethod>\n");
   file->println("        <Track>");
 };
@@ -90,53 +118,8 @@ void TCXLogger::addTrackpoint(const Trackpoint& tp){
   file.println("          </Trackpoint>");
   file.flush();
 
-  TimeSpan ts = tp.currentTime - _currentTime;
-
-  double beats = (tp.heartRate + _BPM_last)/2;
-  _BPM_last = tp.heartRate;
-  double cads = (tp.cadence + _CAD_last)/2;
-  _CAD_last = tp.cadence;
-
-  totalHeartBeats += beats*(ts.totalseconds()/60);
-  total_RPMS += cads*(ts.totalseconds()/60);
-  
-  ts = tp.currentTime - _startTime;
-  laps.back().avgHRM = totalHeartBeats/(ts.totalseconds()/60);
-  laps.back().avgCadence = total_RPMS/(ts.totalseconds()/60);
-
-  if(tp.speed>laps.back().maxSpeed)
-    laps.back().maxSpeed=tp.speed;
-  if(tp.heartRate>laps.back().maxHRM)
-    laps.back().maxHRM=tp.heartRate;
-
-  laps.back().totalDistance = tp.distance;
-
-  
   _currentTime = tp.currentTime;
-  _elapsed_Lap = (tp.currentTime - _startTime);
 
-  auto& a = _model.app().get();
-  float age = TimeSpan(_currentTime - a.birthday).days()/356.25;
-
-  int f = ((age * 0.074) - (a.mass * 0.05741) + (laps.back().avgHRM * 0.4472) - 20.4022) * _elapsed_Lap.totalseconds() / 4.184;
-  int m = ((age * 0.2017) - (a.mass * 0.09036) + (laps.back().avgHRM * 0.6309) - 55.0969) * _elapsed_Lap.totalseconds() / 4.184;
-
-  switch(a.caloricProfile) {
-    case CaloricProfile::Female: 
-      laps.back().Calories = f;
-      break;
-    case CaloricProfile::Male:
-      laps.back().Calories = m;
-      break;
-    case CaloricProfile::Other:
-      laps.back().Calories = (m + f) /2;
-      break;
-  }
-  
-  if(laps.back().Calories<0)
-    laps.back().Calories=0;
-
-  
   totalPoints ++;
   if(totalPoints >= points_per_chunk)
   {
@@ -151,22 +134,30 @@ void TCXLogger::addTrackpoint(const Trackpoint& tp){
       Serial.println(lap_name);
     }
   }
+  
+  laps.back().totalHRM += tp.heartRate;
+  laps.back().totalCadence += tp.cadence;
+
+  if(tp.speed>laps.back().maxSpeed)
+    laps.back().maxSpeed=tp.speed;
+  if(tp.heartRate>laps.back().maxHRM)
+    laps.back().maxHRM=tp.heartRate;
+
+  laps.back().totalDistance = tp.distance;
+
+
 };
 
 void TCXLogger::resetTotals()
 {
-    totalHeartBeats = 0;
-    _BPM_last = 0;
     totalPoints = 0;
-    total_RPMS = 0;
-    _CAD_last = 0;
 };
 
 void TCXLogger::newLap(DateTime currentTime)
 {
   totalPoints = 0;
   resetTotals();
-  laps.push_back({currentTime, 1, 1, 0, 0, 0, 0, 0});
+  laps.push_back({currentTime, 1, 1, 0, 0, 0, 0});
   file.close();
 
   memset(lap_name,0,32);

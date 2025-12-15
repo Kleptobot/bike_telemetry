@@ -26,9 +26,8 @@ struct Trackpoint {
 struct Lap {
   DateTime startTime;
   uint32_t maxHRM;
-  uint32_t avgHRM;
-  uint32_t Calories;
-  double avgCadence;
+  uint32_t totalHRM;
+  double totalCadence;
   double maxSpeed;
   double totalDistance;     // Cumulative distance in meters
   uint16_t parts;
@@ -52,10 +51,6 @@ class TCXLogger {
     DateTime _currentTime;
     TimeSpan _elapsed_Total, _elapsed_Lap;
 
-    double totalHeartBeats=0;
-    double _BPM_last=0;
-    double total_RPMS;
-    double _CAD_last=0;
     int totalPoints=0;
 
     void updateTotals(const Trackpoint& tp);

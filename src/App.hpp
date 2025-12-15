@@ -56,8 +56,8 @@ private:
     TCXLogger* logger = nullptr;
     AppState state = AppState::BOOT, state_prev;
     TinyGPSLocation _lastLocation;
+    uint32_t _lastSeconds;
 
-    float f32_distance;
     bool _gpsEnableState = true;
 
     uint8_t lastSecond;

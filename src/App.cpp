@@ -77,7 +77,7 @@ void App::update() {
                 model.logger().update({0,0});
             }
             
-            f32_distance = 0;
+            model.telemetry().resetDistance();
             break;
 
         case AppState::CONFIG:
@@ -94,7 +94,6 @@ void App::update() {
             
             //check if seconds has changed for logging tick
             if (currentTime.second() != lastSecond) {
-                f32_distance += tel.distance;
                 logger->addTrackpoint({ currentTime,
                                         tel.latitude,
                                         tel.longitude,
@@ -103,7 +102,7 @@ void App::update() {
                                         tel.power,
                                         tel.cadence,
                                         tel.speed,
-                                        f32_distance});
+                                        tel.totalDistance});
             }
             break;
         
@@ -123,22 +122,25 @@ void App::updateTelemetry(imu_data imu, dps_data dps, float speed, float cadence
     float distance = 0;
 
     // /Haversine formula
-    if ( loc.isValid() && _lastLocation.isValid()) {
-        double deg2rad = M_PI/180.0;
-        double theta1 = _lastLocation.lat()*deg2rad;
-        double theta2 = loc.lat()*deg2rad;
-        double phi1 = _lastLocation.lng()*deg2rad;
-        double phi2 = loc.lng()*deg2rad;
+    if (now.secondstime() != _lastSeconds) {
+        if ( loc.isValid() && _lastLocation.isValid()) {
+            double deg2rad = M_PI/180.0;
+            double theta1 = _lastLocation.lat()*deg2rad;
+            double theta2 = loc.lat()*deg2rad;
+            double phi1 = _lastLocation.lng()*deg2rad;
+            double phi2 = loc.lng()*deg2rad;
 
-        double s1 = sin((theta2 - theta1)/2.0);
-        s1 = s1*s1;
-        double c1 = cos(theta1) * cos(theta2);
-        double s2 = sin((phi2-phi1)/2.0);
-        s2 = s2*s2;
+            double s1 = sin((theta2 - theta1)/2.0);
+            s1 = s1*s1;
+            double c1 = cos(theta1) * cos(theta2);
+            double s2 = sin((phi2-phi1)/2.0);
+            s2 = s2*s2;
 
-        distance = 2.0*6371.0*asin(sqrt(s1+c1*s2));
+            distance = 2.0*6371000.0*asin(sqrt(s1+c1*s2)); //distance in m
+        }
+        _lastLocation = loc;
+        _lastSeconds = now.secondstime();
     }
-    _lastLocation = loc;
     model.telemetry().update({imu,dps,speed,cadence,temp,alt,bpm,pow,loc.isValid(),loc.lng(),loc.lat(), distance});
     model.time().update(now);
 }
