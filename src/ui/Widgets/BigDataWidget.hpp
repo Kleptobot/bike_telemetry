@@ -23,11 +23,13 @@ class BigDataWidget : public Widget {
             Disp::setTextColor(_color);
             Disp::setTextSize(_size);
             Disp::setCursor(x, y);
-            if (_value < 100)
-                Disp::print(' ');
-            if (_value < 10)
-                Disp::print(' ');
-            Disp::printFloat(_value, 0);
+            if( _value >= 10) {
+                if (_value < 100)
+                    Disp::print(' ');
+                Disp::printFloat(_value, 0);
+            } else {
+                Disp::printFloat(_value, 1);
+            }
             Disp::setTextSize(2);
             Disp::setCursor(x+18*_size, y);
             Disp::print(labelForType(_type));

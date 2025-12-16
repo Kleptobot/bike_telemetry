@@ -57,7 +57,7 @@ struct Telemetry {
         , longitude(longitude_)
         , latitude(latitude_)
         , distance(distance_)
-        , totalDistance(0.0f)
+        , totalDistance(distance_)
     {}
 
     Telemetry& operator=(const Telemetry& _new) {
@@ -77,7 +77,7 @@ struct Telemetry {
         longitude      = _new.longitude;
         latitude       = _new.latitude;
         distance       = _new.distance;
-        totalDistance  += _new.distance;
+        totalDistance  += _new.totalDistance;
 
         return *this;
     }
