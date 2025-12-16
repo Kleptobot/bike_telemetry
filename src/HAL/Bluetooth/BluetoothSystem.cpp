@@ -234,6 +234,9 @@ void BluetoothSystem::loadDevices() {
         }
         dataFile.close();
     }
+    if (deviceListCallback) {
+        deviceListCallback(deviceList);
+    }
 }
 
 void BluetoothSystem::saveDevices() {
