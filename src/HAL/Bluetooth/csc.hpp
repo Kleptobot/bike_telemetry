@@ -95,6 +95,8 @@ class csc : public BT_Device {
     
     bool discovered() override;
 
+    void disconnect(uint16_t conn_handle, uint8_t reason) override;
+
     void update(uint32_t now) override {
       float f32_kph_est = 0, f32_cad_est = 0;
       

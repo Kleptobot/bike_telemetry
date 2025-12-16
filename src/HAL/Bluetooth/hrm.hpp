@@ -42,7 +42,6 @@ public:
   static std::vector<float> getHRM();
 
   void hrm_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len);
-  void disconnect(uint16_t conn_handle, uint8_t reason);
   void discover(uint16_t conn_handle);
   bool discovered() override {return hrm_meas.discovered();};
   void begin();

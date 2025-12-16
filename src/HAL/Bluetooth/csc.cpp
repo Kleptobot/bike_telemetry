@@ -256,3 +256,17 @@ std::vector<float> csc::getCadence()
   }
   return cadences;
 }
+
+void csc::disconnect(uint16_t conn_handle, uint8_t reason)
+{
+  (void) conn_handle;
+  (void) reason;
+  _disconnected = true;
+  Bluefruit.disconnect(conn_handle);
+
+  b_speed_present = false;
+  b_cadence_present = false;
+  
+  Serial.print("Disconnected, reason = 0x"); 
+  Serial.println(String(reason, HEX));
+}

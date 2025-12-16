@@ -76,12 +76,14 @@ class BT_Device {
     E_Type_BT_Device getType() const {return bt_type;}
     bool begun() const {return _begun;}
     uint8_t readBatt() const {return u8_Batt;}
-    void disconnect(uint8_t reason);
-    void disconnect(uint16_t conn_handle, uint8_t reason);
     uint16_t getConnHandle(){return _conn_handle;};
     
     virtual void discover(uint16_t conn_handle) {};
     virtual bool discovered() { return false; };
+
+    virtual void disconnect(uint8_t reason);
+    virtual void disconnect(uint16_t conn_handle, uint8_t reason);
+
     virtual void begin() {};
 };
 
