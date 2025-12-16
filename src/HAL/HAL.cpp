@@ -9,7 +9,7 @@ SDCardSystem HAL::storageSystem;
 HAL::TelemetryCallback HAL::telemetryCallback;
 
 float HAL::f32_kph, HAL::f32_cadence, HAL::f32_temp, HAL::f32_alt, HAL::f32_bpm, HAL::f32_pow;
-float HAL::f32_GPS_speed, HAL::f32_GPS_Alt;
+float HAL::f32_GPS_Alt;
 uint8_t HAL::_rxBuffer[1024];
 uint32_t HAL::_resetGPSTime, HAL::_resetDispTime;
 LC76G::State HAL::lc76g_state_prev;
@@ -79,18 +79,21 @@ void HAL::update() {
     }
     bluetoothSystem.update();
 
-    if(_gps.speed.isValid()) 
-      f32_GPS_speed = _gps.speed.kmph();
     if(_gps.altitude.isValid())
       f32_GPS_Alt = _gps.altitude.meters();
 
     //agregate speed from gps and sensors
-    std::vector<float> speed = csc::getSpeed();
+    std::vector<float> speed;
+    std::vector<float> csc_speeds = csc::getSpeed();
     if(_gps.speed.isValid()) {
-        speed.push_back(f32_GPS_speed);
+        speed.push_back( _gps.speed.kmph());
     }
+    // Append all elements from csc_speeds to the end of speed
+    speed.insert(speed.end(), csc_speeds.begin(), csc_speeds.end());
     f32_kph = 0;
+    // Serial.print("Speed members: "); Serial.println(speed.size());
     for (auto it = speed.begin(); it != speed.end(); it++) {
+        // Serial.println((*it));
         f32_kph += (*it);
     }
     if(speed.size()>0)
