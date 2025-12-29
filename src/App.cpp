@@ -29,11 +29,11 @@ void App::begin(IStorage* storage) {
     ui.begin(ScreenID::MainMenu);
 
     // Register callback with HAL
-    HAL::onTelemetry([this](imu_data imu, dps_data dps, float speed, float cadence, float temp, float alt, float bpm, float pow, TinyGPSLocation loc, DateTime now) {
+    HAL::inst().onTelemetry([this](imu_data imu, dps_data dps, float speed, float cadence, float temp, float alt, float bpm, float pow, TinyGPSLocation loc, DateTime now) {
         this->updateTelemetry(imu, dps, speed, cadence, temp, alt, bpm, pow, loc, now);
     });
 
-    HAL::bluetooth().onDeviceList([this](std::vector<BluetoothDevice> devices) {
+    HAL::inst().bluetooth().onDeviceList([this](std::vector<BluetoothDevice> devices) {
         this->updateBluetooth(devices);
     });
 
@@ -56,22 +56,33 @@ void App::update() {
     _millis = millis();
     ui.render();
     ui.update((float)(_millis - _last_millis) / 1000.0);
-    ui.handleInput(HAL::inputs());
+    ui.handleInput(HAL::inst().inputs());
     _last_millis = _millis;
+
+    if (tel.validLocation && ! validLoc_prev){
+        // HAL::setRCM(-1);
+        // HAL::sendPAIRCommand("PAIR160,1");
+        // HAL::sendPAIRCommand("PQTMCFGMSGRATE,W,RMC,1","$PQTMCFGMSGRATE,OK");
+        // HAL::sendPAIRCommand("PQTMCFGMSGRATE,R,RMC","$PQTMCFGMSGRATE,OK,RMC");
+        // HAL::sendPAIRCommand("PQTMCFGMSGRATE,W,VTG,1");
+        // HAL::sendPAIRCommand("PAIR080,1");
+        HAL::inst().getNMEArates();
+    }
+    validLoc_prev = tel.validLocation;
 
     switch(state) {
         case AppState::BOOT:
             Serial.println("Loading data from filesystem.");
-            HAL::bluetooth().loadDevices();
+            HAL::inst().bluetooth().loadDevices();
             loadBiometrics();
             state = AppState::IDLE;
             break;
 
         case AppState::IDLE:
-            if (!HAL::bluetooth().all_devices_discovered())
-                HAL::bluetooth().setMode(E_Type_BT_Mode::connect);
+            if (!HAL::inst().bluetooth().all_devices_discovered())
+                HAL::inst().bluetooth().setMode(E_Type_BT_Mode::connect);
             else
-                HAL::bluetooth().setMode(E_Type_BT_Mode::idle);
+                HAL::inst().bluetooth().setMode(E_Type_BT_Mode::idle);
             if(state_prev==AppState::LOGGING) {
                 logger->finaliseLogging();
                 model.logger().update({0,0});
@@ -81,11 +92,11 @@ void App::update() {
             break;
 
         case AppState::CONFIG:
-            HAL::bluetooth().setMode(E_Type_BT_Mode::scan);
+            HAL::inst().bluetooth().setMode(E_Type_BT_Mode::scan);
             break;
 
         case AppState::LOGGING:
-            HAL::bluetooth().setMode(E_Type_BT_Mode::idle);
+            HAL::inst().bluetooth().setMode(E_Type_BT_Mode::idle);
 
             if(state != state_prev)
                 logger->startLogging(currentTime);
@@ -156,7 +167,7 @@ void App::updateGpsEnable(bool state) {
 void App::handleAppEvent(const AppEvent& e) {
     switch (e.type) {
         case AppEventType::SaveTime:
-            HAL::setTime(std::get<DateTime>(e.payload));
+            HAL::inst().setTime(std::get<DateTime>(e.payload));
             break;
 
         case AppEventType::SaveBiometrics:
@@ -168,7 +179,7 @@ void App::handleAppEvent(const AppEvent& e) {
             break;
 
         case AppEventType::StartLogging:
-            HAL::bluetooth().setMode(E_Type_BT_Mode::idle);
+            HAL::inst().bluetooth().setMode(E_Type_BT_Mode::idle);
             state = AppState::LOGGING;
             break;
 
@@ -177,15 +188,15 @@ void App::handleAppEvent(const AppEvent& e) {
             break;
 
         case AppEventType::ConnectBluetooth:
-            HAL::bluetooth().createDevice(std::get<BluetoothDevice>(e.payload));
+            HAL::inst().bluetooth().createDevice(std::get<BluetoothDevice>(e.payload));
             break;
 
         case AppEventType::DisconnectBluetooth:
-            HAL::bluetooth().disconnectDevice(std::get<BluetoothDevice>(e.payload));
+            HAL::inst().bluetooth().disconnectDevice(std::get<BluetoothDevice>(e.payload));
             break;
 
         case AppEventType::ScanBluetooth:
-            HAL::bluetooth().saveDevices();
+            HAL::inst().bluetooth().saveDevices();
             state = AppState::IDLE;
             break;
 
@@ -194,7 +205,7 @@ void App::handleAppEvent(const AppEvent& e) {
             break;
 
         case AppEventType::Sleep:
-            HAL::sleep();
+            HAL::inst().sleep();
         default:
             break;
     }
@@ -237,9 +248,7 @@ void App::loadBiometrics() {
 
         AppData a;
         uint32_t unix = jsonBuffer["birthday"];
-        Serial.print("unix date is: "); Serial.println(unix);
         DateTime bd(unix);
-        Serial.print("dateTime date is: "); Serial.println(bd.timestamp());
         a.birthday = bd;
         a.mass = jsonBuffer["mass"];
         a.caloricProfile = fromString(jsonBuffer["caloricProfile"]);

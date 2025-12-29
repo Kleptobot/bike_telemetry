@@ -1,4 +1,8 @@
 #include "LC76G.hpp"
+#include <numeric>
+#include <functional>
+#include <string.h>
+#include <cstring>
 
 LC76G::LC76G() 
   : _state(STATE_IDLE),
@@ -17,7 +21,53 @@ bool LC76G::begin(TwoWire* wire) {
   return true;
 }
 
-LC76G::State LC76G::update() {
+void LC76G::pollResponseTimeouts()
+{
+  uint32_t now = millis();
+
+  for (auto it = _responses.begin();it != _responses.end(); ) {
+    if (!it->completed && (now - it->sendTimeMs) > it->timeoutMs) {
+      // handleCommandTimeout(it->responsePrefix);
+      it = _responses.erase(it);
+    }
+    else if (it->completed) {
+      it = _responses.erase(it);
+    }
+    else {
+      ++it;
+    }
+  }
+}
+
+void LC76G::processSentence(Sentence s) {
+  Serial.write(s.data,s.length);
+  for (auto it = _responses.begin(); it != _responses.end(); ++it) {
+    if (std::strncmp(s.data, it->responsePrefix, std::strlen(it->responsePrefix)) == 0) {
+      // Fire callback
+      it->callback(s.data, s.length, it->userContext);
+
+      // Remove expectation
+      _responses.erase(it);
+      return;
+    }
+  }
+
+  // Not a response → normal telemetry handling
+  for (uint16_t i = 0; i < s.length; ++i) {
+    _gps.encode(s.data[i]);
+  }
+}
+
+void LC76G::update() {
+  stateMachine();
+
+  if(!_sentences.empty()){
+    processSentence(_sentences.front());
+    _sentences.pop();
+  }
+}
+
+LC76G::State LC76G::stateMachine() {
   uint16_t reg;
 
   switch (_state) {
@@ -30,13 +80,13 @@ LC76G::State LC76G::update() {
       if (millis() - _lastI2cAction > i2c_DELAY) {
         if(_txQueue.empty()) {
           _mode = MODE_RECEIVE;
-        } else {
-            TxCommand& cmd = _txQueue.front();
-            memset(_txBuffer,0,MAX_BUFFER);
-            memcpy(_txBuffer, cmd.data.data(), cmd.data.size());
-            _txLength = cmd.data.size();
-            _txQueue.pop();
-            _mode = MODE_TRANSMIT;
+        }else{
+          TxCommand& cmd = _txQueue.front();
+          memset(_txBuffer,0,MAX_BUFFER);
+          memcpy(_txBuffer, cmd.data.data(), cmd.data.size());
+          _txLength = cmd.data.size();
+          _txQueue.pop();
+          _mode = MODE_TRANSMIT;
         }
         _state=STATE_STEP1A_SEND;
       }
@@ -72,7 +122,7 @@ LC76G::State LC76G::update() {
             return _state;
           }
           // Limit to max read size
-          _transactionLength = min(length, (uint16_t)MAX_READ_SIZE);
+          _transactionLength = min(length, (uint16_t)MAX_BUFFER);
         } else {
           // MODE_TRANSMIT - check buffer size
           if (_txLength > length) {
@@ -120,26 +170,49 @@ LC76G::State LC76G::update() {
     case STATE_STEP2B_TRANSACT:
       // Step 2b: Read or write data
       if (_mode == MODE_RECEIVE) {
+        memset(_rxBuffer, 0, sizeof(_rxBuffer));
         if (readResponse(_rxBuffer, _transactionLength)) {
-          _state=STATE_COMPLETE_RECEIVE;
+          _state=STATE_PROCESS_RECEIVE;
         } else {
           _state=STATE_ERROR;
         }
       } else {
         if (writeData(_txBuffer, _transactionLength)) {
-          _state=STATE_COMPLETE_TRANSMIT;
+          if (_transactionLength>0)_state=STATE_COMPLETE_TRANSMIT;
+          else _state=STATE_COMPLETE_RECEIVE;
         } else {
           _state=STATE_ERROR;
         }
       }
       break;
     
+    case STATE_PROCESS_RECEIVE:
+      _CR = false;
+      for(int i=0; i<_transactionLength;i++){
+        if (_rxBuffer[i] == '$') _$found = true;                // check for '$'
+        if(_$found) _NMEAbuffer[_NMEAlength++] = _rxBuffer[i];  // push char to assembly buffer (only if '$' has been seen)
+        if(_rxBuffer[i] == '\n') {                              // LF found
+          if (_CR) {
+            addSentence();                                      // add sentence to queue
+          } else {
+            _CR = false;                                        // CR not found
+          }
+        };  
+        if(_rxBuffer[i] == '\r') _CR = true;                    // CR found
+        else _CR = false;                                       // CR not found
+      }
+      
+      _state=STATE_COMPLETE_RECEIVE;
+      break;
+    
     case STATE_COMPLETE_RECEIVE:
-      _state=STATE_IDLE;
+      if (millis() - _stateEntry > i2c_DELAY)
+        _state=STATE_IDLE;
       break;
 
     case STATE_COMPLETE_TRANSMIT:
-      _state=STATE_IDLE;
+      if (millis() - _stateEntry > i2c_DELAY)
+        _state=STATE_IDLE;
       break;
     
     case STATE_ERROR:
@@ -240,4 +313,67 @@ int LC76G::Recovery_I2c() {
         return 3;
     }
     return 0;
+}
+
+/**
+ * Calculates the 8-bit XOR checksum for a byte array.
+ * @param data Pointer to the array of unsigned characters (bytes).
+ * @param length The length of the array.
+ * @return The calculated 8-bit checksum.
+ */
+uint8_t LC76G::calculate_xor_checksum(const uint8_t* data, size_t length) {
+    uint8_t checksum = 0;
+    for (size_t i = 0; i < length; ++i) {
+        checksum ^= data[i]; // XOR each byte with the running total
+    }
+    return checksum;
+}
+
+/**
+ * formats a command for sending to the LC76G
+ * @param command command to send
+ * @param response expected response
+ * @param cb callback to fire on response
+ * @param userCtx context of the response
+ * @param timeoutMs timeout before stop looking for response to this command
+ */
+void LC76G::sendCommand(const char* command, const char* response, ResponseCallback cb, void* userCtx, uint32_t timeoutMs)
+{
+    char buffer[64];  // allow for body + framing
+    int length;
+
+    // Compute checksum over the command body only (no '$', '*', or CRLF)
+    length = std::snprintf(buffer, sizeof(buffer), "%s", command);
+
+    uint8_t checksum = calculate_xor_checksum(reinterpret_cast<const uint8_t*>(buffer), length);
+
+    // Format full NMEA sentence
+    length = std::snprintf(buffer,sizeof(buffer),"$%s*%02X\r\n",command,checksum);
+
+    queueCommand(reinterpret_cast<const uint8_t*>(buffer), length);
+
+    if (response && cb) {
+      _responses.push_back({
+        response,
+        cb,
+        userCtx,
+        millis(),
+        timeoutMs,
+        false
+      });
+    }
+}
+
+/**
+ * check for well formed sentence in assembly area, then if well formed add to sentence buffer
+ */
+void LC76G::addSentence() {
+  if(_NMEAlength > 3) {
+    if(_NMEAbuffer[0] == '$' && _NMEAbuffer[_NMEAlength-2] == '\r' && _NMEAbuffer[_NMEAlength-1] == '\n') { //check sentence bounds
+      _sentences.emplace(_NMEAbuffer, _NMEAlength); // push sentence to queue
+      memset(_NMEAbuffer, 0, sizeof(_NMEAbuffer));  // clear assembly buffer
+      _$found = false;                              // reset if $ found
+      _NMEAlength = 0;
+    }
+  }
 }

@@ -13,5 +13,6 @@ struct dps_data {
     float f32_Alt;
     float f32_DSP_Pa;
     float f32_DSP_Temp;
+    bool dpsValid;
     float f32_RTC_Temp;
 };

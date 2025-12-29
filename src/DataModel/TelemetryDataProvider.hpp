@@ -157,7 +157,6 @@ class TelemetryDataProvider {
 public:
     const Telemetry& get() const { return _data; }
     uint32_t version() const { return _version; }
-    bool locationValid() const { return _data.validLocation; }
 
     void update(const Telemetry& newData) {
         _data = newData;

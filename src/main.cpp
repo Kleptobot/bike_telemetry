@@ -7,7 +7,7 @@ bool started = false;
 
 void setup() {
     //run the bare minimum init, GPIO and RTC
-    HAL::init_low();
+    HAL::inst().init_low();
 }
 
 uint32_t last = millis();
@@ -18,14 +18,14 @@ void loop() {
         delay(500);
         
         Serial.begin(115200);
-        HAL::init();
-        App::instance().begin(HAL::SD());
+        HAL::inst().init();
+        App::instance().begin(HAL::inst().SD());
         started = true;
         Serial.println("App started");
     }
 
     //update the HAL and App
-    HAL::update();
+    HAL::inst().update();
     App::instance().update();
 
     //read the state of the gps enable pin, if its low then sleep

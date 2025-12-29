@@ -77,7 +77,9 @@ bool SensorSystem::update(bool i2cBusy) {
             float P_Pb = pow(dps_dat.f32_DSP_Pa/101325,-0.1902663539);
             float Lb = 0.0065;
             dps_dat.f32_Alt = (Tb*P_Pb-Tb)/(Lb*P_Pb);
+            _dpsValid = true;
         }
+        dps_dat.dpsValid = _dpsValid;
         update = true;
         lastDSPTime = millis();    
     } else if ((millis() - lastIMUTime > IMU_Read_Period) && !i2cBusy) {

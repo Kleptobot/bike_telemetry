@@ -33,11 +33,10 @@ class MainScreen : public UIScreen {
         }
 
         void update(float dt) override {
-            //display if gps has a vlaid location
-            gpsIcon.setVisible(model.telemetry().locationValid());
-
             //update numeric displays
             const auto& t = model.telemetry().get();
+            //display if gps has a vlaid location
+            gpsIcon.setVisible(t.validLocation);
 
             for (auto& disp:dataDisplays) {
                 disp.update(t);

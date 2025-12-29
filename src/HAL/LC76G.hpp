@@ -5,10 +5,17 @@
 #include <Wire.h>
 #include <queue>
 #include <vector>
+#include <TinyGPSPlus.h>
+
+static const uint8_t MAX_NMEA_LEN = 255;
 
 class LC76G
 {
   public:
+    using ResponseCallback = void (*)(const char* sentence,
+                                  uint16_t length,
+                                  void* userContext);
+
     // Unified state machine
     enum State {
       STATE_IDLE,
@@ -19,9 +26,31 @@ class LC76G
       STATE_STEP2A_SEND,
       STATE_STEP2A_DELAY,
       STATE_STEP2B_TRANSACT,
+      STATE_PROCESS_RECEIVE,
       STATE_COMPLETE_RECEIVE,
       STATE_COMPLETE_TRANSMIT,
       STATE_ERROR
+    };
+
+    struct Sentence {
+      char data[MAX_NMEA_LEN];
+      uint16_t length;
+
+      Sentence(){}
+      Sentence(uint8_t* buff, uint8_t len) {
+        memcpy(data, buff, len);
+        length = len;
+      }
+
+    };
+
+    struct PendingResponse {
+      const char* responsePrefix;   // e.g. "$PMTK001"
+      ResponseCallback callback;
+      void* userContext;
+      uint32_t sendTimeMs;
+      uint32_t timeoutMs;
+      bool completed;
     };
 
     // Constructor
@@ -30,9 +59,12 @@ class LC76G
     // Initialize the GPS module
     bool begin(TwoWire* wire = &Wire);
     
-    // Non-blocking update - call frequently in loop()
-    State update();
-    
+    // Non-blocking update
+    void update();
+
+    // main state machine
+    State stateMachine();
+
     // Get received data (only valid after STATUS_SUCCESS from receive)
     uint16_t getReceivedData(uint8_t* buffer, uint16_t maxLength);
     
@@ -44,6 +76,9 @@ class LC76G
 
     //tell class that another device just performed i2c
     void i2c_wait() {_lastI2cAction = millis();};
+    void sendCommand(const char* command, const char* response, ResponseCallback cb, void* userCtx, uint32_t timeoutMs = 2000);
+
+    TinyGPSPlus& gps() { return _gps; };
 
   private:
     // I2C addresses
@@ -62,15 +97,12 @@ class LC76G
     static const uint16_t REG_RX_BUF = 0x1000;
     
     static const uint16_t MAX_BUFFER = 64;
-    static const uint8_t MAX_READ_SIZE = 64; // nRF52840 I2C buffer limit
 
     static const uint8_t i2c_DELAY = 20;
 
     struct TxCommand {
       std::vector<uint8_t> data;
       TxCommand(const uint8_t* buf, uint16_t len) : data(buf, buf + len) {}
-
-
     };
     
     // Operation mode
@@ -84,30 +116,39 @@ class LC76G
     unsigned long _stateEntry, _lastI2cAction;
     TwoWire* _wire;
     
+    TinyGPSPlus _gps;
+    
     // Buffers
     uint8_t _rxBuffer[MAX_BUFFER];
     uint16_t _rxLength;
     uint8_t _txBuffer[MAX_BUFFER];
+    uint8_t _NMEAbuffer[MAX_NMEA_LEN];
+    uint16_t _NMEAlength;
     uint16_t _txLength;
     std::queue<TxCommand> _txQueue;
+    std::queue<Sentence> _sentences;
+    std::vector<PendingResponse> _responses;
     
     uint8_t _lengthBytes[4];
     uint8_t _cmdBuffer[CMD_LENGTH];
     uint16_t _transactionLength;
     uint8_t _errorCount = 0;
+
+    bool _CR = false;
+    bool _$found = false;
     
     // Helpers
-    void setState(State newState);
-    void setDelayMs(uint16_t ms);
-    bool isDelayComplete();
     bool i2cWrite(uint8_t addr, const uint8_t* data, uint16_t length);
     bool i2cRead(uint8_t addr, uint8_t* data, uint16_t length);
     bool sendReadRequest(uint16_t reg, uint16_t length);
     bool sendWriteRequest(uint16_t reg, uint16_t length);
     bool readResponse(uint8_t* buffer, uint16_t length);
     bool writeData(const uint8_t* buffer, uint16_t length);
+    uint8_t calculate_xor_checksum(const uint8_t* data, size_t length);
+    void addSentence();
     int Recovery_I2c();
-
+    void pollResponseTimeouts();
+    void processSentence(Sentence s);
 };
 
 #endif

@@ -12,44 +12,51 @@
 
 class HAL {
   public:
-    static void init_low();
-    static void init();
-    static void update();
-    static physIO inputs() { return inputSystem.state(); };
-    static IStorage* SD() { return &storageSystem; }
-    static BluetoothSystem& bluetooth() { return bluetoothSystem; }
+    static HAL& inst() {
+        static HAL instance;
+        return instance;
+    }
+
+    void init_low();
+    void init();
+    void update();
+    physIO inputs() { return inputSystem.state(); };
+    IStorage* SD() { return &storageSystem; }
+    BluetoothSystem& bluetooth() { return bluetoothSystem; }
    
-    static void displayGPSInfo();
-    static void sleep();
+    void displayGPSInfo();
+    void sleep();
+    void setRCM(int mode);
+    void getNMEArates();
 
     using TelemetryCallback = std::function<void(imu_data imu, dps_data dps, float speed, float cadence, float temp, float alt, float bpm, float pow, TinyGPSLocation loc, DateTime now)>;
 
-    static void onTelemetry(TelemetryCallback cb) { telemetryCallback = cb; }
+    void onTelemetry(TelemetryCallback cb) { telemetryCallback = cb; }
 
-    static void setTime(DateTime date) { sensorSystem.setTime(date); }
+    void setTime(DateTime date) { sensorSystem.setTime(date); }
 
   private:
+    HAL() {}
+
     //internal HAL systems
-    static LC76G _LC76G;
-    static TinyGPSPlus _gps;
-    static InputSystem inputSystem;
-    static SensorSystem sensorSystem;
-    static BluetoothSystem bluetoothSystem;
-    static SDCardSystem storageSystem;
+    LC76G _LC76G;
+    InputSystem inputSystem;
+    SensorSystem sensorSystem;
+    BluetoothSystem bluetoothSystem;
+    SDCardSystem storageSystem;
 
     //callbacks used to transmit data to the App
-    static TelemetryCallback telemetryCallback;
+    TelemetryCallback telemetryCallback;
     // static BluetoothCallback bluetoothCallback;
 
     // private memeber variables
-    static float f32_kph, f32_cadence, f32_temp, f32_alt, f32_bpm, f32_pow;
-    static float f32_GPS_Alt;
-    static uint8_t _rxBuffer[1024];
-    static uint32_t _resetGPSTime, _resetDispTime;
-    static LC76G::State lc76g_state_prev;
-    static bool _sleep;
+    float f32_kph, f32_cadence, f32_temp, f32_alt, f32_bpm, f32_pow;
+    uint8_t _rxBuffer[1024];
+    uint32_t _resetGPSTime, _resetDispTime;
+    bool _sleep;
 
     //private methods
-    static void resetGPS();
-    static void resetDisplay();
+    void resetGPS();
+    void resetDisplay();
+    static void onSleep(const char* sentence, uint16_t length, void* context);
 };

@@ -49,8 +49,7 @@ public:
 
 private:
     App() : model(), ui(*this) {}
-
-private:
+    
     std::queue<AppEvent> appEvents;
     IStorage* _storage = nullptr;
     TCXLogger* logger = nullptr;
@@ -59,6 +58,7 @@ private:
     uint32_t _lastSeconds;
 
     bool _gpsEnableState = true;
+    bool validLoc_prev = false;
 
     uint8_t lastSecond;
 
