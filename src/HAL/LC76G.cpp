@@ -1,6 +1,5 @@
 #include "LC76G.hpp"
 #include <numeric>
-#include <functional>
 #include <string.h>
 #include <cstring>
 
@@ -21,45 +20,52 @@ bool LC76G::begin(TwoWire* wire) {
   return true;
 }
 
-void LC76G::pollResponseTimeouts()
-{
+void LC76G::pollResponseTimeouts() {
   uint32_t now = millis();
 
   for (auto it = _responses.begin();it != _responses.end(); ) {
-    if (!it->completed && (now - it->sendTimeMs) > it->timeoutMs) {
-      // handleCommandTimeout(it->responsePrefix);
+    if ((now - it->sendTimeMs) > it->timeoutMs) {
+      Serial.println("timeout");
+      if(it->callback)
+        it->callback(0, nullptr, it->userContext);        // call the callback but with no 
       it = _responses.erase(it);
-    }
-    else if (it->completed) {
-      it = _responses.erase(it);
-    }
-    else {
+    } else {
       ++it;
     }
   }
 }
 
 void LC76G::processSentence(Sentence s) {
-  Serial.write(s.data,s.length);
-  for (auto it = _responses.begin(); it != _responses.end(); ++it) {
-    if (std::strncmp(s.data, it->responsePrefix, std::strlen(it->responsePrefix)) == 0) {
-      // Fire callback
-      it->callback(s.data, s.length, it->userContext);
+    Serial.write(s.data,s.length);
 
-      // Remove expectation
-      _responses.erase(it);
-      return;
+    for (auto it = _responses.begin(); it != _responses.end(); ++it) {
+        uint16_t index = getCommand(it->commandId);
+
+        if (std::strncmp(s.data, COMMANDS[index].response, std::strlen(COMMANDS[index].response)) == 0) {
+            //decode the response
+            uint8_t buffer[5];
+            int numArgs;
+            if(COMMANDS[index].decode(s, numArgs, buffer)) {
+                // Fire callback
+                it->callback(numArgs, buffer, it->userContext);
+            }
+      
+            // Remove expectation
+            _responses.erase(it);
+            return;
+        }
     }
-  }
 
-  // Not a response → normal telemetry handling
-  for (uint16_t i = 0; i < s.length; ++i) {
-    _gps.encode(s.data[i]);
-  }
+    // Not a response → normal telemetry handling
+    for (uint16_t i = 0; i < s.length; ++i) {
+        _gps.encode(s.data[i]);
+    }
 }
 
 void LC76G::update() {
   stateMachine();
+
+  pollResponseTimeouts();
 
   if(!_sentences.empty()){
     processSentence(_sentences.front());
@@ -84,6 +90,7 @@ LC76G::State LC76G::stateMachine() {
           TxCommand& cmd = _txQueue.front();
           memset(_txBuffer,0,MAX_BUFFER);
           memcpy(_txBuffer, cmd.data.data(), cmd.data.size());
+          Serial.write(_txBuffer,cmd.data.size());
           _txLength = cmd.data.size();
           _txQueue.pop();
           _mode = MODE_TRANSMIT;
@@ -331,41 +338,41 @@ uint8_t LC76G::calculate_xor_checksum(const uint8_t* data, size_t length) {
 
 /**
  * formats a command for sending to the LC76G
- * @param command command to send
- * @param response expected response
+ * if present queues an expected response
+ * @param cmdId command to send
  * @param cb callback to fire on response
  * @param userCtx context of the response
- * @param timeoutMs timeout before stop looking for response to this command
+ * @param payload payload to send with the cmd
  */
-void LC76G::sendCommand(const char* command, const char* response, ResponseCallback cb, void* userCtx, uint32_t timeoutMs)
-{
+void LC76G::sendCommand(CmdId cmdId, ResponseCallback cb = nullptr, void* userCtx = nullptr, const void* payload = nullptr) {
     char buffer[64];  // allow for body + framing
-    int length;
+    int length = 0;
+
+    uint16_t index = getCommand(cmdId);
+
+    //call this command's build function
+    length = COMMANDS[index].build(buffer,sizeof(buffer),COMMANDS[index].cmd,payload);
 
     // Compute checksum over the command body only (no '$', '*', or CRLF)
-    length = std::snprintf(buffer, sizeof(buffer), "%s", command);
-
     uint8_t checksum = calculate_xor_checksum(reinterpret_cast<const uint8_t*>(buffer), length);
 
     // Format full NMEA sentence
-    length = std::snprintf(buffer,sizeof(buffer),"$%s*%02X\r\n",command,checksum);
+    char buffer2[64];  // allow for body + framing
+    length = sprintf(buffer2, "$%s*%02X\r\n", buffer, checksum);
 
-    queueCommand(reinterpret_cast<const uint8_t*>(buffer), length);
+    queueCommand(reinterpret_cast<const uint8_t*>(buffer2), length);
 
-    if (response && cb) {
-      _responses.push_back({
-        response,
-        cb,
-        userCtx,
-        millis(),
-        timeoutMs,
-        false
-      });
-    }
+    _responses.push_back({
+      cmdId,
+      cb,
+      userCtx,
+      millis(),
+      COMMANDS[index].timeoutMs
+    });
 }
 
 /**
- * check for well formed sentence in assembly area, then if well formed add to sentence buffer
+ * check for well formed sentence in assembly area, iff well formed add to sentence buffer
  */
 void LC76G::addSentence() {
   if(_NMEAlength > 3) {
@@ -373,7 +380,7 @@ void LC76G::addSentence() {
       _sentences.emplace(_NMEAbuffer, _NMEAlength); // push sentence to queue
       memset(_NMEAbuffer, 0, sizeof(_NMEAbuffer));  // clear assembly buffer
       _$found = false;                              // reset if $ found
-      _NMEAlength = 0;
+      _NMEAlength = 0;                              // reset sentence length
     }
   }
 }
