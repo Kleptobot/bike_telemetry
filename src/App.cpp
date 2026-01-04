@@ -60,13 +60,7 @@ void App::update() {
     _last_millis = _millis;
 
     if (tel.validLocation && ! validLoc_prev){
-        // HAL::setRCM(-1);
-        // HAL::sendPAIRCommand("PAIR160,1");
-        // HAL::sendPAIRCommand("PQTMCFGMSGRATE,W,RMC,1","$PQTMCFGMSGRATE,OK");
-        // HAL::sendPAIRCommand("PQTMCFGMSGRATE,R,RMC","$PQTMCFGMSGRATE,OK,RMC");
-        // HAL::sendPAIRCommand("PQTMCFGMSGRATE,W,VTG,1");
-        // HAL::sendPAIRCommand("PAIR080,1");
-        HAL::inst().getNMEArates();
+       HAL::inst().setNMEARate();
     }
     validLoc_prev = tel.validLocation;
 
@@ -74,6 +68,7 @@ void App::update() {
         case AppState::BOOT:
             Serial.println("Loading data from filesystem.");
             HAL::inst().bluetooth().loadDevices();
+            HAL::inst().resetGPS();
             loadBiometrics();
             state = AppState::IDLE;
             break;
@@ -206,6 +201,15 @@ void App::handleAppEvent(const AppEvent& e) {
 
         case AppEventType::Sleep:
             HAL::inst().sleep();
+            break;
+
+        case AppEventType::RestoreDefaultsGPS:
+            HAL::inst().gpsRestoreDefaults();
+            break;
+
+        case AppEventType::ResetGPS:
+            HAL::inst().resetGPS();
+            break;
         default:
             break;
     }

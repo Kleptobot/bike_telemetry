@@ -18,6 +18,8 @@ enum class AppEventType {
     DisconnectBluetooth,
     DiscoverBluetooth,
     ScanBluetooth,
+    RestoreDefaultsGPS,
+    ResetGPS,
     Sleep
 };
 

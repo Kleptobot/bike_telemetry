@@ -6,6 +6,7 @@
 #include <queue>
 #include <vector>
 #include <TinyGPSPlus.h>
+#include "HAL/StorageInterface.hpp"
 
 static const uint8_t MAX_NMEA_LEN = 255;
 
@@ -34,6 +35,18 @@ class LC76G
         return snprintf(buf, size, "%s,%u", cmd, p->a);
     }
 
+    static int build_1char_1u8(char* buf, uint16_t size, const char* cmd, const void* payload) {
+        const Payload1Ch1U8* p = static_cast<const Payload1Ch1U8*>(payload);
+
+        return snprintf(buf, size, "%s,%s,%u", cmd, p->a, p->b);
+    }
+
+    static int build_1char(char* buf, uint16_t size, const char* cmd, const void* payload) {
+        const Payload1Ch* p = static_cast<const Payload1Ch*>(payload);
+
+        return snprintf(buf, size, "%s,%s", cmd, p->a);
+    }
+
     static int build_2u8(char* buf, uint16_t size, const char* cmd, const void* payload) {
         const Payload2U8* p = static_cast<const Payload2U8*>(payload);
 
@@ -57,8 +70,25 @@ class LC76G
 	    return numArgs==2;
     }
 
+    static bool decode_1char_1u8(Sentence response, int& numArgs, void* payload) {
+      Payload1Ch1U8* p = (Payload1Ch1U8*)payload;
+      numArgs = sscanf(response.data,"%*[^,],%s,%hu*%*X",&p->a,&p->b);
+	    return numArgs==2;
+    }
+
 
     public:
+      LC76G(IStorage& storage) 
+      : _state(STATE_IDLE),
+        _state_prev(STATE_IDLE),
+        _mode(MODE_RECEIVE),
+        _stateEntry(millis()),
+        _lastI2cAction(millis()),
+        _wire(nullptr),
+        _storage(storage),
+        _rxLength(0),
+        _transactionLength(0) {}
+
         //enum of all avaialble commands
         enum CmdId : int16_t {
             PAIR_LOW_POWER_ENTRY_RTC_MODE,
@@ -70,7 +100,12 @@ class LC76G
             SET_STATIC_THRESHOLD,
             RESTORE_DEFAULT_SETTING,
             GET_GLP_STATUS,
-            GLP_ENABLE
+            GLP_ENABLE,
+            GNSS_SUBSYS_HOT_START,
+            GNSS_SUBSYS_WARM_START,
+            GNSS_SUBSYS_COLD_START,
+            SET_NMEA_RATE,
+            GET_NMEA_RATE
         };
 
         struct CommandDef {
@@ -103,7 +138,13 @@ class LC76G
             {SET_STATIC_THRESHOLD, "PAIR070", &build_1u8, "$PAIR001,070", &decode_none, 90000 },
             {RESTORE_DEFAULT_SETTING, "PAIR514", &build_no_args, nullptr, nullptr, 200 },
             {GET_GLP_STATUS, "PAIR681", &build_no_args, "$PAIR681", &decode_1u8, 90000 },
-            {GLP_ENABLE, "PAIR680", &build_1u8, "PAIR001,680", &decode_none, 90000 }
+            {GLP_ENABLE, "PAIR680", &build_1u8, "PAIR001,680", &decode_none, 90000 },
+            {GNSS_SUBSYS_HOT_START, "PAIR004", &build_no_args, nullptr, nullptr, 200 },
+            {GNSS_SUBSYS_WARM_START, "PAIR005", &build_no_args, nullptr, nullptr, 200 },
+            {GNSS_SUBSYS_COLD_START, "PAIR006", &build_no_args, nullptr, nullptr, 200 },
+            {SET_NMEA_RATE, "PQTMCFGMSGRATE,W", &build_1char_1u8, "$PQTMCFGMSGRATE,OK", nullptr, 10000 },
+            {GET_NMEA_RATE, "PQTMCFGMSGRATE,R", &build_1char, "$PQTMCFGMSGRATE,OK", nullptr, 10000 }
+
         };
 
         using ResponseCallback = void (*)(int numArgs, const void* payload, void* userContext);
@@ -141,8 +182,14 @@ class LC76G
       uint8_t b;
     };
 
-    // Constructor
-    LC76G();
+    struct Payload1Ch1U8 {
+      char a[10];
+      uint8_t b;
+    };
+
+    struct Payload1Ch {
+      char a[10];
+    };
     
     // Initialize the GPS module
     bool begin(TwoWire* wire = &Wire);
@@ -167,6 +214,11 @@ class LC76G
     void sendCommand(CmdId cmdId, ResponseCallback cb, void* userCtx, const void* payload);
 
     TinyGPSPlus& gps() { return _gps; };
+    void closeDataFile() {
+      dataFile.flush();
+      dataFile.close();
+      delay(50);
+    }
 
   private:
     // I2C addresses
@@ -205,6 +257,8 @@ class LC76G
     TwoWire* _wire;
     
     TinyGPSPlus _gps;
+    IStorage& _storage;
+    File32 dataFile;
     
     // Buffers
     uint8_t _rxBuffer[MAX_BUFFER];

@@ -16,19 +16,20 @@ void HAL::init() {
 
     Wire.begin();
     Wire.setClock(100000); // 100kHz
-    _LC76G.begin(&Wire);
     sensorSystem.init();
     bluetoothSystem.init(&storageSystem);
     while (!storageSystem.init()) {
         delay(200);
         Serial.println("retrying...");
     }
+    _LC76G.begin(&Wire);
 
     //reset some systems
-    resetGPS();
     resetDisplay();
 
     inputSystem.setOutput(GPIOB6,true); //turn on the screen backlight
+
+    
 }
 
 void HAL::update() {
@@ -160,28 +161,39 @@ void HAL::displayGPSInfo() {
 }
 
 void HAL::sleep() {
+    Serial.println("sleep");
     if (!_sleep) {
         _sleep = true;
-        _LC76G.sendCommand("PAIR650,0","PMTK001",&HAL::onSleep,this);
+        _LC76G.sendCommand(LC76G::PAIR_LOW_POWER_ENTRY_RTC_MODE,&HAL::onSleep,this,nullptr);
     }
 }
 
-void HAL::setRCM(int mode) {
-    if (-1 <= mode && mode <=1) {
-        char buffer[64];
-        sprintf(buffer, "PAIR432,%d", mode);
-        _LC76G.sendCommand(buffer,"",nullptr,nullptr);
-    } else {
-        return;
-    }
+void HAL::getNMEArates(uint8_t type) {
+    LC76G::Payload1U8 p = {type};
+    _LC76G.sendCommand(LC76G::GET_NMEA_MSG_RATE,&HAL::onPAIRResponse,this,&p);
 }
 
-void HAL::getNMEArates() {
-    _LC76G.sendCommand("PQTMCFGMSGRATE,R,RMC","PQTMCFGMSGRATE,OK,RMC",nullptr,nullptr);
+void HAL::setNMEArates(uint8_t type, uint8_t rate) {
+    LC76G::Payload2U8 p = {type, rate};
+    _LC76G.sendCommand(LC76G::SET_NMEA_MSG_RATE,&HAL::onPAIRResponse,this,&p);
 }
 
-void HAL::onSleep(const char* sentence, uint16_t length, void* context) {
+void HAL::onSleep(int numArgs, const void* payload, void* context) {
     auto* self = static_cast<HAL*>(context);
+    self->_LC76G.closeDataFile();
     self->inputSystem.setOutput(GPIOB3,false);    //turn off the GPS enable supply
     self->inputSystem.setOutput(GPIOB6,false);    //turn off the screen backlight
+}
+
+void HAL::onPAIRResponse(int numArgs, const void* payload, void* context) {
+    auto* self = static_cast<HAL*>(context);
+
+    self->handlePAIRResponse(numArgs, payload);
+}
+
+void HAL::handlePAIRResponse(int numArgs, const void* payload) {
+    uint8_t* byte_array = (uint8_t*)payload;
+    for(int i=0; i<numArgs; i++) {
+        Serial.println(byte_array[i]);
+    }
 }

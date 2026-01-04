@@ -26,8 +26,17 @@ class HAL {
    
     void displayGPSInfo();
     void sleep();
-    void setRCM(int mode);
-    void getNMEArates();
+    void getNMEArates(uint8_t type);
+    void setNMEArates(uint8_t type, uint8_t rate);
+    void gpsRestoreDefaults() { _LC76G.sendCommand(LC76G::RESTORE_DEFAULT_SETTING,nullptr,this,nullptr); }
+    void gpsHotStart() { _LC76G.sendCommand(LC76G::GNSS_SUBSYS_HOT_START,nullptr,this,nullptr); }
+    void gpsWarmStart() { _LC76G.sendCommand(LC76G::GNSS_SUBSYS_WARM_START,nullptr,this,nullptr); }
+    void gpsColdStart() { _LC76G.sendCommand(LC76G::GNSS_SUBSYS_COLD_START,nullptr,this,nullptr); }
+    void setNMEARate() { 
+      LC76G::Payload1Ch1U8 p = {"RMC",1};
+      _LC76G.sendCommand(LC76G::SET_NMEA_RATE, nullptr, this, &p);
+    }
+    void resetGPS();
 
     using TelemetryCallback = std::function<void(imu_data imu, dps_data dps, float speed, float cadence, float temp, float alt, float bpm, float pow, TinyGPSLocation loc, DateTime now)>;
 
@@ -36,14 +45,14 @@ class HAL {
     void setTime(DateTime date) { sensorSystem.setTime(date); }
 
   private:
-    HAL() {}
+    HAL() : _LC76G(storageSystem) {}
 
     //internal HAL systems
-    LC76G _LC76G;
     InputSystem inputSystem;
     SensorSystem sensorSystem;
     BluetoothSystem bluetoothSystem;
     SDCardSystem storageSystem;
+    LC76G _LC76G;
 
     //callbacks used to transmit data to the App
     TelemetryCallback telemetryCallback;
@@ -56,7 +65,8 @@ class HAL {
     bool _sleep;
 
     //private methods
-    void resetGPS();
     void resetDisplay();
-    static void onSleep(const char* sentence, uint16_t length, void* context);
+    static void onSleep(int numArgs, const void* payload, void* context);
+    static void onPAIRResponse(int numArgs, const void* payload, void* context);
+    void handlePAIRResponse(int numArgs, const void* payload);
 };

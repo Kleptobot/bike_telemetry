@@ -3,20 +3,12 @@
 #include <string.h>
 #include <cstring>
 
-LC76G::LC76G() 
-  : _state(STATE_IDLE),
-    _state_prev(STATE_IDLE),
-    _mode(MODE_RECEIVE),
-    _stateEntry(millis()),
-    _lastI2cAction(millis()),
-    _wire(nullptr),
-    _rxLength(0),
-    _transactionLength(0) {
-}
-
 bool LC76G::begin(TwoWire* wire) {
   _wire = wire;
   _state = STATE_IDLE;
+  if (_storage.exists("/gpsLog.txt"))
+    _storage.remove("/gpsLog.txt");
+  dataFile = _storage.openFile("/gpsLog.txt", FILE_WRITE);
   return true;
 }
 
@@ -25,9 +17,9 @@ void LC76G::pollResponseTimeouts() {
 
   for (auto it = _responses.begin();it != _responses.end(); ) {
     if ((now - it->sendTimeMs) > it->timeoutMs) {
-      Serial.println("timeout");
       if(it->callback)
-        it->callback(0, nullptr, it->userContext);        // call the callback but with no 
+        it->callback(0, nullptr, it->userContext);        // call the callback but with no payload or args
+
       it = _responses.erase(it);
     } else {
       ++it;
@@ -37,22 +29,24 @@ void LC76G::pollResponseTimeouts() {
 
 void LC76G::processSentence(Sentence s) {
     Serial.write(s.data,s.length);
+    dataFile.write(s.data,s.length);
 
     for (auto it = _responses.begin(); it != _responses.end(); ++it) {
         uint16_t index = getCommand(it->commandId);
-
-        if (std::strncmp(s.data, COMMANDS[index].response, std::strlen(COMMANDS[index].response)) == 0) {
-            //decode the response
-            uint8_t buffer[5];
-            int numArgs;
-            if(COMMANDS[index].decode(s, numArgs, buffer)) {
-                // Fire callback
-                it->callback(numArgs, buffer, it->userContext);
-            }
-      
-            // Remove expectation
-            _responses.erase(it);
-            return;
+        if(COMMANDS[index].response) {  // <- check that response is valid before comparing it
+          if (std::strncmp(s.data, COMMANDS[index].response, std::strlen(COMMANDS[index].response)) == 0) {
+              //decode the response
+              uint8_t buffer[5];
+              int numArgs;
+              if(COMMANDS[index].decode(s, numArgs, buffer)) {
+                  // Fire callback
+                  it->callback(numArgs, buffer, it->userContext);
+              }
+        
+              // Remove expectation
+              _responses.erase(it);
+              return;
+          }
         }
     }
 
@@ -90,7 +84,7 @@ LC76G::State LC76G::stateMachine() {
           TxCommand& cmd = _txQueue.front();
           memset(_txBuffer,0,MAX_BUFFER);
           memcpy(_txBuffer, cmd.data.data(), cmd.data.size());
-          Serial.write(_txBuffer,cmd.data.size());
+          Serial.write(cmd.data.data(),cmd.data.size());
           _txLength = cmd.data.size();
           _txQueue.pop();
           _mode = MODE_TRANSMIT;
@@ -319,6 +313,9 @@ int LC76G::Recovery_I2c() {
     if (i2cWrite(ADDR_WRITE, &dummy_data, 1)) {
         return 3;
     }
+
+    _lastI2cAction = millis();
+
     return 0;
 }
 
