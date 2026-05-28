@@ -29,9 +29,9 @@ public:
 
 private:
     static const uint16_t BAT_Read_Period = 30001;
-    static const uint16_t IMU_Read_Period = 73;
-    static const uint16_t DPS_Read_Period = 101;
-    static const uint16_t RTC_Read_Period = 97;
+    static const uint16_t IMU_Read_Period = 900;
+    static const uint16_t DPS_Read_Period = 1000;
+    static const uint16_t RTC_Read_Period = 500;
 
     LSM6DS3* _myIMU;
     RTC_DS3231 _rtc;
@@ -40,6 +40,7 @@ private:
     uint32_t lastDSPTime = 0, lastIMUTime = 0, lastRTCTime = 0, lastBATTime = 0;
     imu_data _imu;
     dps_data dps_dat;
+    bool _dpsValid = false;
 
     float _f32_RTC_Temp;
     DateTime _now, _newDate;

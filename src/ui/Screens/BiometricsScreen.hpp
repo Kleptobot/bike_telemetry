@@ -17,7 +17,7 @@ class BiometricsScreen : public UIScreen {
             massLabel(5,32,"Mass:"),
             massWidget(110,32, String(0)),
             calorieLabel(5,64,"Calory Calc:"),
-            calorieWidget(110,64, "-"),
+            calorieWidget(calorieLabel.width() + 10,64, "-"),
             backWidget{15,96,"Back",epd_bitmap_left},
             saveWidget{90,96,"Save",epd_bitmap_save} {
                 //register press event callback to send a change screen event

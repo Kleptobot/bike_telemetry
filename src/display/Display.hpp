@@ -29,6 +29,8 @@ namespace Disp {
     void setCursor(int x, int y);
     void setTextColor(uint16_t color);
     void setTextColor(uint16_t color, uint16_t background);
+    int16_t getCursorX();
+    int16_t getCursorY();
 
     void drawText(int x, int y, const String& s, uint16_t color = ST77XX_WHITE);
     void drawTextInverted(int x, int y, const String& s);
@@ -42,5 +44,6 @@ namespace Disp {
     inline void print(const T& data) { canvas.print(data); }
 
     void printFloat(float data, int precision);
+    void printDouble(double value, int precision);
     void getTextBounds(const String text, int16_t x, int16_t y, int16_t* x1, int16_t* y1, uint16_t* w, uint16_t* h);
 }

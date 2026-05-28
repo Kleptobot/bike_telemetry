@@ -20,6 +20,7 @@ enum class AppEventType {
     ScanBluetooth,
     RestoreDefaultsGPS,
     ResetGPS,
+    saveGPSNVRAM,
     Sleep
 };
 

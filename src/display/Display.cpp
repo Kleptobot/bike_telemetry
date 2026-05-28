@@ -119,4 +119,5 @@ namespace Disp {
     }
 
     void printFloat(float data, int precision) {canvas.print(data, precision);};
+    void printDouble(double value, int precision) {canvas.print(value, precision);};
 }

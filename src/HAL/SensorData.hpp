@@ -16,3 +16,9 @@ struct dps_data {
     bool dpsValid;
     float f32_RTC_Temp;
 };
+
+struct location_data {
+    bool valid;
+    double longitude;
+    double latitude;
+};

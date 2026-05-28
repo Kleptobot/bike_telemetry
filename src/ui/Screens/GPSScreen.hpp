@@ -12,7 +12,12 @@ class GPSScreen : public UIScreen {
         UIScreen(model),
         restGPS{5,0,"Reset GPS",epd_bitmap_loop},
         restoreGPSDefaults{5,20,"Restore Defaults",epd_bitmap_gear},
-        backWidget{5,40,"Back",epd_bitmap_left} {
+        RMCrateLabel{5, 40, "RMC rate: "},
+        RMCrate{120, 40, "1"},
+        VTGrateLabel{5, 60, "VTG rate: "},
+        VTGrate{120, 60, "1"},
+        saveNVRAM{5, 80,"Save NVRAM",epd_bitmap_save},
+        backWidget{5, 120,"Back",epd_bitmap_left} {
 
             //attach App events
             restGPS.setOnPress([this] () {
@@ -20,6 +25,9 @@ class GPSScreen : public UIScreen {
             });
             restoreGPSDefaults.setOnPress([this] () {
                 emitAppEvent({AppEventType::RestoreDefaultsGPS});
+            });
+            saveNVRAM.setOnPress([this] () {
+                emitAppEvent({AppEventType::saveGPSNVRAM});
             });
 
             //register press event callback to send a change screen event
@@ -34,34 +42,57 @@ class GPSScreen : public UIScreen {
     void render() override {
         restGPS.render();
         restoreGPSDefaults.render();
+        RMCrateLabel.render();
+        RMCrate.render();
+        VTGrateLabel.render();
+        VTGrate.render();
+        saveNVRAM.render();
         backWidget.render();
     }
 
     void update(float dt) override {
         restGPS.setFocused(_index==0);
         restoreGPSDefaults.setFocused(_index==1);
-        backWidget.setFocused(_index==2);
+        RMCrate.setFocused(_index==2);
+        VTGrate.setFocused(_index==3);
+        saveNVRAM.setFocused(_index==4);
+        backWidget.setFocused(_index==5);
     }
 
     void handleInput(physIO input) override {
-        if (input.Up.press) _index = (_index + 2) % 3;
-        if (input.Down.press) _index = (_index + 1) % 3;
+        if (!anySelected()) {
+            if (input.Up.press) _index = (_index + 5) % 6;
+            if (input.Down.press) _index = (_index + 1) % 6;
+        }
+
+        
 
         restGPS.handleInput(input);
         restoreGPSDefaults.handleInput(input);
+        RMCrate.handleInput(input);
+        VTGrate.handleInput(input);
+        saveNVRAM.handleInput(input);
         backWidget.handleInput(input);
     }
 
     private:
         SelectableTextIconWidget restGPS;
         SelectableTextIconWidget restoreGPSDefaults;
+        SelectableTextWidget RMCrateLabel;
+        SelectableTextWidget RMCrate;
+        SelectableTextWidget VTGrateLabel;
+        SelectableTextWidget VTGrate;
+        SelectableTextIconWidget saveNVRAM;
         SelectableTextIconWidget backWidget;
 
         uint _index = 0;
 
         bool anySelected() {
-            return  restGPS.isSelected() ||
+            return  RMCrate.isSelected() ||
+                    VTGrate.isSelected() ||
+                    restGPS.isSelected() ||
                     restoreGPSDefaults.isSelected() ||
+                    saveNVRAM.isSelected() ||
                     backWidget.isSelected();
         }
 

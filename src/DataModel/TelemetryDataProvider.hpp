@@ -1,5 +1,6 @@
 #pragma once
 #include <Arduino.h>
+#include <variant>
 
 #include "HAL/SensorData.hpp"
 
@@ -12,6 +13,7 @@ enum class TelemetryType : uint8_t {
     Power,
     Distance,
     TotalDist,
+    Location,
     Undefined
 };
 
@@ -29,6 +31,7 @@ struct Telemetry {
     double latitude;        //degrees
     float distance;         //meters
     float totalDistance;    //meters
+    location_data location; //aggregated location data from gps and sensors
 
     Telemetry(){}
     Telemetry(
@@ -58,6 +61,7 @@ struct Telemetry {
         , latitude(latitude_)
         , distance(distance_)
         , totalDistance(distance_)
+        , location({validLocation_, longitude_, latitude_})
     {}
 
     Telemetry& operator=(const Telemetry& _new) {
@@ -78,6 +82,7 @@ struct Telemetry {
         latitude       = _new.latitude;
         distance       = _new.distance;
         totalDistance  += _new.totalDistance;
+        location       = _new.location;
 
         return *this;
     }
@@ -92,7 +97,8 @@ inline TelemetryType& operator++(TelemetryType& t) {
         case TelemetryType::HeartRate : t = TelemetryType::Power; break;
         case TelemetryType::Power : t = TelemetryType::Distance; break;
         case TelemetryType::Distance : t = TelemetryType::TotalDist; break;
-        case TelemetryType::TotalDist : t = TelemetryType::Speed; break;
+        case TelemetryType::TotalDist : t = TelemetryType::Location; break;
+        case TelemetryType::Location : t = TelemetryType::Speed; break;
         default: t = TelemetryType::Undefined;
     }
     return t;
@@ -100,7 +106,7 @@ inline TelemetryType& operator++(TelemetryType& t) {
 
 inline TelemetryType& operator--(TelemetryType& t) {
     switch(t){
-        case TelemetryType::Speed : t = TelemetryType::Distance; break;
+        case TelemetryType::Speed : t = TelemetryType::Location; break;
         case TelemetryType::Cadence : t = TelemetryType::Speed; break;
         case TelemetryType::Temperature : t = TelemetryType::Cadence; break;
         case TelemetryType::Altitude : t = TelemetryType::Temperature; break;
@@ -108,6 +114,7 @@ inline TelemetryType& operator--(TelemetryType& t) {
         case TelemetryType::Power : t = TelemetryType::HeartRate; break;
         case TelemetryType::Distance : t = TelemetryType::Power; break;
         case TelemetryType::TotalDist : t = TelemetryType::Distance; break;
+        case TelemetryType::Location : t = TelemetryType::TotalDist; break;
         default: t = TelemetryType::Undefined; break;
     }
     return t;
@@ -123,6 +130,7 @@ inline const char* toString(const TelemetryType& t) {
         case TelemetryType::Power : return"Power"; break;
         case TelemetryType::Distance : return"Distance"; break;
         case TelemetryType::TotalDist : return"TotalDist"; break;
+        case TelemetryType::Location : return"Location"; break;
         default: return "-"; break;
     }
 }
@@ -136,10 +144,11 @@ inline TelemetryType TelemetryTypefromString(String s) {
     if (s == "Power") return TelemetryType::Power;
     if (s == "Distance") return TelemetryType::Distance;
     if (s == "TotalDist") return TelemetryType::TotalDist;
+    if (s == "Location") return TelemetryType::Location;
     return TelemetryType::Undefined;
 }
 
-inline float GetTelemetryValue(const Telemetry& t, TelemetryType type) {
+inline std::variant<float, location_data> GetTelemetryValue(const Telemetry& t, TelemetryType type) {
     switch (type) {
         case TelemetryType::Speed:        return t.speed;
         case TelemetryType::Cadence:      return t.cadence;
@@ -149,6 +158,7 @@ inline float GetTelemetryValue(const Telemetry& t, TelemetryType type) {
         case TelemetryType::Power:        return t.power;
         case TelemetryType::Distance:     return t.distance;
         case TelemetryType::TotalDist:    return t.totalDistance / 1000.0;  //convert to km
+        case TelemetryType::Location:    return t.location;
         default: return 0.0f;
     }
 }
