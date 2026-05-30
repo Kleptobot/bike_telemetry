@@ -12,6 +12,8 @@ class BigDataWidget : public Widget {
             _type(type) {
             _width = 18*size + 6;
             _height= 8*_size;
+            // ensure type-specific sizing (e.g., Location) is applied
+            setSize(_size);
         }
         
 
@@ -23,23 +25,23 @@ class BigDataWidget : public Widget {
             if (_type == TelemetryType::Undefined) {
                 Disp::fillRect(x,y,_width,_height,ST77XX_BLACK);
                 return;
-            }else if(_type == TelemetryType::Location) {
-                Disp::fillRect(x,y,_width,_height,ST77XX_BLACK);
-                uint16_t coordColor = _locationValue.valid ? ST77XX_GREEN : ST77XX_RED;
-                Disp::setTextColor(coordColor);
+            }
+            Disp::setTextColor(_color);
+            Disp::setTextSize(_size);
+            Disp::setCursor(x, y);
+            if(_type == TelemetryType::Location) {
+                if(!_locationValue.valid) {
+                    Disp::print("No GPS");
+                    return;
+                }
                 Disp::setTextSize(_size/2);
-                Disp::setCursor(x, y);
                 Disp::print("Lat:");
-                Disp::printDouble(_locationValue.latitude, 6);
+                Disp::print(formatLocationValue(_locationValue.latitude));
                 Disp::setCursor(x, y + 8*(_size/2));
                 Disp::print("Lng:");
-                Disp::printDouble(_locationValue.longitude, 6);
+                Disp::print(formatLocationValue(_locationValue.longitude));
                 return;
             }else{
-                Disp::setTextColor(_color);
-                Disp::setTextSize(_size);
-                Disp::setCursor(x, y);
-
                 // Split into integer and decimal parts
                 int intPart = (int)_value;
                 int decPart = (int)((_value - intPart) * 10); // one decimal digit
@@ -69,13 +71,20 @@ class BigDataWidget : public Widget {
 
         void setType(TelemetryType type) {
             _type = type;
+            setSize(_size); // recalculate width/height based on type
             invalidate();
         }
         
         void setSize(uint8_t size) { 
             _size = size;
-            _width = 18*size + 6;
-            _height= 8*_size;
+            if (_type == TelemetryType::Location) {
+                const uint8_t ts = max<uint8_t>(1, _size / 2);
+                _width = (4 + 9) * 6 * ts + 8; // "Lat:" + value, plus padding
+                _height = 16 * ts + 4;        // two lines of half-size text plus padding
+            } else {
+                _width = 18 * size + 6;
+                _height = 8 * _size;
+            }
         }
 
         void setColor(uint16_t color) { _color = color; }
@@ -90,6 +99,7 @@ class BigDataWidget : public Widget {
                 }
             } else {
                 _locationValue = std::get<location_data>(newVal);
+                _color = _locationValue.valid ? ST77XX_GREEN : ST77XX_RED;
             }
             invalidate();
         }
@@ -97,6 +107,26 @@ class BigDataWidget : public Widget {
         void setUnits(String units) { _units = units; }
 
     private:
+        String formatLocationValue(double value) const {
+            int maxLen = 9;
+            int integerDigits = 1;
+            double absVal = value < 0 ? -value : value;
+            if (absVal >= 100) integerDigits = 3;
+            else if (absVal >= 10) integerDigits = 2;
+            int signChars = value < 0 ? 1 : 0;
+            int decimals = maxLen - integerDigits - signChars - 1; // 1 for dot
+            if (decimals < 0) decimals = 0;
+            String formatted = String(value, decimals);
+            while (formatted.length() > maxLen && decimals > 0) {
+                decimals--;
+                formatted = String(value, decimals);
+            }
+            if (formatted.length() > maxLen) {
+                formatted = formatted.substring(0, maxLen);
+            }
+            return formatted;
+        }
+
         uint8_t _size;
         TelemetryType _type;
         float _value;

@@ -25,7 +25,19 @@ namespace Disp {
     }
 
     void markDirty(int16_t x, int16_t y, int16_t w, int16_t h) {
-        dirtyRects.push_back({x, y, w, h});
+        // Validate and clamp rectangle to screen bounds to avoid corrupt/negative sizes
+        if (w <= 0 || h <= 0) return;
+        int16_t nx = x;
+        int16_t ny = y;
+        if (nx < 0) nx = 0;
+        if (ny < 0) ny = 0;
+        if (nx >= SCREEN_WIDTH || ny >= SCREEN_HEIGHT) return;
+        int16_t nw = w;
+        int16_t nh = h;
+        if (nx + nw > SCREEN_WIDTH) nw = SCREEN_WIDTH - nx;
+        if (ny + nh > SCREEN_HEIGHT) nh = SCREEN_HEIGHT - ny;
+        if (nw <= 0 || nh <= 0) return;
+        dirtyRects.push_back({nx, ny, nw, nh});
     }
 
     void resetDirty() {
@@ -33,24 +45,26 @@ namespace Disp {
     }
 
     void flush() {
-        for (uint8_t i = 0; i < dirtyRects.size(); i++) {
+        for (size_t i = 0; i < dirtyRects.size(); i++) {
             auto& r = dirtyRects[i];
 
-            int16_t x = max(0,r.x);
-            int16_t y = max(0,r.y);
-            int16_t w = min(r.w, SCREEN_WIDTH-x);
-            int16_t h = min(r.h, SCREEN_HEIGHT-y);
+            int16_t x = max<int16_t>(0, r.x);
+            int16_t y = max<int16_t>(0, r.y);
+            int16_t w = min<int16_t>(r.w, SCREEN_WIDTH - x);
+            int16_t h = min<int16_t>(r.h, SCREEN_HEIGHT - y);
+
+            if (w <= 0 || h <= 0) continue;
 
             Display.startWrite();
             Display.setAddrWindow(x, y, w, h);
 
             uint16_t* buf = canvas.getBuffer();
-            buf += (r.y * 240) + r.x;
+            buf += (y * 240) + x;
 
-            uint32_t rows = r.h;
-            uint32_t cols = r.w;
+            uint32_t rows = (uint32_t)h;
+            uint32_t cols = (uint32_t)w;
 
-            for (uint32_t y = 0; y < rows; y++) {
+            for (uint32_t row = 0; row < rows; row++) {
                 Display.writePixels(buf, cols);
                 buf += 240; // skip to next full row
             }
