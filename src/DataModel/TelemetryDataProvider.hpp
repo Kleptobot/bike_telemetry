@@ -31,7 +31,6 @@ struct Telemetry {
     double latitude;        //degrees
     float distance;         //meters
     float totalDistance;    //meters
-    location_data location; //aggregated location data from gps and sensors
 
     Telemetry(){}
     Telemetry(
@@ -61,7 +60,6 @@ struct Telemetry {
         , latitude(latitude_)
         , distance(distance_)
         , totalDistance(distance_)
-        , location({validLocation_, longitude_, latitude_})
     {}
 
     Telemetry& operator=(const Telemetry& _new) {
@@ -82,7 +80,6 @@ struct Telemetry {
         latitude       = _new.latitude;
         distance       = _new.distance;
         totalDistance  += _new.totalDistance;
-        location       = _new.location;
 
         return *this;
     }
@@ -158,7 +155,7 @@ inline std::variant<float, location_data> GetTelemetryValue(const Telemetry& t, 
         case TelemetryType::Power:        return t.power;
         case TelemetryType::Distance:     return t.distance;
         case TelemetryType::TotalDist:    return t.totalDistance / 1000.0;  //convert to km
-        case TelemetryType::Location:    return t.location;
+        case TelemetryType::Location:    return (location_data){t.validLocation, t.longitude, t.latitude};
         default: return 0.0f;
     }
 }

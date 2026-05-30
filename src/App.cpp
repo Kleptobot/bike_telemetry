@@ -147,7 +147,18 @@ void App::updateTelemetry(imu_data imu, dps_data dps, float speed, float cadence
         _lastLocation = loc;
         _lastSeconds = now.secondstime();
     }
-    model.telemetry().update({imu,dps,speed,cadence,temp,alt,bpm,pow,loc.isValid(),loc.lng(),loc.lat(), distance});
+    model.telemetry().update({  imu,
+                                dps,
+                                speed,
+                                cadence,
+                                temp,
+                                alt,
+                                bpm,
+                                pow,
+                                loc.isValid(),
+                                loc.lng(),
+                                loc.lat(),
+                                distance});
     model.time().update(now);
 }
 
