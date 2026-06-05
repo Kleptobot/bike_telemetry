@@ -68,7 +68,7 @@ private:
     };
     static const uint16_t MCP_Period = 101;
     Adafruit_MCP23X17 _mcp;
-    bool bUp, bDown, bLeft, bRight, bSelect, bSD_Det;
+    bool bUp = false, bDown = false, bLeft = false, bRight = false, bSelect = false, bSD_Det = false;
     uint32_t lastMCPTime = 0;
     button* buttons[static_cast<size_t>(ButtonID::COUNT)];
     std::queue<pinCMD> pinCmds;

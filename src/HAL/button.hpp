@@ -7,7 +7,7 @@
 class button
 {
   private:
-    bool* _state;
+    bool& _state;
     bool _state_prev;
     bool _RE, _FE;
     bool _long, _short;
@@ -19,15 +19,21 @@ class button
     static const uint16_t _nShortPressTime = 50;
 
   public:
-    button(bool* state)
-    {
-      _state = state;
-    };
+    button(bool& state) :
+        _state(state),
+        _state_prev(state),
+        _RE(false),
+        _FE(false),
+        _long(false),
+        _short(false),
+        _heldTime(0),
+        _releaseTime(0),
+        _long_RE(false) {}
 
     void process();
 
     const buttonState state() const {
-      return {*_state,_RE,_FE,_short,_long_RE,_heldTime,_releaseTime};
+      return {_state,_RE,_FE,_short,_long_RE,_heldTime,_releaseTime};
     }
 };
 
