@@ -1,5 +1,6 @@
 #pragma once
 #include <Arduino.h>
+#include "DebugConfig.hpp"
 #include "UI/Widgets/Widget.hpp"
 #include "display/Display.hpp"
 
@@ -37,6 +38,9 @@ public:
         
     void invalidate() override {
         Disp::markDirty(x-2, y-2, width()+4, height()+4);
+        if (ENABLE_INVALIDATE_DEBUG) {
+            Serial.println("[Widget] Invalidated area: (" + String(x) + "," + String(y) + "," + String(width()) + "," + String(height()) + ")");
+        }
     }
 
     void render() override;

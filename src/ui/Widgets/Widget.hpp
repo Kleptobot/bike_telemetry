@@ -2,6 +2,7 @@
 #pragma once
 #include "HAL/InputInterface.hpp"
 #include "display/Display.hpp"
+#include "DebugConfig.hpp"
 #include <stdint.h>
 #include <functional>
 
@@ -31,6 +32,9 @@ public:
 
     virtual void invalidate() {
         Disp::markDirty(x, y, width(), height());
+        if (ENABLE_INVALIDATE_DEBUG) {
+            Serial.println("[Widget] Invalidated area: (" + String(x) + "," + String(y) + "," + String(width()) + "," + String(height()) + ")");
+        }
     }
 
     // Sizing

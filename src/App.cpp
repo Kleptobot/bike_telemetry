@@ -43,7 +43,7 @@ void App::begin(IStorage* storage) {
 
     Serial.println("[App] Started and registered telemetry callback.");
 }
-
+bool renderUI = true;
 void App::update() {
     // Any periodic application-level behavior here
     Telemetry tel = model.telemetry().get();
@@ -54,15 +54,20 @@ void App::update() {
         appEvents.pop();
     }
     _millis = millis();
-    ui.render();
+    if (renderUI) {
+        ui.render();
+        renderUI = false;
+    } else {
+        renderUI = true;
+    }
     ui.update((float)(_millis - _last_millis) / 1000.0);
     ui.handleInput(HAL::inst().inputs());
     _last_millis = _millis;
 
-    if (tel.validLocation && ! validLoc_prev){
-       HAL::inst().setNMEARate();
-    }
-    validLoc_prev = tel.validLocation;
+    // if (tel.validLocation && ! validLoc_prev){
+    //    HAL::inst().setNMEArates(5,1);
+    // }
+    // validLoc_prev = tel.validLocation;
 
     switch(state) {
         case AppState::BOOT:

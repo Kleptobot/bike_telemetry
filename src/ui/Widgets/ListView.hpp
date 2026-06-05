@@ -2,6 +2,7 @@
 #include <vector>
 #include <memory>
 #include <functional>
+#include "DebugConfig.hpp"
 #include "HAL/InputInterface.hpp"
 #include "display/Display.hpp"
 
@@ -85,6 +86,9 @@ public:
             _widgets[i].get()->invalidate();
         }
         Disp::markDirty(SCREEN_WIDTH - 4,_y,4,totalHeight);
+        if (ENABLE_INVALIDATE_DEBUG) {
+            Serial.println("[Widget] Invalidated area: (" + String(_x) + "," + String(_y) + "," + String(4) + "," + String(totalHeight) + ")");
+        }
     }
 
     void setIndex(uint index) {

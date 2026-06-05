@@ -1,4 +1,5 @@
 #include "HAL.hpp"
+#include "DebugConfig.hpp"
 #include <numeric>
 
 void HAL::init_low() {
@@ -193,7 +194,9 @@ void HAL::onPAIRResponse(int numArgs, const void* payload, void* context) {
 
 void HAL::handlePAIRResponse(int numArgs, const void* payload) {
     uint8_t* byte_array = (uint8_t*)payload;
-    for(int i=0; i<numArgs; i++) {
-        Serial.println(byte_array[i]);
+    if (ENABLE_GPS_DEBUG) {
+        for(int i=0; i<numArgs; i++) {
+            Serial.println(byte_array[i]);
+        }
     }
 }

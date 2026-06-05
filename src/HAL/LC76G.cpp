@@ -1,4 +1,5 @@
 #include "LC76G.hpp"
+#include "DebugConfig.hpp"
 #include <numeric>
 #include <string.h>
 #include <cstring>
@@ -28,7 +29,9 @@ void LC76G::pollResponseTimeouts() {
 }
 
 void LC76G::processSentence(Sentence s) {
-    Serial.write(s.data,s.length);
+    if (ENABLE_GPS_DEBUG) {
+        Serial.write(s.data, s.length);
+    }
     dataFile.write(s.data,s.length);
 
     for (auto it = _responses.begin(); it != _responses.end(); ++it) {
@@ -84,7 +87,9 @@ LC76G::State LC76G::stateMachine() {
           TxCommand& cmd = _txQueue.front();
           memset(_txBuffer,0,MAX_BUFFER);
           memcpy(_txBuffer, cmd.data.data(), cmd.data.size());
-          Serial.write(cmd.data.data(),cmd.data.size());
+         if (ENABLE_GPS_DEBUG) {
+             Serial.write(cmd.data.data(),cmd.data.size());
+         }
           _txLength = cmd.data.size();
           _txQueue.pop();
           _mode = MODE_TRANSMIT;

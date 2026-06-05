@@ -38,8 +38,11 @@ class MainScreen : public UIScreen {
             //display if gps has a vlaid location
             gpsIcon.setVisible(t.validLocation);
 
-            for (auto& disp:dataDisplays) {
-                disp.update(t);
+            if (version != model.telemetry().version()) {
+                for (auto& disp:dataDisplays) {
+                    disp.update(t);
+                }
+                version = model.telemetry().version();
             }
 
             //display the current time
@@ -59,11 +62,12 @@ class MainScreen : public UIScreen {
             settingsIcon.setVisible(appState != AppState::LOGGING);
             powerIcon.setVisible(appState != AppState::LOGGING);
 
-            if (appState != AppState::LOGGING){
+            if (appState != AppState::LOGGING && appState_prev == AppState::LOGGING) {
                 playIcon.setIcon(epd_bitmap_play);
-            }else{
+            }else if (appState == AppState::LOGGING && appState_prev != AppState::LOGGING) {
                 playIcon.setIcon(epd_bitmap_loop);
             }
+            appState_prev = appState;
 
         }
 
@@ -120,4 +124,6 @@ class MainScreen : public UIScreen {
 
         DateTime _date;
         DateTime _lap;
+        uint32_t version = 0;
+        AppState appState_prev = AppState::IDLE;
 };

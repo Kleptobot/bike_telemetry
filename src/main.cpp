@@ -1,7 +1,12 @@
+#define DEBUG_INVALIDATE 0
+#define DEBUG_GPS 0
 #include <Arduino.h>
+#include "DebugConfig.hpp"
 #include "HAL/HAL.hpp"
 #include "App.hpp"
-// #include "display/Display.hpp"
+
+const bool ENABLE_INVALIDATE_DEBUG = DEBUG_INVALIDATE;
+const bool ENABLE_GPS_DEBUG = DEBUG_GPS;
 
 bool started = false;
 

@@ -92,16 +92,21 @@ class BigDataWidget : public Widget {
         void update(const Telemetry& t) {
             if (_type == TelemetryType::Undefined) return;
             auto newVal = GetTelemetryValue(t, _type);
+            bool newData = false;
             if (std::holds_alternative<float>(newVal)) {
+                newData = _value != std::get<float>(newVal);
                 _value = std::get<float>(newVal);
                 if (_value != _value) { // Check for NaN
                     _value = 0.0f;
                 }
             } else {
+                newData = _locationValue != std::get<location_data>(newVal);
                 _locationValue = std::get<location_data>(newVal);
                 _color = _locationValue.valid ? ST77XX_GREEN : ST77XX_RED;
             }
-            invalidate();
+            if (newData) {
+                invalidate();
+            }
         }
         
         void setUnits(String units) { _units = units; }
