@@ -44,12 +44,12 @@ enum class ButtonID : uint8_t {
 class InputSystem {
 public:
   InputSystem() {
-    buttons[static_cast<size_t>(ButtonID::UP)] = new button(&bUp);
-    buttons[static_cast<size_t>(ButtonID::DOWN)] = new button(&bDown);
-    buttons[static_cast<size_t>(ButtonID::LEFT)] = new button(&bLeft);
-    buttons[static_cast<size_t>(ButtonID::RIGHT)] = new button(&bRight);
-    buttons[static_cast<size_t>(ButtonID::SELECT)] = new button(&bSelect);
-    buttons[static_cast<size_t>(ButtonID::SD_DET)] = new button(&bSD_Det);
+    buttons[static_cast<size_t>(ButtonID::UP)] = new button(bUp);
+    buttons[static_cast<size_t>(ButtonID::DOWN)] = new button(bDown);
+    buttons[static_cast<size_t>(ButtonID::LEFT)] = new button(bLeft);
+    buttons[static_cast<size_t>(ButtonID::RIGHT)] = new button(bRight);
+    buttons[static_cast<size_t>(ButtonID::SELECT)] = new button(bSelect);
+    buttons[static_cast<size_t>(ButtonID::SD_DET)] = new button(bSD_Det);
   }
   void init();
   bool update(bool i2cBusy);

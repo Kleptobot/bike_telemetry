@@ -1,17 +1,37 @@
 #include "TimeWidget.hpp"
 #include "Display/Display.hpp"
+#include "DebugConfig.hpp"
 
 void TimeWidget::handleInput(physIO input) {
 
     if (input.Select.press) {
         selected = !selected;
+        lastHeldTime = 0;  // reset repeat timer on select
     }
 
     if (selected) {
-        if (input.Up.press)   incrementField(focusField);
-        if (input.Down.press) decrementField(focusField);
+        // Handle Up: press or held with repeat
+        if (input.Up.state && shouldRepeat(input.Up.heldTime)) {
+            incrementField(focusField);
+            lastHeldTime = input.Up.heldTime;
+        }else if (input.Up.press) {
+            incrementField(focusField);
+            lastHeldTime = input.Up.heldTime;
+        } 
+
+        // Handle Down: press or held with repeat
+         if (input.Down.state && shouldRepeat(input.Down.heldTime)) {
+            decrementField(focusField);
+            lastHeldTime = input.Down.heldTime;
+        } else if (input.Down.press) {
+            decrementField(focusField);
+            lastHeldTime = input.Down.heldTime;
+        }
     } else {
+        // Handle Left: press only (no repeat for focus change)
         if (input.Left.press)  moveFocusLeft();
+        
+        // Handle Right: press only (no repeat for focus change)
         if (input.Right.press) moveFocusRight();
     }
 }

@@ -6,7 +6,6 @@
 #include <stdint.h>
 #include <functional>
 
-
 class Widget {
 public:
     Widget(int x = 0, int y = 0, int w = 0, int h = 0)
@@ -58,6 +57,16 @@ public:
         if (s != selected) invalidate();
         selected = s;
     }
+    
+    bool shouldRepeat(uint32_t heldTime) {
+        // Start repeating after initial delay
+        if (heldTime < HOLD_REPEAT_DELAY) return false;
+        
+        // Check if enough heldTime has passed since last repeat action
+        return (heldTime - lastHeldTime) >= HOLD_REPEAT_INTERVAL;
+    }
+
+
     virtual bool isSelected() const { return selected; }
 
     virtual int width() const { return _width; }
@@ -69,4 +78,10 @@ protected:
     bool visible = true;
     bool focused = false;
     bool selected = false;
+    uint32_t lastHeldTime = 0;  // Track heldTime of last repeat action
+
+private:
+    // Hold press repeat timing
+    static constexpr uint32_t HOLD_REPEAT_DELAY = 400;    // ms before repeat starts
+    static constexpr uint32_t HOLD_REPEAT_INTERVAL = 100;  // ms between repeats
 };

@@ -35,7 +35,13 @@ public:
     }
 
     void handleInput(const physIO& input) {
-        if (input.Up.press) moveSelection(-1);
+        if (input.Up.state && shouldRepeat(input.Up.heldTime)) {
+            moveSelection(-1);
+            lastHeldTime = input.Up.heldTime;
+        } else if (input.Down.state && shouldRepeat(input.Down.heldTime)) {
+            moveSelection(+1);
+            lastHeldTime = input.Down.heldTime;
+        } else if (input.Up.press) moveSelection(-1);
         else if (input.Down.press) moveSelection(+1);
         else if (input.Select.press) selectItem();
     }
@@ -46,6 +52,14 @@ public:
             w->update(dt);
             totalHeight += (w->height() + margin);
         }
+    }
+    
+    bool shouldRepeat(uint32_t heldTime) {
+        // Start repeating after initial delay
+        if (heldTime < HOLD_REPEAT_DELAY) return false;
+        
+        // Check if enough heldTime has passed since last repeat action
+        return (heldTime - lastHeldTime) >= HOLD_REPEAT_INTERVAL;
     }
 
     void render() {
@@ -109,6 +123,10 @@ private:
     int barHeight = 0, barY = 0;
     std::vector<std::unique_ptr<WidgetT>> _widgets;
     ItemSelectedCallback _onSelected;
+    uint32_t lastHeldTime = 0;  // Track heldTime of last repeat action
+
+    static constexpr uint32_t HOLD_REPEAT_DELAY = 400;    // ms before repeat starts
+    static constexpr uint32_t HOLD_REPEAT_INTERVAL = 100;  // ms between repeats
 
     void moveSelection(int delta) {
         if (_widgets.empty()) return;

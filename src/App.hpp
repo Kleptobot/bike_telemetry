@@ -56,6 +56,7 @@ private:
     AppState state = AppState::BOOT, state_prev;
     TinyGPSLocation _lastLocation;
     uint32_t _lastSeconds;
+    uint32_t _lastRenderMillis = 0;
 
     bool _gpsEnableState = true;
     bool validLoc_prev = false;
