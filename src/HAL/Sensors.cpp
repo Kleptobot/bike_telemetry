@@ -100,8 +100,9 @@ bool SensorSystem::update(bool i2cBusy) {
         float vBat = adcVoltage * (1510.0 / 510.0);
 
         digitalWrite(VBAT_ENABLE, HIGH);
-        _nBattPercentage = vBat / .036;
+        _nBattPercentage = (int)constrain(vBat / 0.036f, 0.0f, 100.0f);
         lastBATTime = millis();
+        Serial.printf("VBat: %.2f V, %d%%\n", vBat, _nBattPercentage);
     }
     return update; 
 }

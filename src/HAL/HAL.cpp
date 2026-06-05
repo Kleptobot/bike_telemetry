@@ -98,6 +98,7 @@ void HAL::update() {
     if (telemetryCallback) {
         telemetryCallback(sensorSystem.imu(),
                           sensorSystem.dps(),
+                          sensorSystem.batt(),
                           f32_kph,
                           f32_cadence,
                           f32_temp,

@@ -38,7 +38,7 @@ class HAL {
     }
     void resetGPS();
 
-    using TelemetryCallback = std::function<void(imu_data imu, dps_data dps, float speed, float cadence, float temp, float alt, float bpm, float pow, TinyGPSLocation loc, DateTime now)>;
+    using TelemetryCallback = std::function<void(imu_data imu, dps_data dps, int BattPercentage, float speed, float cadence, float temp, float alt, float bpm, float pow, TinyGPSLocation loc, DateTime now)>;
 
     void onTelemetry(TelemetryCallback cb) { telemetryCallback = cb; }
 

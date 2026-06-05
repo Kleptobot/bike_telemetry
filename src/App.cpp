@@ -29,8 +29,8 @@ void App::begin(IStorage* storage) {
     ui.begin(ScreenID::MainMenu);
 
     // Register callback with HAL
-    HAL::inst().onTelemetry([this](imu_data imu, dps_data dps, float speed, float cadence, float temp, float alt, float bpm, float pow, TinyGPSLocation loc, DateTime now) {
-        this->updateTelemetry(imu, dps, speed, cadence, temp, alt, bpm, pow, loc, now);
+    HAL::inst().onTelemetry([this](imu_data imu, dps_data dps, int BattPercentage, float speed, float cadence, float temp, float alt, float bpm, float pow, TinyGPSLocation loc, DateTime now) {
+        this->updateTelemetry(imu, dps, BattPercentage, speed, cadence, temp, alt, bpm, pow, loc, now);
     });
 
     HAL::inst().bluetooth().onDeviceList([this](std::vector<BluetoothDevice> devices) {
@@ -130,7 +130,7 @@ void App::update() {
     model.app().setState(state);
 }
 
-void App::updateTelemetry(imu_data imu, dps_data dps, float speed, float cadence, float temp, float alt, float bpm, float pow, TinyGPSLocation loc, DateTime now) {
+void App::updateTelemetry(imu_data imu, dps_data dps, int BattPercentage, float speed, float cadence, float temp, float alt, float bpm, float pow, TinyGPSLocation loc, DateTime now) {
     float distance = 0;
 
     // /Haversine formula
@@ -155,6 +155,7 @@ void App::updateTelemetry(imu_data imu, dps_data dps, float speed, float cadence
     }
     model.telemetry().update({  imu,
                                 dps,
+                                BattPercentage,
                                 speed,
                                 cadence,
                                 temp,

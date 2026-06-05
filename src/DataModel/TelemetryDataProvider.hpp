@@ -4,6 +4,16 @@
 
 #include "HAL/SensorData.hpp"
 
+#include <vector>
+
+struct GPSPoint {
+    double lat;
+    double lon;
+    uint32_t ts;
+    GPSPoint() : lat(0), lon(0), ts(0) {}
+    GPSPoint(double la, double lo, uint32_t t) : lat(la), lon(lo), ts(t) {}
+};
+
 enum class TelemetryType : uint8_t {
     Speed,
     Cadence,
@@ -20,6 +30,7 @@ enum class TelemetryType : uint8_t {
 struct Telemetry {
     imu_data imu;
     dps_data dps;
+    int16_t BattPercentage;
     float speed;            //km/h
     float cadence;          //RPM
     float temperature;      //celcius
@@ -36,6 +47,7 @@ struct Telemetry {
     Telemetry(
         const imu_data& imu_,
         const dps_data& dps_,
+        int16_t BattPercentage_,
         float speed_,
         float cadence_,
         float temperature_,
@@ -49,6 +61,7 @@ struct Telemetry {
     )
         : imu(imu_)
         , dps(dps_)
+        , BattPercentage(BattPercentage_)
         , speed(speed_)
         , cadence(cadence_)
         , temperature(temperature_)
@@ -69,6 +82,7 @@ struct Telemetry {
 
         imu            = _new.imu;
         dps            = _new.dps;
+        BattPercentage = _new.BattPercentage;
         speed          = _new.speed;
         cadence        = _new.cadence;
         temperature    = _new.temperature;
@@ -168,11 +182,32 @@ public:
     void update(const Telemetry& newData) {
         _data = newData;
         ++_version;
+        // append gps point if valid
+        if (_data.validLocation) {
+            appendPoint(_data.latitude, _data.longitude, millis());
+        }
     }
 
     void resetDistance() { _data.totalDistance = 0;}
 
+    // Recent track access
+    const std::vector<GPSPoint>& recentTrack() const { return _recent; }
+    void clearTrack() { _recent.clear(); }
+
+private:
+    void appendPoint(double lat, double lon, uint32_t ts) {
+        if (_recent.empty() || _recent.back().lat != lat || _recent.back().lon != lon) {
+            _recent.emplace_back(lat, lon, ts);
+            if (_recent.size() > _maxPoints) {
+                // simple pop-front
+                _recent.erase(_recent.begin());
+            }
+        }
+    }
+
 private:
     Telemetry _data{};
     uint32_t _version = 0;
+    std::vector<GPSPoint> _recent;
+    const size_t _maxPoints = 600;
 };
