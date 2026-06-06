@@ -7,9 +7,12 @@
 bool LC76G::begin(TwoWire* wire) {
   _wire = wire;
   _state = STATE_IDLE;
-  if (_storage.exists("/gpsLog.txt"))
-    _storage.remove("/gpsLog.txt");
-  dataFile = _storage.openFile("/gpsLog.txt", FILE_WRITE);
+  if (ENABLE_GPS_DEBUG) {
+    Serial.println("Initializing LC76G...");
+    if (_storage.exists("/gpsLog.txt"))
+        _storage.remove("/gpsLog.txt");
+    dataFile = _storage.openFile("/gpsLog.txt", FILE_WRITE);
+  }
   return true;
 }
 
@@ -29,34 +32,34 @@ void LC76G::pollResponseTimeouts() {
 }
 
 void LC76G::processSentence(Sentence s) {
-    if (ENABLE_GPS_DEBUG) {
-        Serial.write(s.data, s.length);
-    }
+  if (ENABLE_GPS_DEBUG) {
+    Serial.write(s.data, s.length);
     dataFile.write(s.data,s.length);
+  }
 
-    for (auto it = _responses.begin(); it != _responses.end(); ++it) {
-        uint16_t index = getCommand(it->commandId);
-        if(COMMANDS[index].response) {  // <- check that response is valid before comparing it
-          if (std::strncmp(s.data, COMMANDS[index].response, std::strlen(COMMANDS[index].response)) == 0) {
-              //decode the response
-              uint8_t buffer[5];
-              int numArgs;
-              if(COMMANDS[index].decode(s, numArgs, buffer)) {
-                  // Fire callback
-                  it->callback(numArgs, buffer, it->userContext);
-              }
-        
-              // Remove expectation
-              _responses.erase(it);
-              return;
-          }
+  for (auto it = _responses.begin(); it != _responses.end(); ++it) {
+    uint16_t index = getCommand(it->commandId);
+    if(COMMANDS[index].response) {  // <- check that response is valid before comparing it
+      if (std::strncmp(s.data, COMMANDS[index].response, std::strlen(COMMANDS[index].response)) == 0) {
+        //decode the response
+        uint8_t buffer[5];
+        int numArgs;
+        if(COMMANDS[index].decode(s, numArgs, buffer)) {
+          // Fire callback
+          it->callback(numArgs, buffer, it->userContext);
         }
-    }
 
-    // Not a response → normal telemetry handling
-    for (uint16_t i = 0; i < s.length; ++i) {
-        _gps.encode(s.data[i]);
+        // Remove expectation
+        _responses.erase(it);
+        return;
+      }
     }
+  }
+
+  // Not a response → normal telemetry handling
+  for (uint16_t i = 0; i < s.length; ++i) {
+      _gps.encode(s.data[i]);
+  }
 }
 
 void LC76G::update() {
