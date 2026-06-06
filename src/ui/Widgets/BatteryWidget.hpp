@@ -20,8 +20,10 @@ class BatteryWidget : public Widget {
         }
 
         void setBat(uint8_t batt) {
-            _batt = batt;
-            invalidate();
+            if (batt != _batt) {
+                _batt = batt;
+                invalidate();
+            }
         }
 
     private:

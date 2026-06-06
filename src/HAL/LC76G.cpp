@@ -196,7 +196,16 @@ LC76G::State LC76G::stateMachine() {
       _CR = false;
       for(int i=0; i<_transactionLength;i++){
         if (_rxBuffer[i] == '$') _$found = true;                // check for '$'
-        if(_$found) _NMEAbuffer[_NMEAlength++] = _rxBuffer[i];  // push char to assembly buffer (only if '$' has been seen)
+        if(_$found) {
+          // Add bounds check to prevent buffer overflow
+          if (_NMEAlength < MAX_NMEA_LEN) {
+            _NMEAbuffer[_NMEAlength++] = _rxBuffer[i];  // push char to assembly buffer (only if '$' has been seen)
+          } else {
+            // Buffer full, reset and start over
+            _$found = false;
+            _NMEAlength = 0;
+          }
+        }
         if(_rxBuffer[i] == '\n') {                              // LF found
           if (_CR) {
             addSentence();                                      // add sentence to queue
@@ -377,12 +386,24 @@ void LC76G::sendCommand(CmdId cmdId, ResponseCallback cb = nullptr, void* userCt
  * check for well formed sentence in assembly area, iff well formed add to sentence buffer
  */
 void LC76G::addSentence() {
-  if(_NMEAlength > 3) {
+  if(_NMEAlength > 3 && _NMEAlength <= MAX_NMEA_LEN) {
     if(_NMEAbuffer[0] == '$' && _NMEAbuffer[_NMEAlength-2] == '\r' && _NMEAbuffer[_NMEAlength-1] == '\n') { //check sentence bounds
       _sentences.emplace(_NMEAbuffer, _NMEAlength); // push sentence to queue
       memset(_NMEAbuffer, 0, sizeof(_NMEAbuffer));  // clear assembly buffer
       _$found = false;                              // reset if $ found
       _NMEAlength = 0;                              // reset sentence length
+    } else {
+      // Malformed sentence - if buffer is getting too large, reset it
+      if (_NMEAlength >= MAX_NMEA_LEN - 1) {
+        memset(_NMEAbuffer, 0, sizeof(_NMEAbuffer));
+        _$found = false;
+        _NMEAlength = 0;
+      }
     }
+  } else if (_NMEAlength > MAX_NMEA_LEN) {
+    // Safety catch: buffer overflow attempt
+    memset(_NMEAbuffer, 0, sizeof(_NMEAbuffer));
+    _$found = false;
+    _NMEAlength = 0;
   }
 }

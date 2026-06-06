@@ -194,9 +194,20 @@ void HAL::onPAIRResponse(int numArgs, const void* payload, void* context) {
 }
 
 void HAL::handlePAIRResponse(int numArgs, const void* payload) {
+    // Validate payload before using it
+    if (payload == nullptr || numArgs <= 0) {
+        if (ENABLE_GPS_DEBUG) {
+            Serial.println("[HAL] PAIR response received with no payload");
+        }
+        return;
+    }
+    
     uint8_t* byte_array = (uint8_t*)payload;
     if (ENABLE_GPS_DEBUG) {
-        for(int i=0; i<numArgs; i++) {
+        for(int i=0; i<numArgs && i<5; i++) {  // Added bounds check (max 5 bytes)
+            Serial.print("[PAIR] Arg ");
+            Serial.print(i);
+            Serial.print(": ");
             Serial.println(byte_array[i]);
         }
     }

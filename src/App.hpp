@@ -57,6 +57,9 @@ private:
     TinyGPSLocation _lastLocation;
     uint32_t _lastSeconds;
     uint32_t _lastRenderMillis = 0;
+    int messageType = 0;
+    uint32_t _messageSendMillis = 0;
+    bool startMessageConfig = false;
 
     bool _gpsEnableState = true;
     bool validLoc_prev = false;

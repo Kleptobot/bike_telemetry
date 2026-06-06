@@ -131,9 +131,9 @@ class LC76G
         inline static const CommandDef COMMANDS[] = {
             {PAIR_LOW_POWER_ENTRY_RTC_MODE, "PAIR650", &build_no_args, nullptr, nullptr, 200 },
             {GET_NMEA_MSG_RATE, "PAIR063", &build_1u8, "$PAIR063", &decode_2u8, 90000 },
-            {SET_NMEA_MSG_RATE, "PAIR062,", &build_2u8, "PAIR001,062", &decode_1u8, 90000 },
+            {SET_NMEA_MSG_RATE, "PAIR062", &build_2u8, "PAIR001,062", &decode_1u8, 90000 },
             {GET_NAVIGATION_MODE, "PAIR081", &build_no_args, "$PAIR081", &decode_1u8, 90000 },
-            {SET_NAVIGATION_MODE, "PAIR080,", &build_1u8, "$PAIR001,080", &decode_none, 90000 },
+            {SET_NAVIGATION_MODE, "PAIR080", &build_1u8, "$PAIR001,080", &decode_none, 90000 },
             {GET_STATIC_THRESHOLD, "PAIR071", &build_no_args, "$PAIR071", &decode_1u8, 90000 },
             {SET_STATIC_THRESHOLD, "PAIR070", &build_1u8, "$PAIR001,070", &decode_none, 90000 },
             {RESTORE_DEFAULT_SETTING, "PAIR514", &build_no_args, nullptr, nullptr, 200 },
@@ -142,7 +142,7 @@ class LC76G
             {GNSS_SUBSYS_HOT_START, "PAIR004", &build_no_args, nullptr, nullptr, 200 },
             {GNSS_SUBSYS_WARM_START, "PAIR005", &build_no_args, nullptr, nullptr, 200 },
             {GNSS_SUBSYS_COLD_START, "PAIR006", &build_no_args, nullptr, nullptr, 200 },
-            {SET_NMEA_RATE, "PQTMCFGMSGRATE,W", &build_1char_1u8, "$PQTMCFGMSGRATE,OK", nullptr, 10000 },
+            {SET_NMEA_RATE, "PQTMCFGMSGRATE,W", &build_1char_1u8, nullptr, nullptr, 10000 },
             {GET_NMEA_RATE, "PQTMCFGMSGRATE,R", &build_1char, "$PQTMCFGMSGRATE,OK", nullptr, 10000 }
 
         };

@@ -48,6 +48,7 @@ class MainScreen : public UIScreen {
             //display the current time
             _date = model.time().get();
             timeWidget.update(dt);
+            batt.setBat(t.BattPercentage);
             
             //get the current lap time
             auto& ts = model.logger().get().lapElapsed;

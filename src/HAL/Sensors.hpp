@@ -28,10 +28,10 @@ public:
     void setTime(DateTime date);
 
 private:
-    static const uint16_t BAT_Read_Period = 30001;
-    static const uint16_t IMU_Read_Period = 900;
-    static const uint16_t DPS_Read_Period = 1000;
-    static const uint16_t RTC_Read_Period = 500;
+    static const uint16_t BAT_Read_Period = 29999;
+    static const uint16_t IMU_Read_Period = 1999;
+    static const uint16_t DPS_Read_Period = 4999;
+    static const uint16_t RTC_Read_Period = 450;
 
     LSM6DS3* _myIMU;
     RTC_DS3231 _rtc;

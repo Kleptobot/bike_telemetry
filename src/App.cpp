@@ -66,9 +66,53 @@ void App::update() {
     _last_millis = _millis;
 
     if (tel.validLocation && ! validLoc_prev){
-       HAL::inst().setNMEArates(5,1);
+        startMessageConfig = true;
+        // HAL::inst().setNMEArates(0,0);
+        // HAL::inst().setNMEArates(1,0);
+        // HAL::inst().setNMEArates(2,0);
+        // HAL::inst().setNMEArates(3,0);
+        // HAL::inst().setNMEArates(4,0);
+        // HAL::inst().setNMEArates(5,0);
+        // HAL::inst().setNMEArates(6,0);
+        // HAL::inst().setNMEArates(7,0);
+        // HAL::inst().setNMEArates(8,0);
+        // HAL::inst().setNMEArates(9,0);
+        // HAL::inst().setRMCRate();
+
     }
     validLoc_prev = tel.validLocation;
+    if (startMessageConfig){
+        switch (messageType)
+        {
+        case 0: 
+             HAL::inst().setNMEArates(messageType,1);
+             messageType+=10;
+             _messageSendMillis = _millis;
+            break;
+
+        case 1: case 2: case 3: case 4: case 5: case 6: case 7: case 8: case 9:
+             HAL::inst().setNMEArates(messageType,0);
+             messageType+=10;
+             _messageSendMillis = _millis;
+            break;
+
+        case 10: case 11: case 12: case 13: case 14: case 15: case 16: case 17: case 18:
+            //wait here for 1 second
+            if (_millis - _messageSendMillis > 1000) {
+                _lastRenderMillis = _millis;
+                messageType-=9;
+            }
+            break;
+
+        case 19:
+            HAL::inst().setRMCRate();
+            startMessageConfig = false;
+            break;
+        
+        default:
+            break;
+        }
+    }
 
     switch(state) {
         case AppState::BOOT:

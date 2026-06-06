@@ -32,9 +32,9 @@ class HAL {
     void gpsHotStart() { _LC76G.sendCommand(LC76G::GNSS_SUBSYS_HOT_START,nullptr,this,nullptr); }
     void gpsWarmStart() { _LC76G.sendCommand(LC76G::GNSS_SUBSYS_WARM_START,nullptr,this,nullptr); }
     void gpsColdStart() { _LC76G.sendCommand(LC76G::GNSS_SUBSYS_COLD_START,nullptr,this,nullptr); }
-    void setNMEARate() { 
+    void setRMCRate() { 
       LC76G::Payload1Ch1U8 p = {"RMC",1};
-      _LC76G.sendCommand(LC76G::SET_NMEA_RATE, nullptr, this, &p);
+      _LC76G.sendCommand(LC76G::SET_NMEA_RATE, &HAL::onPAIRResponse, this, &p);
     }
     void resetGPS();
 
