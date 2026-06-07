@@ -44,6 +44,9 @@ class HAL {
 
     void setTime(DateTime date) { sensorSystem.setTime(date); }
 
+    void buzzStart();
+    void buzzStop();
+
   private:
     HAL() : _LC76G(storageSystem) {}
 

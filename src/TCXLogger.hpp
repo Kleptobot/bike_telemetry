@@ -25,11 +25,11 @@ struct Trackpoint {
 
 struct Lap {
   DateTime startTime;
-  uint32_t maxHRM;
-  uint32_t totalHRM;
-  double totalCadence;
-  double maxSpeed;
-  double totalDistance;     // Cumulative distance in meters
+  float maxHRM;
+  float totalHRM;
+  float totalCadence;
+  float maxSpeed;
+  float totalDistance;     // Cumulative distance in meters
   uint16_t parts;
 };
 

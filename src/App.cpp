@@ -67,17 +67,6 @@ void App::update() {
 
     if (tel.validLocation && ! validLoc_prev){
         startMessageConfig = true;
-        // HAL::inst().setNMEArates(0,0);
-        // HAL::inst().setNMEArates(1,0);
-        // HAL::inst().setNMEArates(2,0);
-        // HAL::inst().setNMEArates(3,0);
-        // HAL::inst().setNMEArates(4,0);
-        // HAL::inst().setNMEArates(5,0);
-        // HAL::inst().setNMEArates(6,0);
-        // HAL::inst().setNMEArates(7,0);
-        // HAL::inst().setNMEArates(8,0);
-        // HAL::inst().setNMEArates(9,0);
-        // HAL::inst().setRMCRate();
 
     }
     validLoc_prev = tel.validLocation;

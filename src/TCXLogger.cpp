@@ -65,13 +65,13 @@ void TCXLogger::writeLapHeader(uint16_t lapIndex, File32 *file){
   // Initialize total time, distance, etc. 
   file->print("        <TotalTimeSeconds>");file->print(ts.totalseconds());file->print("</TotalTimeSeconds>\n");
   file->print("        <DistanceMeters>");file->print(lp.totalDistance);file->print("</DistanceMeters>\n");
-  file->print("        <MaximumSpeed>");file->print(lp.maxSpeed);file->print("</MaximumSpeed>\n");
+  file->print("        <MaximumSpeed>");file->print(lp.maxSpeed,2);file->print("</MaximumSpeed>\n");
   file->print("        <Calories>");file->print(Calories);file->print("</Calories>\n");
   file->print("        <AverageHeartRateBpm>\n");
-  file->print("          <Value>");file->print(avgHRM);file->print("</Value>\n"); // Set to at least 1
+  file->print("          <Value>");file->print(avgHRM,2);file->print("</Value>\n"); // Set to at least 1
   file->print("        </AverageHeartRateBpm>\n");
   file->print("        <MaximumHeartRateBpm>\n");
-  file->print("          <Value>");file->print(lp.maxHRM);file->print("</Value>\n"); // Set to at least 1
+  file->print("          <Value>");file->print(lp.maxHRM,2);file->print("</Value>\n"); // Set to at least 1
   file->print("        </MaximumHeartRateBpm>\n");
   file->print("        <Intensity>Active</Intensity>\n"); // Add intensity element
   file->print("        <Cadence>");file->print(avgCAD,2);file->print("</Cadence>\n"); // Placeholder value

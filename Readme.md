@@ -4,6 +4,8 @@ OBike is an open-source hardware and firmware project for bicycle telemetry and 
 
 Purpose: capture bike telemetry (speed, cadence, power, heart rate, GPS tracks, barometric altitude and sensor data), present it on a colour display, and log sessions to an SD card in TCX/CSV formats.
 
+Standard bike peripherals that connect via Bluetooth and implement the CSC, HRM and CPS profiles are compatible.
+
 ## Contents
  - `src/` — Firmware source (C++). Core subsystems in `src/HAL`, UI in `src/ui`, display driver in `src/display`, logging in `src/TCXLogger.cpp`.
  - `include/` — Public headers and shared definitions.

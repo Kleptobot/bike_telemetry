@@ -134,6 +134,14 @@ void HAL::resetDisplay() {
     _resetDispTime = millis();
 }
 
+void HAL::buzzStart() {
+    inputSystem.setOutput(GPIOB2, true);
+}
+
+void HAL::buzzStop() {
+    inputSystem.setOutput(GPIOB2, false);
+}
+
 void HAL::displayGPSInfo() {
   Serial.println("\n--- GPS Status ---");
   

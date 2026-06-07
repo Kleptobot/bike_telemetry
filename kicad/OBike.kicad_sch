@@ -8098,7 +8098,7 @@
 	)
 	(wire
 		(pts
-			(xy 152.4 248.92) (xy 154.94 248.92)
+			(xy 152.4 251.46) (xy 154.94 251.46)
 		)
 		(stroke
 			(width 0)
@@ -8128,7 +8128,7 @@
 	)
 	(wire
 		(pts
-			(xy 152.4 254) (xy 154.94 254)
+			(xy 152.4 256.54) (xy 154.94 256.54)
 		)
 		(stroke
 			(width 0)
@@ -8368,7 +8368,7 @@
 	)
 	(wire
 		(pts
-			(xy 132.08 254) (xy 134.62 254)
+			(xy 132.08 256.54) (xy 134.62 256.54)
 		)
 		(stroke
 			(width 0)
@@ -8798,16 +8798,6 @@
 	)
 	(wire
 		(pts
-			(xy 396.24 220.98) (xy 396.24 223.52)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "429fdb8f-45a7-49af-9c9f-4faac2361f5b")
-	)
-	(wire
-		(pts
 			(xy 157.48 213.36) (xy 161.29 213.36)
 		)
 		(stroke
@@ -8858,7 +8848,7 @@
 	)
 	(wire
 		(pts
-			(xy 132.08 248.92) (xy 134.62 248.92)
+			(xy 132.08 251.46) (xy 134.62 251.46)
 		)
 		(stroke
 			(width 0)
@@ -9078,6 +9068,16 @@
 	)
 	(wire
 		(pts
+			(xy 396.24 193.04) (xy 396.24 207.01)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "559272a0-6cda-41af-8c44-e03b3221e5c3")
+	)
+	(wire
+		(pts
 			(xy 223.52 113.03) (xy 224.79 113.03)
 		)
 		(stroke
@@ -9138,7 +9138,7 @@
 	)
 	(wire
 		(pts
-			(xy 162.56 251.46) (xy 162.56 257.81)
+			(xy 162.56 254) (xy 162.56 260.35)
 		)
 		(stroke
 			(width 0)
@@ -9688,7 +9688,7 @@
 	)
 	(wire
 		(pts
-			(xy 152.4 251.46) (xy 162.56 251.46)
+			(xy 152.4 254) (xy 162.56 254)
 		)
 		(stroke
 			(width 0)
@@ -10028,7 +10028,7 @@
 	)
 	(wire
 		(pts
-			(xy 389.89 193.04) (xy 396.24 193.04)
+			(xy 396.24 193.04) (xy 389.89 193.04)
 		)
 		(stroke
 			(width 0)
@@ -10065,6 +10065,16 @@
 			(type default)
 		)
 		(uuid "a49cb4d9-e5d8-4a72-96e7-6ca7586f63f8")
+	)
+	(wire
+		(pts
+			(xy 396.24 207.01) (xy 394.97 207.01)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "a4b2c133-8eb7-4fd6-becc-f12a0d8a5d9f")
 	)
 	(wire
 		(pts
@@ -10308,7 +10318,7 @@
 	)
 	(wire
 		(pts
-			(xy 125.73 251.46) (xy 134.62 251.46)
+			(xy 125.73 254) (xy 134.62 254)
 		)
 		(stroke
 			(width 0)
@@ -10638,6 +10648,16 @@
 	)
 	(wire
 		(pts
+			(xy 396.24 209.55) (xy 394.97 209.55)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "cd8c3dec-2ee0-424a-bd4a-f09bbda1d6d1")
+	)
+	(wire
+		(pts
 			(xy 330.2 118.11) (xy 334.01 118.11)
 		)
 		(stroke
@@ -10705,6 +10725,16 @@
 			(type default)
 		)
 		(uuid "d3e63b35-df2e-46ea-9073-0b87e0f70128")
+	)
+	(wire
+		(pts
+			(xy 396.24 223.52) (xy 396.24 209.55)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "d40ffcde-0f87-4c10-9ce6-28e0e3ed099d")
 	)
 	(wire
 		(pts
@@ -10865,16 +10895,6 @@
 			(type default)
 		)
 		(uuid "e35b65e4-3bee-4e7b-9b26-5219ae7bad65")
-	)
-	(wire
-		(pts
-			(xy 396.24 193.04) (xy 396.24 195.58)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "e3ab9a2e-d967-41fa-a148-bd72c2b8fcb7")
 	)
 	(wire
 		(pts
@@ -11538,7 +11558,7 @@
 	)
 	(global_label "SW6"
 		(shape input)
-		(at 125.73 251.46 180)
+		(at 125.73 254 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -11548,7 +11568,7 @@
 		)
 		(uuid "2b0b0e31-15cd-47dd-b377-b0a2f9329497")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 118.8744 251.46 0)
+			(at 118.8744 254 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12506,7 +12526,7 @@
 	)
 	(global_label "SW4"
 		(shape input)
-		(at 132.08 248.92 180)
+		(at 132.08 251.46 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -12516,7 +12536,7 @@
 		)
 		(uuid "9c3b3ac8-31a2-4785-a238-f50632154c3d")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 125.2244 248.92 0)
+			(at 125.2244 251.46 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12814,7 +12834,7 @@
 	)
 	(global_label "SW1"
 		(shape input)
-		(at 154.94 248.92 0)
+		(at 154.94 251.46 0)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -12824,7 +12844,7 @@
 		)
 		(uuid "c326e2ed-0fb2-45ef-a143-d21bb39859e4")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 161.7956 248.92 0)
+			(at 161.7956 251.46 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13100,7 +13120,7 @@
 	)
 	(global_label "SW2"
 		(shape input)
-		(at 154.94 254 0)
+		(at 154.94 256.54 0)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -13110,7 +13130,7 @@
 		)
 		(uuid "ddf22c89-1255-4eb5-a5d5-c7486cf8f4d9")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 161.7956 254 0)
+			(at 161.7956 256.54 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13474,7 +13494,7 @@
 	)
 	(global_label "SW3"
 		(shape input)
-		(at 132.08 254 180)
+		(at 132.08 256.54 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -13484,7 +13504,7 @@
 		)
 		(uuid "fb10d407-f009-4385-8f32-c7399affaecf")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 125.2244 254 0)
+			(at 125.2244 256.54 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13931,7 +13951,7 @@
 	)
 	(symbol
 		(lib_id "power:Earth")
-		(at 162.56 257.81 0)
+		(at 162.56 260.35 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -13939,7 +13959,7 @@
 		(dnp no)
 		(uuid "03bb5fba-2e6b-4d61-8a90-4ac643a3a0b3")
 		(property "Reference" "#PWR07"
-			(at 162.56 264.16 0)
+			(at 162.56 266.7 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13948,7 +13968,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 160.528 262.382 0)
+			(at 160.528 264.922 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13957,7 +13977,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 162.56 257.81 0)
+			(at 162.56 260.35 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13966,7 +13986,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 162.56 257.81 0)
+			(at 162.56 260.35 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13975,7 +13995,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"Earth\""
-			(at 162.56 257.81 0)
+			(at 162.56 260.35 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15862,7 +15882,7 @@
 	(symbol
 		(lib_name "5_position_tactile_1")
 		(lib_id "5_pos:5_position_tactile")
-		(at 144.78 251.46 0)
+		(at 144.78 254 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -15870,7 +15890,7 @@
 		(dnp no)
 		(uuid "38565a6c-fa55-4ce9-936f-0323f84e4c6c")
 		(property "Reference" "SW1"
-			(at 144.78 242.062 0)
+			(at 144.78 244.602 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15878,7 +15898,7 @@
 			)
 		)
 		(property "Value" "5_position_tactile"
-			(at 144.78 244.094 0)
+			(at 144.78 246.634 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15886,7 +15906,7 @@
 			)
 		)
 		(property "Footprint" "5_pos:5-position"
-			(at 144.78 251.46 0)
+			(at 144.78 254 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15895,7 +15915,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 144.78 251.46 0)
+			(at 144.78 254 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15904,7 +15924,7 @@
 			)
 		)
 		(property "Description" "Single Pole Single Throw (SPST) switch"
-			(at 144.78 243.84 0)
+			(at 144.78 246.38 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15913,7 +15933,7 @@
 			)
 		)
 		(property "Manufacturer" "TE Connectivity ALCOSWITCH Switches"
-			(at 144.78 251.46 0)
+			(at 144.78 254 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15922,7 +15942,7 @@
 			)
 		)
 		(property "Manufacturer PN" "2425755-1"
-			(at 144.78 251.46 0)
+			(at 144.78 254 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15931,7 +15951,7 @@
 			)
 		)
 		(property "Digikiey PN" "450-2425755-1CT-ND"
-			(at 144.78 251.46 0)
+			(at 144.78 254 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15940,7 +15960,7 @@
 			)
 		)
 		(property "MANUFACTURER" ""
-			(at 144.78 251.46 0)
+			(at 144.78 254 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15949,7 +15969,7 @@
 			)
 		)
 		(property "Field6" ""
-			(at 144.78 251.46 0)
+			(at 144.78 254 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -16761,6 +16781,74 @@
 			(project "OBike"
 				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
 					(reference "D2")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector_Generic:Conn_01x02")
+		(at 389.89 209.55 180)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "53d32cbd-2050-4cde-bcf4-11a7df4c8c16")
+		(property "Reference" "J8"
+			(at 389.89 200.66 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "Conn_01x02"
+			(at 389.89 203.2 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Connector_PinHeader_2.00mm:PinHeader_1x02_P2.00mm_Vertical"
+			(at 389.89 209.55 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 389.89 209.55 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Generic connector, single row, 01x02, script generated (kicad-library-utils/schlib/autogen/connector/)"
+			(at 389.89 209.55 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "479dd103-ab1a-4aaf-831c-08f41134c71b")
+		)
+		(pin "2"
+			(uuid "0954569f-97b3-4275-97a8-57b31e83a220")
+		)
+		(instances
+			(project "OBike"
+				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
+					(reference "J8")
 					(unit 1)
 				)
 			)
@@ -17811,16 +17899,16 @@
 	)
 	(symbol
 		(lib_id "Mallory:PK-11N40PQ")
-		(at 396.24 195.58 90)
+		(at 373.38 196.85 90)
 		(mirror x)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
-		(dnp no)
+		(dnp yes)
 		(uuid "6cc1c5b8-a735-458c-a4e2-e4776b79bc8c")
 		(property "Reference" "LS1"
-			(at 391.16 207.0099 90)
+			(at 368.3 208.2799 90)
 			(effects
 				(font
 					(size 1.524 1.524)
@@ -17829,7 +17917,7 @@
 			)
 		)
 		(property "Value" "ASI09N40MTRQ"
-			(at 391.16 209.5499 90)
+			(at 368.3 210.8199 90)
 			(effects
 				(font
 					(size 1.524 1.524)
@@ -17838,7 +17926,7 @@
 			)
 		)
 		(property "Footprint" "Mallory:ASI09N40M"
-			(at 396.24 195.58 0)
+			(at 373.38 196.85 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -17848,7 +17936,7 @@
 			)
 		)
 		(property "Datasheet" "PK-11N40PQ"
-			(at 396.24 195.58 0)
+			(at 373.38 196.85 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -17858,7 +17946,7 @@
 			)
 		)
 		(property "Description" ""
-			(at 396.24 195.58 0)
+			(at 373.38 196.85 0)
 			(effects
 				(font
 					(size 1.27 1.27)
