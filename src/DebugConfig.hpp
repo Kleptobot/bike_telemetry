@@ -12,6 +12,11 @@
 #define DEBUG_INPUTS 0
 #endif
 
+#ifndef DEBUG_BLUETOOTH
+#define DEBUG_BLUETOOTH 0
+#endif
+
 extern const bool ENABLE_INVALIDATE_DEBUG;
 extern const bool ENABLE_GPS_DEBUG;
 extern const bool ENABLE_INPUTS_DEBUG;
+extern const bool ENABLE_BLUETOOTH_DEBUG;

@@ -1,6 +1,7 @@
 #define DEBUG_INVALIDATE 0
 #define DEBUG_GPS 0
 #define DEBUG_INPUTS 0
+#define DEBUG_BLUETOOTH 0
 
 #include <Arduino.h>
 #include "DebugConfig.hpp"
@@ -10,6 +11,7 @@
 const bool ENABLE_INVALIDATE_DEBUG = DEBUG_INVALIDATE;
 const bool ENABLE_GPS_DEBUG = DEBUG_GPS;
 const bool ENABLE_INPUTS_DEBUG = DEBUG_INPUTS;
+const bool ENABLE_BLUETOOTH_DEBUG = DEBUG_BLUETOOTH;
 
 bool started = false;
 

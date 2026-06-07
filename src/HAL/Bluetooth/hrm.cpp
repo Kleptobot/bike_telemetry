@@ -29,6 +29,11 @@ void hrm::hrm_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len)
   {
     u16_bpm = data[1];
   }
+  if (ENABLE_BLUETOOTH_DEBUG) {
+    Serial.print("Received HRM Measurement: ");
+    Serial.print(u16_bpm);
+    Serial.println(" bpm");
+  }
 }
 
 void hrm::begin()
@@ -120,7 +125,9 @@ void hrm::discover(uint16_t conn_handle)
     if (bat_meas.discover() )
     {
       u8_Batt = bat_meas.read8();
-      //Serial.print("Batt: "); Serial.println(u8_batt);
+      if (ENABLE_BLUETOOTH_DEBUG) {
+        Serial.print("Batt: "); Serial.println(u8_Batt);
+      }
     }
     if ( bat_meas.enableNotify() )
     {

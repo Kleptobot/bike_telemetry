@@ -47,7 +47,11 @@ public:
   void begin();
 
   void update(uint32_t now) override {
-    f32_bpm = 0.8 * f32_bpm + 0.2 * (float)u16_bpm;
+    f32_bpm = 0.99f * f32_bpm + 0.01f * (float)u16_bpm;
+    if (ENABLE_BLUETOOTH_DEBUG) {
+      Serial.print("Smoothed BPM: ");
+      Serial.println(f32_bpm);
+    }
   }
 };
 #endif

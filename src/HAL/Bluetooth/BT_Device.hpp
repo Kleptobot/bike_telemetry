@@ -10,6 +10,7 @@
 
 #include "HAL/BluetoothInterface.hpp"
 #include "MAC.hpp"
+#include "DebugConfig.hpp"
 
 #define     GATT_BAT_UUID                           0x180F
 #define     GATT_BAT_MEASUREMENT_UUID               0x2A19
