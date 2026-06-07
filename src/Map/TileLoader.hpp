@@ -24,4 +24,6 @@ namespace TileLoader {
     // srcX/srcY define the top-left pixel within the tile to copy from (0..TILE_SIZE-1).
     // copyW/copyH define the size to copy. Returns true on success.
     bool loadRawTileToCanvas(int z, uint32_t x, uint32_t y, int destX, int destY, int srcX = 0, int srcY = 0, int copyW = TILE_SIZE, int copyH = TILE_SIZE);
+
+    bool loadRawTileToBuffer(int z, uint32_t x, uint32_t y, uint16_t* destBuf, int bufStride, int destX, int destY, int srcX, int srcY, int copyW, int copyH);
 }

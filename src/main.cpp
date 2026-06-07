@@ -30,6 +30,7 @@ void loop() {
         App::instance().begin(HAL::inst().SD());
         started = true;
         Serial.println("App started");
+        Serial.printf("Free heap: %d bytes\n", dbgHeapTotal() - dbgHeapUsed());
         last = millis();
     }
 
