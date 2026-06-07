@@ -60,10 +60,18 @@ public:
     
     bool shouldRepeat(uint32_t heldTime) {
         // Start repeating after initial delay
+        if (heldTime < lastHeldTime) {
+            // This can happen if heldTime resets (e.g., on button release)
+            lastHeldTime = 0; // Reset lastHeldTime to avoid issues on next press
+        }
         if (heldTime < HOLD_REPEAT_DELAY) return false;
         
         // Check if enough heldTime has passed since last repeat action
-        return (heldTime - lastHeldTime) >= HOLD_REPEAT_INTERVAL;
+        if (heldTime - lastHeldTime < HOLD_REPEAT_INTERVAL) {
+            return false;
+        }
+        lastHeldTime = heldTime; // Update lastHeldTime for next repeat check
+        return true;
     }
 
 
@@ -78,10 +86,10 @@ protected:
     bool visible = true;
     bool focused = false;
     bool selected = false;
-    uint32_t lastHeldTime = 0;  // Track heldTime of last repeat action
 
 private:
     // Hold press repeat timing
     static constexpr uint32_t HOLD_REPEAT_DELAY = 400;    // ms before repeat starts
     static constexpr uint32_t HOLD_REPEAT_INTERVAL = 100;  // ms between repeats
+    uint32_t lastHeldTime = 0;  // Track heldTime of last repeat action
 };

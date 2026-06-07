@@ -274,6 +274,11 @@ void App::saveBiometrics() {
     doc["birthday"] = a.birthday.unixtime();
     doc["mass"] = a.mass;
     doc["caloricProfile"] = toString(a.caloricProfile);
+    doc["zone1Start"] = a.zone1Start;
+    doc["zone2Start"] = a.zone2Start;
+    doc["zone3Start"] = a.zone3Start;
+    doc["zone4Start"] = a.zone4Start;
+    doc["zone5Start"] = a.zone5Start;
 
     if (_storage->exists("/biometrics.txt"))
         _storage->remove("/biometrics.txt");
@@ -307,6 +312,11 @@ void App::loadBiometrics() {
         a.birthday = bd;
         a.mass = jsonBuffer["mass"];
         a.caloricProfile = fromString(jsonBuffer["caloricProfile"]);
+        a.zone1Start = jsonBuffer["zone1Start"];
+        a.zone2Start = jsonBuffer["zone2Start"];
+        a.zone3Start = jsonBuffer["zone3Start"];
+        a.zone4Start = jsonBuffer["zone4Start"];
+        a.zone5Start = jsonBuffer["zone5Start"];
 
         model.app().update(a);
         dataFile.close();

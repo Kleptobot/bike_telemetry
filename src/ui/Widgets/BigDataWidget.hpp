@@ -3,6 +3,7 @@
 #include "Display/Display.hpp"
 #include "UI/GFX.h"
 #include "HAL/SensorData.hpp"
+#include "DataModel/DataModel.hpp"
 
 class BigDataWidget : public Widget {
     public:
@@ -10,7 +11,7 @@ class BigDataWidget : public Widget {
             : Widget(x, y),
             _size(size),
             _type(type) {
-            _width = 18*size + 6;
+            _width = 36*size + 6;
             _height= 8*_size;
             // ensure type-specific sizing (e.g., Location) is applied
             setSize(_size);
@@ -44,7 +45,7 @@ class BigDataWidget : public Widget {
             }else{
                 // Split into integer and decimal parts
                 int intPart = (int)_value;
-                int decPart = (int)((_value - intPart) * 10); // one decimal digit
+                int decPart = (int)(float(_value - intPart) * 10.0f); // one decimal digit
 
                 // Print integer part
                 if (intPart < 10)
@@ -66,6 +67,10 @@ class BigDataWidget : public Widget {
                 Disp::setTextSize(2);
                 Disp::setCursor(labelX, y);
                 Disp::print(labelForType(_type));
+                String debugOutput = "For type: " + String(toString(_type)) +" Value: " + String(_value);
+                if (ENABLE_INVALIDATE_DEBUG) {
+                    Serial.println("[BigDataWidget] " + debugOutput);
+                }
             }
         }
 
@@ -82,7 +87,7 @@ class BigDataWidget : public Widget {
                 _width = (4 + 9) * 6 * ts + 8; // "Lat:" + value, plus padding
                 _height = 16 * ts + 4;        // two lines of half-size text plus padding
             } else {
-                _width = 18 * size + 6;
+                _width = 36 * size + 6;
                 _height = 8 * _size;
             }
         }
@@ -98,6 +103,17 @@ class BigDataWidget : public Widget {
                 _value = std::get<float>(newVal);
                 if (_value != _value) { // Check for NaN
                     _value = 0.0f;
+                }
+                if (_type == TelemetryType::HeartRate && _value > 0) {
+                    //get the zone thresholds from the model and set color accordingly
+                    DataModel& model = App::instance().getModel();
+                    int hr = static_cast<int>(_value);
+                    auto appData = model.app().get();
+                    if (hr < appData.zone1Start) _color = ST77XX_BLUE;
+                    else if (hr < appData.zone2Start) _color = ST77XX_GREEN;
+                    else if (hr < appData.zone3Start) _color = ST77XX_YELLOW;
+                    else if (hr < appData.zone4Start) _color = ST77XX_ORANGE;
+                    else _color = ST77XX_RED;
                 }
             } else {
                 newData = _locationValue != std::get<location_data>(newVal);
