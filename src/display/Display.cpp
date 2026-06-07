@@ -37,6 +37,27 @@ namespace Disp {
         if (nx + nw > SCREEN_WIDTH) nw = SCREEN_WIDTH - nx;
         if (ny + nh > SCREEN_HEIGHT) nh = SCREEN_HEIGHT - ny;
         if (nw <= 0 || nh <= 0) return;
+
+        int16_t nr = nx + nw; // right edge of new rect
+        int16_t nb = ny + nh; // bottom edge of new rect
+
+        for (size_t i = 0; i < dirtyRects.size(); i++) {
+            DirtyRect& e = dirtyRects[i];
+            int16_t er = e.x + e.w;
+            int16_t eb = e.y + e.h;
+
+            // Existing rect already fully covers the new one — nothing to add
+            if (e.x <= nx && e.y <= ny && er >= nr && eb >= nb) return;
+
+            // New rect fully covers an existing one — replace it in-place and return,
+            // since any other existing rects are either contained by the new one (and
+            // will be naturally re-covered on flush) or are independent regions
+            if (nx <= e.x && ny <= e.y && nr >= er && nb >= eb) {
+                e = {nx, ny, nw, nh};
+                return;
+            }
+        }
+
         dirtyRects.push_back({nx, ny, nw, nh});
     }
 
