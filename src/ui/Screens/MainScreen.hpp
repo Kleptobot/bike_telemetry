@@ -6,12 +6,14 @@
 #include "UI/Widgets/IconWidget.hpp"
 #include "UI/Widgets/TimeWidget.hpp"
 #include "UI/GFX.h"
+#include "UI/Widgets/MapWidget.hpp"
 
 class MainScreen : public UIScreen {
     public:
         MainScreen (DataModel& model) : 
             UIScreen(model),
             batt(202,5),
+            map(120,30,112,160, model),
             gpsIcon(5,5,16,16,epd_bitmap_antenna),
 
             settingsIcon    (88,300,16,16,epd_bitmap_gear),
@@ -70,6 +72,9 @@ class MainScreen : public UIScreen {
             }
             appState_prev = appState;
 
+            //update map widget
+            map.update(dt);
+
         }
 
         void handleInput(physIO input) override {
@@ -109,6 +114,9 @@ class MainScreen : public UIScreen {
             playIcon.render();
             stopIcon.render();
             powerIcon.render();
+
+            // render map
+            map.render();
         }
     
     private:
@@ -122,6 +130,8 @@ class MainScreen : public UIScreen {
         TimeWidget lapTime;
 
         std::vector<BigDataWidget> dataDisplays;
+
+        MapWidget map;
 
         DateTime _date;
         DateTime _lap;
