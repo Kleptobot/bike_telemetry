@@ -72,6 +72,8 @@ private:
     uint32_t lastMCPTime = 0;
     button* buttons[static_cast<size_t>(ButtonID::COUNT)];
     std::queue<pinCMD> pinCmds;
+    bool firstRun = true;
+    uint32_t firstRunTime = 0;
 
     static GpsEnableCallback gpsEnableCallback;
 };

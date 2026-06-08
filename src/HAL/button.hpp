@@ -12,8 +12,8 @@ class button
     bool _RE, _FE;
     bool _long, _short;
     uint32_t _RETime = 0, _FETime = 0;
-    uint32_t _heldTime;
-    uint32_t _releaseTime;
+    uint32_t _heldTime = 0;
+    uint32_t _releaseTime = 0;
     bool _long_RE;
     static const uint16_t _nHeldPressTime = 1500;
     static const uint16_t _nShortPressTime = 50;

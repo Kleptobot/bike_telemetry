@@ -23,12 +23,19 @@ class HAL {
     physIO inputs() { return inputSystem.state(); };
     IStorage* SD() { return &storageSystem; }
     BluetoothSystem& bluetooth() { return bluetoothSystem; }
+    void reInitStorage() {
+      while (!storageSystem.init()) {
+            Serial.println("SD card detected, initializing...");
+            delay(200);
+        }
+    }
    
     void displayGPSInfo();
     void sleep();
     void getNMEArates(uint8_t type);
     void setNMEArates(uint8_t type, uint8_t rate);
     void gpsRestoreDefaults() { _LC76G.sendCommand(LC76G::RESTORE_DEFAULT_SETTING,nullptr,this,nullptr); }
+    void gpsSaveNVRAM() { _LC76G.sendCommand(LC76G::SAVE_TO_NVRAM,nullptr,this,nullptr); }
     void gpsHotStart() { _LC76G.sendCommand(LC76G::GNSS_SUBSYS_HOT_START,nullptr,this,nullptr); }
     void gpsWarmStart() { _LC76G.sendCommand(LC76G::GNSS_SUBSYS_WARM_START,nullptr,this,nullptr); }
     void gpsColdStart() { _LC76G.sendCommand(LC76G::GNSS_SUBSYS_COLD_START,nullptr,this,nullptr); }

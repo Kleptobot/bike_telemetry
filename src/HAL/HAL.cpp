@@ -19,9 +19,17 @@ void HAL::init() {
     Wire.setClock(100000); // 100kHz
     sensorSystem.init();
     bluetoothSystem.init(&storageSystem);
-    while (!storageSystem.init()) {
-        delay(200);
-        Serial.println("retrying...");
+    for (int i=0; i<5; i++) {
+        inputSystem.update(false);
+        delay(100);
+    }
+    if (!inputs().SD_Det.state) {   //SD card pin is inverted, low means card is present
+        while (!storageSystem.init()) {
+            Serial.println("SD card detected, initializing...");
+            delay(200);
+        }
+    } else {
+        Serial.println("No SD card detected.");
     }
     _LC76G.begin(&Wire);
 
@@ -29,8 +37,6 @@ void HAL::init() {
     resetDisplay();
 
     inputSystem.setOutput(GPIOB6,true); //turn on the screen backlight
-
-    
 }
 
 void HAL::update() {

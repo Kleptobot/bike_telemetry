@@ -20,20 +20,19 @@ void setup() {
     HAL::inst().init_low();
 }
 
-uint32_t last;
 void loop() {
     //check if we need to run the higher level init functions (only once started)
     if (!started) {
         digitalWrite(D6, true); //turn on the auxilary supply
+        Serial.begin(115200);
         delay(500);
         
-        Serial.begin(115200);
         HAL::inst().init();
         App::instance().begin(HAL::inst().SD());
         started = true;
         Serial.println("App started");
         Serial.printf("Free heap: %d bytes\n", dbgHeapTotal() - dbgHeapUsed());
-        last = millis();
+        Serial.println("SD card det state: " + String(HAL::inst().inputs().SD_Det.state));
     }
 
     //update the HAL and App
@@ -41,11 +40,8 @@ void loop() {
     App::instance().update();
 
     //read the state of the gps enable pin, if its low then sleep
-    //delay the check for at least a second to avoid rapid sleep/wake cycles if the pin is noisy
-    if (millis() - last > 1000) {
-        if ( !App::instance().getGpsEnableState() ) {
-            digitalWrite(D6, false); //turn off the auxilary supply
-            NRF_POWER->SYSTEMOFF = 1;
-        }
+    if ( !App::instance().getGpsEnableState() ) {
+        digitalWrite(D6, false); //turn off the auxilary supply
+        NRF_POWER->SYSTEMOFF = 1;
     }
 }

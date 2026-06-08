@@ -54,17 +54,18 @@ class BigDataWidget : public Widget {
                     Disp::print(' ');
                 Disp::print(intPart);
 
-                // Switch to half size for decimal part, aligned to top
+                // Switch to 1/3rd size alligned with top of integer part for decimal
+                int smallSize = max<uint8_t>(1, _size / 3);
                 int decX = Disp::getCursorX();
                 int decY = y; // top-aligned, same Y as the integer part
-                Disp::setTextSize(_size / 2 > 0 ? _size / 2 : 1);
+                Disp::setTextSize(smallSize);
                 Disp::setCursor(decX, decY);
                 Disp::print('.');
                 Disp::print(decPart);
 
                 // Place label after decimal, back to full size
                 int labelX = Disp::getCursorX();
-                Disp::setTextSize(2);
+                Disp::setTextSize(smallSize);
                 Disp::setCursor(labelX, y);
                 Disp::print(labelForType(_type));
                 String debugOutput = "For type: " + String(toString(_type)) +" Value: " + String(_value);
@@ -129,13 +130,13 @@ class BigDataWidget : public Widget {
 
     private:
         String formatLocationValue(double value) const {
-            int maxLen = 9;
-            int integerDigits = 1;
+            uint16_t maxLen = 9;
+            uint16_t integerDigits = 1;
             double absVal = value < 0 ? -value : value;
             if (absVal >= 100) integerDigits = 3;
             else if (absVal >= 10) integerDigits = 2;
-            int signChars = value < 0 ? 1 : 0;
-            int decimals = maxLen - integerDigits - signChars - 1; // 1 for dot
+            uint16_t signChars = value < 0 ? 1 : 0;
+            uint16_t decimals = maxLen - integerDigits - signChars - 1; // 1 for dot
             if (decimals < 0) decimals = 0;
             String formatted = String(value, decimals);
             while (formatted.length() > maxLen && decimals > 0) {
@@ -160,11 +161,11 @@ class BigDataWidget : public Widget {
                 case TelemetryType::Speed: return "km/h";
                 case TelemetryType::Cadence: return "rpm";
                 case TelemetryType::HeartRate: return "bpm";
-                case TelemetryType::Temperature: return " C ";  //° cannot be rendered
-                case TelemetryType::Power: return " W ";
-                case TelemetryType::Altitude: return " m ";
-                case TelemetryType::Distance: return " m ";
-                case TelemetryType::TotalDist: return " km";
+                case TelemetryType::Temperature: return "C  ";  //° cannot be rendered
+                case TelemetryType::Power: return "W  ";
+                case TelemetryType::Altitude: return "m  ";
+                case TelemetryType::Distance: return "m  ";
+                case TelemetryType::TotalDist: return "km ";
                 case TelemetryType::Location: return "";
                 default: return "-";
             }

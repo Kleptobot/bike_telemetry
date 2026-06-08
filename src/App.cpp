@@ -16,7 +16,6 @@ void App::begin(IStorage* storage) {
     logger = new TCXLogger(_storage, model);
     state = AppState::BOOT;
     Disp::init();
-    loadLayout();
 
     ui.registerScreen<MainScreen>(ScreenID::MainMenu,App::instance().getModel());
     ui.registerScreen<TimeEditScreen>(ScreenID::TimeMenu,App::instance().getModel());
@@ -86,8 +85,8 @@ void App::update() {
             break;
 
         case 10: case 11: case 12: case 13: case 14: case 15: case 16: case 17: case 18:
-            //wait here for 1 second
-            if (_millis - _messageSendMillis > 1000) {
+            //wait here for 200ms
+            if (_millis - _messageSendMillis > 200) {
                 _lastRenderMillis = _millis;
                 messageType-=9;
             }
@@ -109,6 +108,8 @@ void App::update() {
             HAL::inst().bluetooth().loadDevices();
             HAL::inst().resetGPS();
             loadBiometrics();
+            loadLayout();
+            ui.showScreen(ScreenID::MainMenu);
             state = AppState::IDLE;
             break;
 
@@ -123,6 +124,15 @@ void App::update() {
             }
             
             model.telemetry().resetDistance();
+
+            //on SD card detection go back to boot
+            if (HAL::inst().inputs().SD_Det.FE) {
+                HAL::inst().reInitStorage();
+                state = AppState::BOOT;
+            } else if (HAL::inst().inputs().SD_Det.RE) {
+                //SD card removed
+            }
+
             break;
 
         case AppState::CONFIG:
@@ -163,7 +173,7 @@ void App::update() {
     model.app().setState(state);
 }
 
-void App::updateTelemetry(imu_data imu, dps_data dps, int BattPercentage, float speed, float cadence, float temp, float alt, float bpm, float pow, TinyGPSLocation loc, DateTime now) {
+void App::updateTelemetry(imu_data imu, dps_data dps, int16_t BattPercentage, float speed, float cadence, float temp, float alt, float bpm, float pow, TinyGPSLocation loc, DateTime now) {
     float distance = 0;
 
     // /Haversine formula
@@ -261,6 +271,18 @@ void App::handleAppEvent(const AppEvent& e) {
         case AppEventType::ResetGPS:
             HAL::inst().resetGPS();
             break;
+
+        case AppEventType::saveGPSNVRAM:
+            HAL::inst().gpsSaveNVRAM();
+            break;
+
+        case AppEventType::setGPSNMEARate:
+            {
+                NMEArateChange change = std::get<NMEArateChange>(e.payload);
+                HAL::inst().setNMEArates(change.type, change.rate);
+            }
+            break;
+
         default:
             break;
     }

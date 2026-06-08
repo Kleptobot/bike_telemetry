@@ -21,10 +21,16 @@ enum class AppEventType {
     RestoreDefaultsGPS,
     ResetGPS,
     saveGPSNVRAM,
+    setGPSNMEARate,
     Sleep
+};
+
+struct NMEArateChange {
+    int type;
+    int rate;
 };
 
 struct AppEvent {
     AppEventType type;
-    std::variant<int,float,BluetoothDevice,DateTime> payload;
+    std::variant<int,float,BluetoothDevice,DateTime,NMEArateChange> payload;
 };

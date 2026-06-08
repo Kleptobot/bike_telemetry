@@ -60,19 +60,19 @@ class LC76G
 
     static bool decode_1u8(Sentence response, int& numArgs, void* payload) {
         uint8_t* byte_array = (uint8_t*)payload;
-        numArgs = sscanf(response.data,"%*[^,],%hu*%*X",&byte_array[0]);
+        numArgs = sscanf(response.data,"%*[^,],%c*%*X",&byte_array[0]);
 	    return numArgs==2;
     }
 
     static bool decode_2u8(Sentence response, int& numArgs, void* payload) {
         uint8_t* byte_array = (uint8_t*)payload;
-        numArgs = sscanf(response.data,"%*[^,],%hu,%hu*%*X",&byte_array[0],&byte_array[1]);
+        numArgs = sscanf(response.data,"%*[^,],%c,%c*%*X",&byte_array[0],&byte_array[1]);
 	    return numArgs==2;
     }
 
     static bool decode_1char_1u8(Sentence response, int& numArgs, void* payload) {
       Payload1Ch1U8* p = (Payload1Ch1U8*)payload;
-      numArgs = sscanf(response.data,"%*[^,],%s,%hu*%*X",&p->a,&p->b);
+      numArgs = sscanf(response.data, "%*[^,],%9s,%hhu*%*X", p->a, &p->b);
 	    return numArgs==2;
     }
 
@@ -105,7 +105,8 @@ class LC76G
             GNSS_SUBSYS_WARM_START,
             GNSS_SUBSYS_COLD_START,
             SET_NMEA_RATE,
-            GET_NMEA_RATE
+            GET_NMEA_RATE,
+            SAVE_TO_NVRAM
         };
 
         struct CommandDef {
@@ -143,7 +144,8 @@ class LC76G
             {GNSS_SUBSYS_WARM_START, "PAIR005", &build_no_args, nullptr, nullptr, 200 },
             {GNSS_SUBSYS_COLD_START, "PAIR006", &build_no_args, nullptr, nullptr, 200 },
             {SET_NMEA_RATE, "PQTMCFGMSGRATE,W", &build_1char_1u8, nullptr, nullptr, 10000 },
-            {GET_NMEA_RATE, "PQTMCFGMSGRATE,R", &build_1char, "$PQTMCFGMSGRATE,OK", nullptr, 10000 }
+            {GET_NMEA_RATE, "PQTMCFGMSGRATE,R", &build_1char, "$PQTMCFGMSGRATE,OK", nullptr, 10000 },
+            {SAVE_TO_NVRAM, "PAIR511", &build_no_args, "PAIR001,511,1", nullptr, 10000 }
 
         };
 

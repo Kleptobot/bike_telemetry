@@ -27,7 +27,8 @@ class MainScreen : public UIScreen {
         void onEnter() override {
             auto& l = model.layout().get();
             
-            int size = 256/(8*l.displays.size());
+            int size = constrain( 256/(8*l.displays.size()),1,8);
+
             dataDisplays.clear();
             for ( uint i = 0; i<l.displays.size(); i++) {
                 dataDisplays.push_back({5,30+int(i)*8*size,size,l.displays[i]});
@@ -87,7 +88,7 @@ class MainScreen : public UIScreen {
                     }
                     break;
 
-                default:
+                case AppState::IDLE:
                     if (input.Select.press) {
                         emitAppEvent({AppEventType::StartLogging,0});
                     } else if (input.Left.press) {
@@ -96,6 +97,13 @@ class MainScreen : public UIScreen {
                         emitAppEvent({AppEventType::Sleep,0});
                     }
                     break;
+
+                default:
+                    if (input.Left.press) {
+                        emitUIEvent(UIEventType::ChangeScreen, ScreenID::SettingsMenu);
+                    } else if (input.Right.held) {
+                        emitAppEvent({AppEventType::Sleep,0});
+                    }
             }
         }
 

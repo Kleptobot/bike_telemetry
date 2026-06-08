@@ -33,12 +33,24 @@ void InputSystem::init() {
   
   _mcp.digitalWrite(GPIOB5, true);    //set the reset pin of the gps
   _mcp.digitalWrite(GPIOB6, false);   //turn the display off
-  //_mcp.digitalWrite(GPIOB7, true);    //set the reset pin of the display
+  _mcp.digitalWrite(GPIOB7, true);    //set the reset pin of the display
 
 }
 
 bool InputSystem::update(bool i2cBusy) {
     bool update = false;
+    //dont run input for the first 200ms
+    // if (firstRun) {
+    //   if (firstRunTime == 0) {
+    //     firstRunTime = millis();
+    //     return false;
+    //   }
+    //   if (millis() - firstRunTime > 200)
+    //     firstRun = false;
+    //   else
+    //     return false;
+    // }
+
     if ((millis() - lastMCPTime > MCP_Period) && !i2cBusy) {
         lastMCPTime = millis();
         uint8_t currentA = _mcp.readGPIOA();

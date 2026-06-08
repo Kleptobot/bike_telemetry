@@ -30,7 +30,7 @@ void TileLoader::latLonToTilePixel(double lat, double lon, int zoom, int& pixelX
 static String tilePath(int z, uint32_t x, uint32_t y) {
     // path: /tiles/{z}/{x}/{y}.raw
     char buf[128];
-    snprintf(buf, sizeof(buf), "/tiles/%d/%u/%u.raw", z, x, y);
+    snprintf(buf, sizeof(buf), "/tiles/%d/%" PRIu32 "/%" PRIu32 ".raw", z, x, y);
     return String(buf);
 }
 
@@ -50,7 +50,7 @@ static bool loadRawTileImpl(int z, uint32_t x, uint32_t y,
     if (!storage) return false;
  
     char buf[128];
-    snprintf(buf, sizeof(buf), "/tiles/%d/%u/%u.raw", z, x, y);
+    snprintf(buf, sizeof(buf), "/tiles/%d/%" PRIu32 "/%" PRIu32 ".raw", z, x, y);
  
     if (!storage->exists(buf)) return false;
  
