@@ -17,6 +17,10 @@ public:
 
     bool isMounted() const { return mounted; }
     bool isBusy() const { return busy; }
+    void unMount() {
+        sd.end();
+        mounted = false;
+    }
 
 private:
     SdFat32 sd;              // the only filesystem instance

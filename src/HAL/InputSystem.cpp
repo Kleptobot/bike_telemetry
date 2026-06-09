@@ -39,17 +39,6 @@ void InputSystem::init() {
 
 bool InputSystem::update(bool i2cBusy) {
     bool update = false;
-    //dont run input for the first 200ms
-    // if (firstRun) {
-    //   if (firstRunTime == 0) {
-    //     firstRunTime = millis();
-    //     return false;
-    //   }
-    //   if (millis() - firstRunTime > 200)
-    //     firstRun = false;
-    //   else
-    //     return false;
-    // }
 
     if ((millis() - lastMCPTime > MCP_Period) && !i2cBusy) {
         lastMCPTime = millis();

@@ -10,6 +10,7 @@
 #include "UI/Screens/BiometricsScreen.hpp"
 #include "UI/Screens/DisplayEditScreen.hpp"
 #include "UI/Screens/GPSScreen.hpp"
+#include "UI/Screens/UnmountSDScreen.hpp"
 
 void App::begin(IStorage* storage) {
     _storage = storage;
@@ -24,6 +25,7 @@ void App::begin(IStorage* storage) {
     ui.registerScreen<BiometricsScreen>(ScreenID::Biometrics,App::instance().getModel());
     ui.registerScreen<DisplayEditScreen>(ScreenID::DisplayEdit,App::instance().getModel());
     ui.registerScreen<GPSScreen>(ScreenID::GPSSettings,App::instance().getModel());
+    ui.registerScreen<UnmountSDScreen>(ScreenID::UnmountSD,App::instance().getModel());
 
     ui.begin(ScreenID::MainMenu);
 
@@ -47,6 +49,8 @@ void App::update() {
     // Any periodic application-level behavior here
     Telemetry tel = model.telemetry().get();
     DateTime currentTime = model.time().get();
+
+    model.SD().update ({HAL::inst().SDMounted(),!HAL::inst().inputs().SD_Det.state});
 
     if (!appEvents.empty()) {
         handleAppEvent(appEvents.front());
@@ -281,6 +285,10 @@ void App::handleAppEvent(const AppEvent& e) {
                 NMEArateChange change = std::get<NMEArateChange>(e.payload);
                 HAL::inst().setNMEArates(change.type, change.rate);
             }
+            break;
+
+        case AppEventType::UnmountSD:
+            HAL::inst().unMountSD();
             break;
 
         default:

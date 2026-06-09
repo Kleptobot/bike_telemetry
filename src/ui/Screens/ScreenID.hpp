@@ -8,5 +8,6 @@ enum class ScreenID {
     Biometrics,
     GPSSettings,
     TimeMenu,
-    DisplayEdit
+    DisplayEdit,
+    UnmountSD
 };

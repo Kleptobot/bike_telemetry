@@ -22,6 +22,7 @@ enum class AppEventType {
     ResetGPS,
     saveGPSNVRAM,
     setGPSNMEARate,
+    UnmountSD,
     Sleep
 };
 

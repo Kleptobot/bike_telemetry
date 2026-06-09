@@ -45,6 +45,9 @@ class HAL {
     }
     void resetGPS();
 
+    bool SDMounted() const { return storageSystem.isMounted(); };
+    void unMountSD() {storageSystem.unMount(); };
+
     using TelemetryCallback = std::function<void(imu_data imu, dps_data dps, int BattPercentage, float speed, float cadence, float temp, float alt, float bpm, float pow, TinyGPSLocation loc, DateTime now)>;
 
     void onTelemetry(TelemetryCallback cb) { telemetryCallback = cb; }
