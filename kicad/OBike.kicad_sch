@@ -8228,16 +8228,6 @@
 	)
 	(wire
 		(pts
-			(xy 364.49 59.69) (xy 382.27 59.69)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "21ab247c-56d1-4445-99a0-84fbeac64401")
-	)
-	(wire
-		(pts
 			(xy 377.19 67.31) (xy 382.27 67.31)
 		)
 		(stroke
@@ -12625,28 +12615,6 @@
 		(uuid "a5ae6622-fd91-480b-ad04-7b224fcbda64")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 196.4653 220.98 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-				(hide yes)
-			)
-		)
-	)
-	(global_label "SCR_RST"
-		(shape output)
-		(at 364.49 59.69 180)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right)
-		)
-		(uuid "aabb2362-55ac-413b-8c7a-0e86ba8a998e")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 353.3406 59.69 0)
 			(effects
 				(font
 					(size 1.27 1.27)
