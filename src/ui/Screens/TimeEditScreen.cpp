@@ -3,10 +3,11 @@
 void TimeEditScreen::update(float dt) {
     timeWidget.update(dt);
     dateWidget.update(dt);
+    UTCOffsetDisp.setText(String(_UTCOffset));
 
     timeWidget.setFocused (focusField == EditField::Time);
     dateWidget.setFocused (focusField == EditField::Date);
-    
+    UTCOffsetDisp.setFocused (focusField == EditField::UTC);
     backWidget.setFocused (focusField == EditField::Back);
     saveWidget.setFocused (focusField == EditField::Save);
 
@@ -23,7 +24,7 @@ void TimeEditScreen::handleInput(physIO input) {
             moveFocusLeft();
         if (input.Right.press)
             moveFocusRight();
-    } 
+    }
     switch (focusField) {
         case EditField::Time:
             timeWidget.handleInput(input);
@@ -33,17 +34,21 @@ void TimeEditScreen::handleInput(physIO input) {
             break;
         case EditField::UTC:
         // Handle Up: press or held with repeat
-            if (input.Up.state && UTCOffsetDisp.shouldRepeat(input.Up.heldTime)) {
-                _UTCOffset ++;
-            }else if (input.Up.press) {
-                _UTCOffset ++;
-            } 
-            // Handle Down: press or held with repeat
-            if (input.Down.state && UTCOffsetDisp.shouldRepeat(input.Down.heldTime)) {
-                _UTCOffset --;
-            } else if (input.Down.press) {
-                _UTCOffset --;
+            if (UTCOffsetDisp.isSelected()) {
+                if (input.Up.state && UTCOffsetDisp.shouldRepeat(input.Up.heldTime)) {
+                    _UTCOffset ++;
+                }else if (input.Up.press) {
+                    _UTCOffset ++;
+                } 
+                // Handle Down: press or held with repeat
+                if (input.Down.state && UTCOffsetDisp.shouldRepeat(input.Down.heldTime)) {
+                    _UTCOffset --;
+                } else if (input.Down.press) {
+                    _UTCOffset --;
+                }
+                _UTCOffset = constrain(_UTCOffset,-12,12);
             }
+            if (input.Select.press) UTCOffsetDisp.setSelected(!UTCOffsetDisp.isSelected());
             break;
         case EditField::Back:
             backWidget.handleInput(input);
@@ -61,7 +66,7 @@ void TimeEditScreen::moveFocusUp() {
         case EditField::Date: focusField = EditField::Time; break;
         case EditField::UTC: focusField = EditField::Date; break;
         case EditField::Back: focusField = EditField::UTC; break;
-        case EditField::Save: focusField = EditField::Date; break;
+        case EditField::Save: focusField = EditField::UTC; break;
         default: break;
     }
 }

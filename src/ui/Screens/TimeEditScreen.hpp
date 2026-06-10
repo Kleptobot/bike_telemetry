@@ -12,7 +12,7 @@ class TimeEditScreen : public UIScreen {
             UIScreen(model),
             timeWidget{5,5, &_date},
             dateWidget{5,30, &_date},
-            UTCOffsetLabel{5,55, "Timezone offset: "},
+            UTCOffsetLabel{5,55, "UTC offset: "},
             UTCOffsetDisp{UTCOffsetLabel.width() + 10,55, ""},
             backWidget{5,87,"Back",epd_bitmap_left},
             saveWidget{75,87,"Save",epd_bitmap_save} {
@@ -22,8 +22,10 @@ class TimeEditScreen : public UIScreen {
                 });
                 //register the save press event callback to send a change screen and app save event
                 saveWidget.setOnPress([this] () {
+                    Serial.println( "UTC: " + String(_UTCOffset));
                     this->model.time().update({this->_date,_UTCOffset});
                     emitAppEvent({AppEventType::SaveTime,_date});
+                    emitAppEvent({AppEventType::SaveBiometrics,0});
                     emitUIEvent(UIEventType::ChangeScreen, ScreenID::SettingsMenu);
                 });
             }

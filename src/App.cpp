@@ -215,16 +215,17 @@ void App::updateTelemetry(imu_data imu, dps_data dps, int16_t BattPercentage, fl
                                 distance});
 
     //when gps time goes valid, check if the RTC time needs to be re-synced
+    int UTCoffset = model.time().get().UTCoffset;
     if (gpsNow.isValid() && !_gpsNowValid) {
         //load gpsTime into _gpsNow DateTime object, adding in the saved UTC offset
-        _gpsNow = {rtcNow.year(), rtcNow.month(), rtcNow.day(), gpsNow.hour()+10, gpsNow.minute(), gpsNow.second()};
+        _gpsNow = {rtcNow.year(), rtcNow.month(), rtcNow.day(), gpsNow.hour()+UTCoffset, gpsNow.minute(), gpsNow.second()};
         TimeSpan ts = _gpsNow - rtcNow;
-        if (ts.totalseconds() > 30)
+        if (ts.totalseconds() > 30 || ts.totalseconds() < -30)
             HAL::inst().setTime(_gpsNow);
     }
     _gpsNowValid = gpsNow.isValid();
     
-    model.time().update({rtcNow, 10});
+    model.time().update({rtcNow, UTCoffset});
 }
 
 void App::updateBluetooth(std::vector<BluetoothDevice> devices) {
