@@ -34,6 +34,11 @@ Standard bike peripherals that connect via Bluetooth and implement the CSC, HRM 
 ## Dependencies
  - PlatformIO project (see `platformio.ini`).
  - Arduino/Adafruit libraries required by the display and graphics: `Adafruit_GFX`, `Adafruit_ST7789`.
+ - Adafruit RTClib library
+ - Adafruit MCP23017 Arduino Library
+ - Seeed Arduino LSM6DS3 library
+ - XENSIV Digital Pressure Sensor library
+ - bblanchon/ArduinoJson
  - `TinyGPSPlus` for parsing NMEA sentences.
 
 ## Key files to inspect
