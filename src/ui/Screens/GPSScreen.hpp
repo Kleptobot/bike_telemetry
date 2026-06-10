@@ -14,25 +14,25 @@ class GPSScreen : public UIScreen {
         restoreGPSDefaults{5,20,"Restore Defaults",epd_bitmap_gear},
 
         GGArateLabel{5, 50, "GGA rate: "},
-        GGArate{GGArateLabel.width() + 10, 50, String(rates[0])},
+        GGArate{GGArateLabel.width() + 10, 50, String(_rates[0])},
         GLLrateLabel{5, 70, "GLL rate: "},
-        GLLrate{GLLrateLabel.width() + 10, 70, String(rates[1])},
+        GLLrate{GLLrateLabel.width() + 10, 70, String(_rates[1])},
         GSArateLabel{5, 90, "GSA rate: "},
-        GSArate{GSArateLabel.width() + 10, 90, String(rates[2])},
+        GSArate{GSArateLabel.width() + 10, 90, String(_rates[2])},
         GSVrateLabel{5, 110, "GSV rate: "},
-        GSVrate{GSVrateLabel.width() + 10, 110, String(rates[3])},
+        GSVrate{GSVrateLabel.width() + 10, 110, String(_rates[3])},
         RMCrateLabel{5, 130, "RMC rate: "},
-        RMCrate{RMCrateLabel.width() + 10, 130, String(rates[4])},
+        RMCrate{RMCrateLabel.width() + 10, 130, String(_rates[4])},
         VTGrateLabel{5, 150, "VTG rate: "},
-        VTGrate{VTGrateLabel.width() + 10, 150, String(rates[5])},
+        VTGrate{VTGrateLabel.width() + 10, 150, String(_rates[5])},
         ZDArateLabel{5, 170, "ZDA rate: "},
-        ZDArate{ZDArateLabel.width() + 10, 170, String(rates[6])},
+        ZDArate{ZDArateLabel.width() + 10, 170, String(_rates[6])},
         GRSrateLabel{5, 190, "GRS rate: "},
-        GRSrate{GRSrateLabel.width() + 10, 190, String(rates[7])},
+        GRSrate{GRSrateLabel.width() + 10, 190, String(_rates[7])},
         GSTrateLabel{5, 210, "GST rate: "},
-        GSTrate{GSTrateLabel.width() + 10, 210, String(rates[8])},
+        GSTrate{GSTrateLabel.width() + 10, 210, String(_rates[8])},
         GNSrateLabel{5, 230, "GNS rate: "},
-        GNSrate{GNSrateLabel.width() + 10, 230, String(rates[9])},
+        GNSrate{GNSrateLabel.width() + 10, 230, String(_rates[9])},
 
         saveNVRAM{5, 260,"Save NVRAM",epd_bitmap_save},
         backWidget{15, 280,"Back",epd_bitmap_left},
@@ -148,7 +148,7 @@ class GPSScreen : public UIScreen {
             GSTrate,
             GNSrate};
         
-        int rates[10] = {1,0,0,0,1,0,0,0,0,0};
+        int _rates[10] = {1,0,0,0,1,0,0,0,0,0};
         bool prevSelectedRates[10] = {false,false,false,false,false,false,false,false,false,false};
 
         bool anySelected() {

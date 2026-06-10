@@ -12,21 +12,25 @@ class TimeEditScreen : public UIScreen {
             UIScreen(model),
             timeWidget{5,5, &_date},
             dateWidget{5,30, &_date},
-            backWidget{5,55,"Back",epd_bitmap_left},
-            saveWidget{75,55,"Save",epd_bitmap_save} {
+            UTCOffsetLabel{5,55, "Timezone offset: "},
+            UTCOffsetDisp{UTCOffsetLabel.width() + 10,55, ""},
+            backWidget{5,87,"Back",epd_bitmap_left},
+            saveWidget{75,87,"Save",epd_bitmap_save} {
                 //register press event callback to send a change screen event
                 backWidget.setOnPress([this] () {
                     emitUIEvent(UIEventType::ChangeScreen, ScreenID::SettingsMenu);
                 });
                 //register the save press event callback to send a change screen and app save event
                 saveWidget.setOnPress([this] () {
-                    this->model.time().update(this->_date);
+                    this->model.time().update({this->_date,_UTCOffset});
                     emitAppEvent({AppEventType::SaveTime,_date});
                     emitUIEvent(UIEventType::ChangeScreen, ScreenID::SettingsMenu);
                 });
             }
         void onEnter() override {
-            _date = model.time().get();
+            auto m = model.time().get();
+            _date = m.now;
+            _UTCOffset = m.UTCoffset;
         }
 
         void update(float dt) override;
@@ -36,18 +40,23 @@ class TimeEditScreen : public UIScreen {
         void render() override {
             timeWidget.render();
             dateWidget.render();
+            UTCOffsetLabel.render();
+            UTCOffsetDisp.render();
             backWidget.render();
             saveWidget.render();
         }
 
     private:
-        enum class EditField { Time = 0, Date, Back, Save };
+        enum class EditField { Time = 0, Date, UTC,  Back, Save };
         EditField focusField = EditField::Time;
         TimeWidget timeWidget;
         DateWidget dateWidget;
+        SelectableTextWidget UTCOffsetLabel;
+        SelectableTextWidget UTCOffsetDisp;
         SelectableTextIconWidget backWidget;
         SelectableTextIconWidget saveWidget;
         DateTime _date;
+        int _UTCOffset;
 
         void moveFocusUp();
         void moveFocusDown();
@@ -55,6 +64,7 @@ class TimeEditScreen : public UIScreen {
         void moveFocusRight();
         bool anySelected() {return timeWidget.isSelected() ||
                                     dateWidget.isSelected() ||
+                                    UTCOffsetDisp.isSelected() ||
                                     saveWidget.isSelected() ||
                                     backWidget.isSelected(); }
 

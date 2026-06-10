@@ -32,7 +32,7 @@ public:
     void update();
 
     // Data from HAL
-    void updateTelemetry(imu_data imu, dps_data dps, int16_t BattPercentage, float speed, float cadence, float temp, float alt, float bpm, float pow, TinyGPSLocation loc, DateTime now);
+    void updateTelemetry(imu_data imu, dps_data dps, int16_t BattPercentage, float speed, float cadence, float temp, float alt, float bpm, float pow, TinyGPSLocation loc, DateTime now, TinyGPSTime gpsNow);
     void updateBluetooth(std::vector<BluetoothDevice> devices);
     void updateGpsEnable(bool state);
 
@@ -55,6 +55,8 @@ private:
     TCXLogger* logger = nullptr;
     AppState state = AppState::BOOT, state_prev;
     TinyGPSLocation _lastLocation;
+    DateTime _gpsNow;
+    bool _gpsNowValid = false;
     uint32_t _lastSeconds;
     uint32_t _lastRenderMillis = 0;
     int messageType = 0;

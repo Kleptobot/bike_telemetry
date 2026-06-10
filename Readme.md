@@ -42,9 +42,9 @@ Standard bike peripherals that connect via Bluetooth and implement the CSC, HRM 
  - `TinyGPSPlus` for parsing NMEA sentences.
 
 ## Key files to inspect
- - `src/HAL/LC76G.cpp` / `src/HAL/LC76G.hpp` — low-level driver for the Quectel LC76G module, NMEA assembly and PAIR command handling.
+ - `src/HAL/LC76G.cpp` / `src/HAL/LC76G.hpp` — i2c driver for the Quectel LC76G module, NMEA assembly and PAIR command handling.
  - `src/display/Display.hpp` / `src/display/Display.cpp` — ST7789 display wrapper and canvas handling (240×320 canvas, 16-bit colour buffer).
- - `src/TCXLogger.*` — TCX/CSV formatting and SD card logging.
+ - `src/TCXLogger.*` — TCX formatting and SD card logging.
  - `kicad/` — schematic (`.kicad_sch`) and PCB (`.kicad_pcb`) files.
  - `3D_CAD/` — STEP/STL files for the housing and mounting hardware.
 

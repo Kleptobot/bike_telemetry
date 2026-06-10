@@ -49,7 +49,7 @@ class MainScreen : public UIScreen {
             }
 
             //display the current time
-            _date = model.time().get();
+            _date = model.time().get().now;
             timeWidget.update(dt);
             batt.setBat(t.BattPercentage);
             

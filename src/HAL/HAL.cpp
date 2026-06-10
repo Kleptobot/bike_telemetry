@@ -112,7 +112,8 @@ void HAL::update() {
                           f32_bpm,
                           f32_pow,
                           _LC76G.gps().location,
-                          sensorSystem.now());
+                          sensorSystem.now(),
+                          _LC76G.gps().time);
     }
 
     //if reset time is non zero check if 100ms has passed since the trigger, then reset time to zero and write reset pin high

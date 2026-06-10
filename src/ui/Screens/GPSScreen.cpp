@@ -36,11 +36,11 @@ void GPSScreen::handleInput(physIO input) {
             case EditField::GSTrate:
             case EditField::GNSrate:
                     if (input.Up.state && ratesWidgetRefs[(int)focusField-2].get().shouldRepeat(input.Up.heldTime)) {
-                        ++rates[(int)focusField-2];
+                        ++_rates[(int)focusField-2];
                     } else if (input.Down.state && ratesWidgetRefs[(int)focusField-2].get().shouldRepeat(input.Down.heldTime)) {
-                        --rates[(int)focusField-2];
-                    } else if (input.Up.press) ++rates[(int)focusField-2];
-                    else if (input.Down.press) --rates[(int)focusField-2];
+                        --_rates[(int)focusField-2];
+                    } else if (input.Up.press) ++_rates[(int)focusField-2];
+                    else if (input.Down.press) --_rates[(int)focusField-2];
                     if(input.Select.press) 
                         ratesWidgetRefs[(int)focusField-2].get().setSelected(false);
                 break;
@@ -63,13 +63,13 @@ void GPSScreen::update(float dt) {
     saveWidget.setFocused(focusField == EditField::save);
     for(int i = 0; i < 10; ++i) {
         ratesWidgetRefs[i].get().setFocused(focusField == EditField(int(EditField::GGArate) + i));
-        ratesWidgetRefs[i].get().setText(String(rates[i]));
+        ratesWidgetRefs[i].get().setText(String(_rates[i]));
 
         //on the falling edge of selected, emit an event to the app to update the rate
         if (!ratesWidgetRefs[i].get().isSelected() && prevSelectedRates[i]) {
             AppEvent e;
             e.type = AppEventType::setGPSNMEARate;
-            e.payload = NMEArateChange{i, rates[i]};
+            e.payload = NMEArateChange{i, _rates[i]};
             emitAppEvent(e);
         }
         prevSelectedRates[i] = ratesWidgetRefs[i].get().isSelected();

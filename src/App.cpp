@@ -30,8 +30,8 @@ void App::begin(IStorage* storage) {
     ui.begin(ScreenID::MainMenu);
 
     // Register callback with HAL
-    HAL::inst().onTelemetry([this](imu_data imu, dps_data dps, int BattPercentage, float speed, float cadence, float temp, float alt, float bpm, float pow, TinyGPSLocation loc, DateTime now) {
-        this->updateTelemetry(imu, dps, BattPercentage, speed, cadence, temp, alt, bpm, pow, loc, now);
+    HAL::inst().onTelemetry([this](imu_data imu, dps_data dps, int BattPercentage, float speed, float cadence, float temp, float alt, float bpm, float pow, TinyGPSLocation loc, DateTime rtcNow, TinyGPSTime gpsNow) {
+        this->updateTelemetry(imu, dps, BattPercentage, speed, cadence, temp, alt, bpm, pow, loc, rtcNow, gpsNow);
     });
 
     HAL::inst().bluetooth().onDeviceList([this](std::vector<BluetoothDevice> devices) {
@@ -48,7 +48,7 @@ void App::begin(IStorage* storage) {
 void App::update() {
     // Any periodic application-level behavior here
     Telemetry tel = model.telemetry().get();
-    DateTime currentTime = model.time().get();
+    DateTime currentTime = model.time().get().now;
 
     model.SD().update ({HAL::inst().SDMounted(),!HAL::inst().inputs().SD_Det.state});
 
@@ -177,11 +177,11 @@ void App::update() {
     model.app().setState(state);
 }
 
-void App::updateTelemetry(imu_data imu, dps_data dps, int16_t BattPercentage, float speed, float cadence, float temp, float alt, float bpm, float pow, TinyGPSLocation loc, DateTime now) {
+void App::updateTelemetry(imu_data imu, dps_data dps, int16_t BattPercentage, float speed, float cadence, float temp, float alt, float bpm, float pow, TinyGPSLocation loc, DateTime rtcNow, TinyGPSTime gpsNow) {
     float distance = 0;
 
     // /Haversine formula
-    if (now.secondstime() != _lastSeconds) {
+    if (rtcNow.secondstime() != _lastSeconds) {
         if ( loc.isValid() && _lastLocation.isValid()) {
             double deg2rad = M_PI/180.0;
             double theta1 = _lastLocation.lat()*deg2rad;
@@ -198,7 +198,7 @@ void App::updateTelemetry(imu_data imu, dps_data dps, int16_t BattPercentage, fl
             distance = 2.0*6371000.0*asin(sqrt(s1+c1*s2)); //distance in m
         }
         _lastLocation = loc;
-        _lastSeconds = now.secondstime();
+        _lastSeconds = rtcNow.secondstime();
     }
     model.telemetry().update({  imu,
                                 dps,
@@ -213,7 +213,18 @@ void App::updateTelemetry(imu_data imu, dps_data dps, int16_t BattPercentage, fl
                                 loc.lng(),
                                 loc.lat(),
                                 distance});
-    model.time().update(now);
+
+    //when gps time goes valid, check if the RTC time needs to be re-synced
+    if (gpsNow.isValid() && !_gpsNowValid) {
+        //load gpsTime into _gpsNow DateTime object, adding in the saved UTC offset
+        _gpsNow = {rtcNow.year(), rtcNow.month(), rtcNow.day(), gpsNow.hour()+10, gpsNow.minute(), gpsNow.second()};
+        TimeSpan ts = _gpsNow - rtcNow;
+        if (ts.totalseconds() > 30)
+            HAL::inst().setTime(_gpsNow);
+    }
+    _gpsNowValid = gpsNow.isValid();
+    
+    model.time().update({rtcNow, 10});
 }
 
 void App::updateBluetooth(std::vector<BluetoothDevice> devices) {
@@ -300,6 +311,7 @@ void App::saveBiometrics() {
     JsonDocument doc;
 
     auto& a = model.app().get();
+    int utcOffset = model.time().get().UTCoffset;
     
     doc["birthday"] = a.birthday.unixtime();
     doc["mass"] = a.mass;
@@ -309,6 +321,7 @@ void App::saveBiometrics() {
     doc["zone3Start"] = a.zone3Start;
     doc["zone4Start"] = a.zone4Start;
     doc["zone5Start"] = a.zone5Start;
+    doc["UTCOffset"] = utcOffset;
 
     if (_storage->exists("/biometrics.txt"))
         _storage->remove("/biometrics.txt");
@@ -339,6 +352,7 @@ void App::loadBiometrics() {
         AppData a;
         uint32_t unix = jsonBuffer["birthday"];
         DateTime bd(unix);
+        int UTCOffset;
         a.birthday = bd;
         a.mass = jsonBuffer["mass"];
         a.caloricProfile = fromString(jsonBuffer["caloricProfile"]);
@@ -347,8 +361,10 @@ void App::loadBiometrics() {
         a.zone3Start = jsonBuffer["zone3Start"];
         a.zone4Start = jsonBuffer["zone4Start"];
         a.zone5Start = jsonBuffer["zone5Start"];
+        UTCOffset = jsonBuffer["UTCOffset"];
 
         model.app().update(a);
+        model.time().setUTCOffset(UTCOffset);
         dataFile.close();
     }
 }
