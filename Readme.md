@@ -6,6 +6,8 @@ Purpose: capture bike telemetry (speed, cadence, power, heart rate, GPS tracks, 
 
 Standard bike peripherals that connect via Bluetooth and implement the CSC, HRM and CPS profiles are compatible.
 
+<img width="1424" height="1196" alt="OBike v3 assembly" src="https://github.com/user-attachments/assets/fc615ce1-27c5-40f6-beea-987b0b69bac0" />
+
 ## Contents
  - `src/` — Firmware source (C++). Core subsystems in `src/HAL`, UI in `src/ui`, display driver in `src/display`, logging in `src/TCXLogger.cpp`.
  - `include/` — Public headers and shared definitions.
