@@ -17115,7 +17115,7 @@
 				(hide yes)
 			)
 		)
-		(property "Digikiey PN" "RMCF0805JT10K0CT-ND"
+		(property "Digikiey PN" "RMCF0603JT1K00CT-ND"
 			(at 326.39 118.11 90)
 			(effects
 				(font
@@ -17747,7 +17747,7 @@
 				(hide yes)
 			)
 		)
-		(property "MANUFACTURER" ""
+		(property "MANUFACTURER" "1276-1066-1-ND"
 			(at 60.96 30.48 0)
 			(effects
 				(font
@@ -19863,6 +19863,15 @@
 				(hide yes)
 			)
 		)
+		(property "Digikiey PN" "MMSS8550-H-TPMSCT-ND"
+			(at 340.36 118.11 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "3"
 			(uuid "f017da69-943d-42d8-a7b3-4aa99be3413c")
 		)
@@ -19945,7 +19954,7 @@
 				(hide yes)
 			)
 		)
-		(property "Digikiey PN" "RMCF0805JT10K0CT-ND"
+		(property "Digikiey PN" "RMCF0603JT1K00CT-ND"
 			(at 379.73 228.6 90)
 			(effects
 				(font
@@ -20127,7 +20136,7 @@
 				(hide yes)
 			)
 		)
-		(property "Field6" ""
+		(property "Digikiey PN" "RMCF0805JT10K0CT-ND"
 			(at 29.21 214.63 90)
 			(effects
 				(font
@@ -20534,7 +20543,7 @@
 				(hide yes)
 			)
 		)
-		(property "Field6" ""
+		(property "Digikiey PN" "RMCF0805JT10K0CT-ND"
 			(at 31.75 214.63 90)
 			(effects
 				(font
@@ -21085,6 +21094,15 @@
 				(hide yes)
 			)
 		)
+		(property "Digikiey PN" "MMSS8550-H-TPMSCT-ND"
+			(at 393.7 228.6 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "3"
 			(uuid "0d4b5cee-6f7f-4072-b0d7-c0687b6c7370")
 		)
@@ -21458,7 +21476,7 @@
 				(hide yes)
 			)
 		)
-		(property "Field6" ""
+		(property "Digikiey PN" "RMCF0603JT10K0CT-ND"
 			(at 26.67 214.63 90)
 			(effects
 				(font
@@ -22223,7 +22241,7 @@
 				(hide yes)
 			)
 		)
-		(property "Digikiey PN" "RMCF0805JT10K0CT-ND"
+		(property "Digikiey PN" "RMCF0603JT10K0CT-ND"
 			(at 387.35 233.68 90)
 			(effects
 				(font
@@ -23955,7 +23973,7 @@
 				(hide yes)
 			)
 		)
-		(property "Digikiey PN" "RMCF0805JT10K0CT-ND"
+		(property "Digikiey PN" "RMCF0603JT10K0CT-ND"
 			(at 334.01 124.46 90)
 			(effects
 				(font
