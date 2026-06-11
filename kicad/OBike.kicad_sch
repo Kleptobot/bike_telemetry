@@ -7477,6 +7477,12 @@
 		(uuid "720baf39-c054-4971-9a9f-89d220070e37")
 	)
 	(junction
+		(at 144.78 107.95)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "7673a5cf-7357-4668-ae84-2801646d85c9")
+	)
+	(junction
 		(at 50.8 154.94)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -7627,12 +7633,6 @@
 		(uuid "c31d13d2-afbf-4aa8-9671-b9ab4321e903")
 	)
 	(junction
-		(at 144.78 115.57)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "c3e1b729-894d-444b-94e1-ab3abf3f9008")
-	)
-	(junction
 		(at 378.46 110.49)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -7723,6 +7723,12 @@
 		(uuid "e59a7eae-6d8f-4435-96a8-4743414ee7e7")
 	)
 	(junction
+		(at 144.78 115.57)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "e8efd8e4-9908-4c08-8dd4-351aff50d348")
+	)
+	(junction
 		(at 139.7 48.26)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -7739,12 +7745,6 @@
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "ebc88ade-76a2-42e9-9432-957615afd45c")
-	)
-	(junction
-		(at 144.78 107.95)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "ebd5101b-83cf-44e8-81bd-abf4880fcb9b")
 	)
 	(junction
 		(at 266.7 213.36)
@@ -9448,7 +9448,7 @@
 	)
 	(wire
 		(pts
-			(xy 149.86 107.95) (xy 144.78 107.95)
+			(xy 142.24 107.95) (xy 144.78 107.95)
 		)
 		(stroke
 			(width 0)
@@ -9585,16 +9585,6 @@
 			(type default)
 		)
 		(uuid "7a766978-5b61-4b24-973f-79be52304f3b")
-	)
-	(wire
-		(pts
-			(xy 142.24 107.95) (xy 144.78 107.95)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "7a9fb5f1-b942-4604-a081-10d4d657b628")
 	)
 	(wire
 		(pts
@@ -9905,6 +9895,16 @@
 			(type default)
 		)
 		(uuid "982c86e9-5d86-4b26-9f80-ecd9408a68ab")
+	)
+	(wire
+		(pts
+			(xy 144.78 107.95) (xy 149.86 107.95)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "98a1fe50-1e1a-4728-aa13-d177b51aaf4c")
 	)
 	(wire
 		(pts
@@ -13781,7 +13781,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "PTVS5V0Z1USK"
+		(property "Value" "ESDA051-1JY"
 			(at 144.018 83.058 0)
 			(effects
 				(font
@@ -13790,7 +13790,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Diode_SMD:Nexperia_DSN1608-2_1.6x0.8mm"
+		(property "Footprint" "Diode_SMD:D_SOD-323"
 			(at 141.605 86.36 0)
 			(effects
 				(font
@@ -13799,7 +13799,7 @@
 				(hide yes)
 			)
 		)
-		(property "Datasheet" "https://assets.nexperia.com/documents/data-sheet/PTVS5V0Z1USK.pdf"
+		(property "Datasheet" "https://www.st.com/resource/en/datasheet/esda051-1jy.pdf"
 			(at 146.05 86.36 0)
 			(effects
 				(font
@@ -13808,7 +13808,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "5V, 1200W TVS unidirectional diode, DSN1608-2"
+		(property "Description" "TVS DIODE 5VWM 12.8VC SOD323"
 			(at 146.05 86.36 0)
 			(effects
 				(font
@@ -13817,16 +13817,7 @@
 				(hide yes)
 			)
 		)
-		(property "Digikey PN" "1727-2742-1-ND"
-			(at 146.05 86.36 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikiey PN" ""
+		(property "Digikey PN" "497-ESDA051-1JYCT-ND"
 			(at 146.05 86.36 90)
 			(effects
 				(font
@@ -16993,7 +16984,7 @@
 		(at 389.89 209.55 180)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
+		(in_bom no)
 		(on_board yes)
 		(dnp no)
 		(fields_autoplaced yes)
@@ -20147,15 +20138,6 @@
 				(hide yes)
 			)
 		)
-		(property "Digikiey PN" ""
-			(at 27.94 190.5 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
 		(pin "1"
 			(uuid "6cb5273d-db47-4dd5-bc29-b685f7d2d83c")
 		)
@@ -20166,6 +20148,84 @@
 			(project "OBike"
 				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
 					(reference "R22")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Diode:PTVS5V0Z1USK")
+		(at 144.78 111.76 270)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "a741ca89-fc7e-4d0e-8ec6-badc3497bf8d")
+		(property "Reference" "D6"
+			(at 143.51 102.87 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "ESDA051-1JY"
+			(at 142.748 108.458 0)
+			(effects
+				(font
+					(size 0.635 0.635)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Diode_SMD:D_SOD-323"
+			(at 140.335 111.76 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "https://www.st.com/resource/en/datasheet/esda051-1jy.pdf"
+			(at 144.78 111.76 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "TVS DIODE 5VWM 12.8VC SOD323"
+			(at 144.78 111.76 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Digikey PN" "497-ESDA051-1JYCT-ND"
+			(at 144.78 111.76 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "493116bd-52a6-42e2-ba37-19fb6be3b121")
+		)
+		(pin "2"
+			(uuid "e0e4007a-2e3f-4f5e-a51d-e6baa2f627d9")
+		)
+		(instances
+			(project "OBike"
+				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
+					(reference "D6")
 					(unit 1)
 				)
 			)
@@ -20604,15 +20664,6 @@
 				(hide yes)
 			)
 		)
-		(property "Digikiey PN" ""
-			(at 29.21 214.63 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
 		(pin "1"
 			(uuid "83107e0f-86b3-4bc0-9e5e-969ea76043b3")
 		)
@@ -21021,15 +21072,6 @@
 			)
 		)
 		(property "Digikey PN" "RMCF0805JT10K0CT-ND"
-			(at 31.75 214.63 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikiey PN" ""
 			(at 31.75 214.63 90)
 			(effects
 				(font
@@ -21887,93 +21929,6 @@
 		)
 	)
 	(symbol
-		(lib_id "Diode:PTVS5V0Z1USK")
-		(at 144.78 111.76 270)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "cd525566-4427-4d51-aff6-db960c4a4ef2")
-		(property "Reference" "D6"
-			(at 143.51 102.87 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "PTVS5V0Z1USK"
-			(at 142.748 108.458 0)
-			(effects
-				(font
-					(size 0.635 0.635)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "Diode_SMD:Nexperia_DSN1608-2_1.6x0.8mm"
-			(at 140.335 111.76 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "https://assets.nexperia.com/documents/data-sheet/PTVS5V0Z1USK.pdf"
-			(at 144.78 111.76 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "5V, 1200W TVS unidirectional diode, DSN1608-2"
-			(at 144.78 111.76 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikey PN" "1727-2742-1-ND"
-			(at 144.78 111.76 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikiey PN" ""
-			(at 144.78 111.76 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "c618d17e-ed9f-4247-88bd-694cda6957c8")
-		)
-		(pin "2"
-			(uuid "c8c5190e-ef0a-4a0f-bec1-a0a54a73d0f6")
-		)
-		(instances
-			(project ""
-				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
-					(reference "D6")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "Device:R")
 		(at 26.67 214.63 0)
 		(unit 1)
@@ -22034,16 +21989,7 @@
 				(hide yes)
 			)
 		)
-		(property "Digikey PN" "RMCF0603JT10K0CT-ND"
-			(at 26.67 214.63 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikiey PN" ""
+		(property "Digikey PN" "RMCF0805JT10K0CT-ND"
 			(at 26.67 214.63 90)
 			(effects
 				(font
