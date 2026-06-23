@@ -4,6 +4,7 @@
 #include <variant>
 #include <RTClib.h>
 #include "HAL/BluetoothInterface.hpp"
+#include "DataModel/TimeDataProvider.hpp"
 
 enum class AppEventType {
     None,
@@ -33,5 +34,5 @@ struct NMEArateChange {
 
 struct AppEvent {
     AppEventType type;
-    std::variant<int,float,BluetoothDevice,DateTime,NMEArateChange> payload;
+    std::variant<int,float,BluetoothDevice,timeData,NMEArateChange> payload;
 };

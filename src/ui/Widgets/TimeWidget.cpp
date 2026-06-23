@@ -11,16 +11,16 @@ void TimeWidget::handleInput(physIO input) {
     if (selected) {
         // Handle Up: press or held with repeat
         if (input.Up.state && shouldRepeat(input.Up.heldTime)) {
-            incrementField(focusField);
+            editField(focusField,1);
         }else if (input.Up.press) {
-            incrementField(focusField);
+            editField(focusField,1);
         } 
 
         // Handle Down: press or held with repeat
          if (input.Down.state && shouldRepeat(input.Down.heldTime)) {
-            decrementField(focusField);
+            editField(focusField,-1);
         } else if (input.Down.press) {
-            decrementField(focusField);
+            editField(focusField,-1);
         }
     } else {
         // Handle Left: press only (no repeat for focus change)
@@ -40,14 +40,16 @@ void TimeWidget::update(float dt) {
     minuteText.setSelected(focusField == EditField::Minute && selected);
     secondText.setSelected(focusField == EditField::Second && selected);
 
-    if(_date->hour() < 10) hourText.setText("0"+String(_date->hour()));
-    else hourText.setText(String(_date->hour()));
+    auto lt = _date->local();
 
-    if(_date->minute() < 10) minuteText.setText("0"+String(_date->minute()));
-    else minuteText.setText(String( _date->minute()));
+    if(lt.hour < 10) hourText.setText("0"+String(lt.hour));
+    else hourText.setText(String(lt.hour));
 
-    if(_date->second() < 10) secondText.setText("0"+String(_date->second()));
-    else secondText.setText(String( _date->second()));
+    if(lt.minute < 10) minuteText.setText("0"+String(lt.minute));
+    else minuteText.setText(String(lt.minute));
+
+    if(lt.second < 10) secondText.setText("0"+String(lt.second));
+    else secondText.setText(String(lt.second));
 }
 
 void TimeWidget::moveFocusLeft() {
@@ -70,59 +72,20 @@ void TimeWidget::moveFocusRight() {
     }
 }
 
-void TimeWidget::incrementField(EditField field) {
+void TimeWidget::editField(EditField field, int val) {
     switch (field) {
         case EditField::Hour:
-            *_date = DateTime(_date->year(), _date->month(), _date->day(), 
-                            (_date->hour() + 1) % 24,
-                            _date->minute(),
-                            _date->second());
+            _date->add_hours(val);
             hourText.setText(String( _date->hour()));
             break;
 
         case EditField::Minute:
-            *_date = DateTime(_date->year(), _date->month(), _date->day(), 
-                            _date->hour(),
-                            (_date->minute() +1) % 60,
-                            _date->second());
+            _date->add_minutes(val);
             minuteText.setText(String( _date->minute()));
             break;
 
         case EditField::Second:
-            *_date = DateTime(_date->year(), _date->month(), _date->day(), 
-                            _date->minute(), 
-                            _date->hour(),
-                            (_date->second() + 1) % 60);
-            secondText.setText(String( _date->second()));
-            break;
-
-        default: break;
-    }
-}
-
-void TimeWidget::decrementField(EditField field) {
-    switch (field) {
-        case EditField::Hour:
-            *_date = DateTime(_date->year(), _date->month(), _date->day(),
-                            (_date->hour() == 1 ? 23 : _date->hour() - 1),
-                            _date->minute(),
-                            _date->second());
-            hourText.setText(String( _date->hour()));
-            break;
-
-        case EditField::Minute:
-            *_date = DateTime(_date->year(), _date->month(), _date->day(),
-                            _date->hour(),
-                            (_date->minute() == 1 ? 59 : _date->minute() - 1),
-                            _date->second());
-            minuteText.setText(String( _date->minute()));
-            break;
-
-        case EditField::Second:
-            *_date = DateTime(_date->year(), _date->month(), _date->day(),
-                            _date->hour(),
-                            _date->minute(), 
-                            (_date->second() == 1 ? 60 : _date->second() - 1));
+            _date->add_seconds(val);
             secondText.setText(String( _date->second()));
             break;
 

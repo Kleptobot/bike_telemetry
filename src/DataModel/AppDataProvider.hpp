@@ -55,7 +55,7 @@ inline CaloricProfile fromString(String s) {
 
 struct AppData {
     AppState state;
-    DateTime birthday = DateTime(1993,5,21);
+    timeData birthday = DateTime(1993,5,21);
     uint16_t mass = 75;
     CaloricProfile caloricProfile = CaloricProfile::Other;
     uint8_t zone1Start = 55; // bpm
@@ -67,7 +67,7 @@ struct AppData {
     AppData(){}
     AppData(
         AppState s, 
-        DateTime b, 
+        timeData b, 
         uint16_t m, 
         CaloricProfile c, 
         uint8_t z1, 

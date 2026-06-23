@@ -1,7 +1,7 @@
 #include "common/FsApiConstants.h"
 #include "TCXLogger.hpp"
 
-void TCXLogger::startLogging(DateTime currentTime) {
+void TCXLogger::startLogging(const timeData& currentTime) {
   _startTime = currentTime;
   laps.clear();
   laps.push_back({currentTime, 1, 1, 0, 0, 0, 0});
@@ -25,7 +25,7 @@ void TCXLogger::writeLapHeader(uint16_t lapIndex, File32 *file){
   char time[32];
 
   Lap lp = laps[lapIndex];
-  TimeSpan ts;
+  timeDuration ts;
   if(lapIndex < laps.size()-1 )
   {
     ts = laps[lapIndex+1].startTime - laps[lapIndex].startTime;
@@ -34,10 +34,10 @@ void TCXLogger::writeLapHeader(uint16_t lapIndex, File32 *file){
   }
 
   auto& a = _model.app().get();
-  float age = TimeSpan(_currentTime - a.birthday).days()/356.25;
+  float age = timeDuration(_currentTime - a.birthday).days()/356.25;
 
-  float avgHRM = float(lp.totalHRM) / float(ts.totalseconds());
-  float avgCAD = lp.totalCadence / ts.totalseconds();
+  float avgHRM = float(lp.totalHRM) / float(ts._totalSeconds);
+  float avgCAD = lp.totalCadence / ts._totalSeconds;
 
   int f = ((age * 0.074) - (float(a.mass) * 0.1265672342) + (avgHRM * 0.4472) - 20.4022) * float(_elapsed_Lap.totalseconds()) / 251.1;
   int m = ((age * 0.2017) - (float(a.mass) * 0.1992094632) + (avgHRM * 0.6309) - 55.0969) * float(_elapsed_Lap.totalseconds()) / 251.1;
@@ -63,7 +63,7 @@ void TCXLogger::writeLapHeader(uint16_t lapIndex, File32 *file){
   sprintf(time, "%d-%02d-%02dT%02d:%02d:%02d", lp.startTime.year(), lp.startTime.month(), lp.startTime.day(), lp.startTime.hour(), lp.startTime.minute(), lp.startTime.second());
   file->print("      <Lap StartTime=\"");file->print(time);file->println("\">");
   // Initialize total time, distance, etc. 
-  file->print("        <TotalTimeSeconds>");file->print(ts.totalseconds());file->print("</TotalTimeSeconds>\n");
+  file->print("        <TotalTimeSeconds>");file->print(ts._totalSeconds);file->print("</TotalTimeSeconds>\n");
   file->print("        <DistanceMeters>");file->print(lp.totalDistance);file->print("</DistanceMeters>\n");
   file->print("        <MaximumSpeed>");file->print(lp.maxSpeed,2);file->print("</MaximumSpeed>\n");
   file->print("        <Calories>");file->print(Calories);file->print("</Calories>\n");
@@ -153,7 +153,7 @@ void TCXLogger::resetTotals()
     totalPoints = 0;
 };
 
-void TCXLogger::newLap(DateTime currentTime)
+void TCXLogger::newLap(timeData currentTime)
 {
   totalPoints = 0;
   resetTotals();

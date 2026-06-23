@@ -4,7 +4,6 @@
 #include <Arduino.h>
 #include <SPI.h>
 #include <vector>
-#include <RTClib.h>
 #include <SdFat.h>
 #include "HAL/StorageInterface.hpp"
 #include "DataModel/DataModel.hpp"
@@ -12,7 +11,7 @@
 #define points_per_chunk 1800
 
 struct Trackpoint {
-    DateTime currentTime;    // Time in ISO 8601 format
+    timeData currentTime;    // Time in ISO 8601 format
     double latitude;
     double longitude;
     double altitude;
@@ -24,7 +23,7 @@ struct Trackpoint {
 };
 
 struct Lap {
-  DateTime startTime;
+  timeData startTime;
   float maxHRM;
   float totalHRM;
   float totalCadence;
@@ -47,13 +46,12 @@ class TCXLogger {
     std::vector<Lap> laps;
 
     char _filename[32];
-    DateTime _startTime;
-    DateTime _currentTime;
+    timeData _startTime;
+    timeData _currentTime;
     TimeSpan _elapsed_Total, _elapsed_Lap;
 
     int totalPoints=0;
 
-    void updateTotals(const Trackpoint& tp);
     void writeLapHeader(uint16_t lapIndex, File32 *file);
     void resetTotals();
     void dataTransfer(File32 *from, File32 *to);
@@ -61,22 +59,22 @@ class TCXLogger {
   public:
     TCXLogger(IStorage* storage, DataModel& model) : _storage(storage), _model(model) {};
 
-    void startLogging(DateTime currentTime);
+    void startLogging(const timeData& currentTime);
     void addTrackpoint(const Trackpoint& tp);
-    void newLap(DateTime currentTime);
+    void newLap(timeData currentTime);
     bool finaliseLogging();
 
-    const TimeSpan elapsed_Total() const {return _currentTime-_startTime;};
-    const TimeSpan elapsed_Lap() const {return _currentTime-laps.back().startTime;};
+    const timeDuration elapsed_Total() const {return _currentTime-_startTime;};
+    const timeDuration elapsed_Lap() const {return _currentTime-laps.back().startTime;};
 
     const String elapsedString_Total() const
     {
-      TimeSpan ts = elapsed_Total();
+      timeDuration ts = elapsed_Total();
       return String(ts.hours())+":"+String(ts.minutes())+":"+String(ts.seconds());
     }
     const String elapsedString_Lap() const
     {
-      TimeSpan ts = elapsed_Lap();
+      timeDuration ts = elapsed_Lap();
       return String(ts.hours())+":"+String(ts.minutes())+":"+String(ts.seconds());
     }
 

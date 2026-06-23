@@ -144,7 +144,7 @@ class BiometricsScreen : public UIScreen {
 
         SelectableTextIconWidget backWidget;
         SelectableTextIconWidget saveWidget;
-        DateTime _birthday;
+        timeData _birthday;
         uint16_t _mass;
         CaloricProfile _caloricProfile;
         uint8_t _zone1Start;

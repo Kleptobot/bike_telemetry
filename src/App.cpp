@@ -48,7 +48,7 @@ void App::begin(IStorage* storage) {
 void App::update() {
     // Any periodic application-level behavior here
     Telemetry tel = model.telemetry().get();
-    DateTime currentTime = model.time().get().now;
+    const timeData& currentTime = model.time().get();
 
     model.SD().update ({HAL::inst().SDMounted(),!HAL::inst().inputs().SD_Det.state});
 
@@ -124,7 +124,7 @@ void App::update() {
                 HAL::inst().bluetooth().setMode(E_Type_BT_Mode::idle);
             if(state_prev==AppState::LOGGING) {
                 logger->finaliseLogging();
-                model.logger().update({0,0});
+                model.logger().update({timeDuration(0), timeDuration(0)});
             }
             
             model.telemetry().resetDistance();
@@ -215,15 +215,15 @@ void App::updateTelemetry(imu_data imu, dps_data dps, int16_t BattPercentage, fl
                                 distance});
 
     //when gps time goes valid, check if the RTC time needs to be re-synced
-    int UTCoffset = model.time().get().UTCoffset;
-    if (gpsNow.isValid() && !_gpsNowValid) {
+    int UTCoffset = model.time().get().offset();
+    if (loc.isValid() && !_gpsNowValid) {
         //load gpsTime into _gpsNow DateTime object, adding in the saved UTC offset
-        _gpsNow = {rtcNow.year(), rtcNow.month(), rtcNow.day(), gpsNow.hour()+UTCoffset, gpsNow.minute(), gpsNow.second()};
+        _gpsNow = {rtcNow.year(), rtcNow.month(), rtcNow.day(), gpsNow.hour()+UTCoffset*60, gpsNow.minute(), gpsNow.second()};
         TimeSpan ts = _gpsNow - rtcNow;
         if (ts.totalseconds() > 30 || ts.totalseconds() < -30)
             HAL::inst().setTime(_gpsNow);
     }
-    _gpsNowValid = gpsNow.isValid();
+    _gpsNowValid = loc.isValid();
     
     model.time().update({rtcNow, UTCoffset});
 }
@@ -239,7 +239,7 @@ void App::updateGpsEnable(bool state) {
 void App::handleAppEvent(const AppEvent& e) {
     switch (e.type) {
         case AppEventType::SaveTime:
-            HAL::inst().setTime(std::get<DateTime>(e.payload));
+            HAL::inst().setTime(std::get<timeData>(e.payload).utcDateTime());
             break;
 
         case AppEventType::SaveBiometrics:
@@ -312,7 +312,7 @@ void App::saveBiometrics() {
     JsonDocument doc;
 
     auto& a = model.app().get();
-    int utcOffset = model.time().get().UTCoffset;
+    int utcOffset = model.time().get().offset();
     
     doc["birthday"] = a.birthday.unixtime();
     doc["mass"] = a.mass;
@@ -352,7 +352,7 @@ void App::loadBiometrics() {
 
         AppData a;
         uint32_t unix = jsonBuffer["birthday"];
-        DateTime bd(unix);
+        timeData bd(unix, 0);
         int UTCOffset;
         a.birthday = bd;
         a.mass = jsonBuffer["mass"];

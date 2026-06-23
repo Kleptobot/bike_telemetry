@@ -22,17 +22,14 @@ class TimeEditScreen : public UIScreen {
                 });
                 //register the save press event callback to send a change screen and app save event
                 saveWidget.setOnPress([this] () {
-                    Serial.println( "UTC: " + String(_UTCOffset));
-                    this->model.time().update({this->_date,_UTCOffset});
+                    this->model.time().update(this->_date);
                     emitAppEvent({AppEventType::SaveTime,_date});
                     emitAppEvent({AppEventType::SaveBiometrics,0});
                     emitUIEvent(UIEventType::ChangeScreen, ScreenID::SettingsMenu);
                 });
             }
         void onEnter() override {
-            auto m = model.time().get();
-            _date = m.now;
-            _UTCOffset = m.UTCoffset;
+            _date = model.time().get();
         }
 
         void update(float dt) override;
@@ -57,8 +54,7 @@ class TimeEditScreen : public UIScreen {
         SelectableTextWidget UTCOffsetDisp;
         SelectableTextIconWidget backWidget;
         SelectableTextIconWidget saveWidget;
-        DateTime _date;
-        int _UTCOffset;
+        timeData _date;
 
         void moveFocusUp();
         void moveFocusDown();

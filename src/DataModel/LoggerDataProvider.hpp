@@ -1,10 +1,10 @@
 #pragma once
 #include <Arduino.h>
-#include <RTClib.h>
+#include "DataModel/TimeDataProvider.hpp"
 
 struct LoggerData {
-    TimeSpan totalElapsed;
-    TimeSpan lapElapsed;
+    timeDuration totalElapsed;
+    timeDuration lapElapsed;
 };
 
 class LoggerDataProvider {
@@ -18,6 +18,6 @@ private:
         _data = newData;
         ++_version;
     }
-    LoggerData _data{};
+    LoggerData _data;
     uint32_t _version = 0;
 };

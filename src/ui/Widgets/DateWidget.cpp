@@ -10,16 +10,16 @@ void DateWidget::handleInput(physIO input) {
     if (selected) {
         // Handle Up: press or held with repeat
         if (input.Up.state && shouldRepeat(input.Up.heldTime)) {
-            incrementField(focusField);
+            editField(focusField,1);
         }else if (input.Up.press) {
-            incrementField(focusField);
+            editField(focusField,1);
         } 
 
         // Handle Down: press or held with repeat
          if (input.Down.state && shouldRepeat(input.Down.heldTime)) {
-            decrementField(focusField);
+            editField(focusField,-1);
         } else if (input.Down.press) {
-            decrementField(focusField);
+            editField(focusField,-1);
         }
     } else {
         // Handle Left: press only (no repeat for focus change)
@@ -39,14 +39,16 @@ void DateWidget::update(float dt) {
     monthText.setSelected(selected && focusField == EditField::Month);
     yearText.setSelected(selected && focusField == EditField::Year);
     
-    if(_date->day() < 10) dayText.setText("0"+String(_date->day()));
-    else dayText.setText(String( _date->day()));
+    auto lt = _date->local();
 
-    if(_date->month() < 10) monthText.setText("0"+String(_date->month()));
-    else monthText.setText(String( _date->month()));
+    if(lt.day < 10) dayText.setText("0"+String(lt.day));
+    else dayText.setText(String(lt.day));
 
-    if(_date->year() < 10) yearText.setText("0"+String(_date->year()));
-    else yearText.setText(String( _date->year()));
+    if(lt.month < 10) monthText.setText("0"+String(lt.month));
+    else monthText.setText(String(lt.month));
+
+    if(lt.year < 10) yearText.setText("0"+String(lt.year));
+    else yearText.setText(String(lt.year));
 }
 
 void DateWidget::moveFocusLeft() {
@@ -69,59 +71,20 @@ void DateWidget::moveFocusRight() {
     }
 }
 
-void DateWidget::incrementField(EditField field) {
+void DateWidget::editField(EditField field, int val) {
     switch (field) {
         case EditField::Day:
-            *_date = DateTime(_date->year(),
-                            _date->month(),
-                            (_date->day() % 31) + 1,
-                            _date->hour(), _date->minute(), _date->second());
+            _date->add_days(val);
             dayText.setText(String( _date->day()));
             break;
 
         case EditField::Month:
-            *_date = DateTime(_date->year(),
-                            (_date->month() % 12) + 1,
-                            _date->day(),
-                            _date->hour(), _date->minute(), _date->second());
+            _date->add_months(val);
             monthText.setText(String( _date->month()));
             break;
 
         case EditField::Year:
-            *_date = DateTime(_date->year() + 1, 
-                            _date->month(),
-                            _date->day(),
-                            _date->hour(), _date->minute(), _date->second());
-            yearText.setText(String( _date->year()));
-            break;
-
-        default: break;
-    }
-}
-
-void DateWidget::decrementField(EditField field) {
-    switch (field) {
-        case EditField::Day:
-            *_date = DateTime(_date->year(),
-                            _date->month(),
-                            (_date->day() == 1 ? 31 : _date->day() - 1),
-                            _date->hour(), _date->minute(), _date->second());
-            dayText.setText(String( _date->day()));
-            break;
-
-        case EditField::Month:
-            *_date = DateTime(_date->year(),
-                            (_date->month() == 1 ? 12 : _date->month() - 1),
-                            _date->day(),
-                            _date->hour(), _date->minute(), _date->second());
-            monthText.setText(String( _date->month()));
-            break;
-
-        case EditField::Year:
-            *_date = DateTime(_date->year() - 1,
-                            _date->month(),
-                            _date->day(),
-                            _date->hour(), _date->minute(), _date->second());
+            _date->add_years(val);
             yearText.setText(String( _date->year()));
             break;
 

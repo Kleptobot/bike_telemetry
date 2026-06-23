@@ -35,48 +35,48 @@ class MainScreen : public UIScreen {
             }
         }
 
-        void update(float dt) override {
-            //update numeric displays
-            const auto& t = model.telemetry().get();
-            //display if gps has a vlaid location
-            gpsIcon.setVisible(t.validLocation);
+void update(float dt) override {
+    //update numeric displays
+    const auto& t = model.telemetry().get();
+    //display if gps has a vlaid location
+    gpsIcon.setVisible(t.validLocation);
 
-            if (version != model.telemetry().version()) {
-                for (auto& disp:dataDisplays) {
-                    disp.update(t);
-                }
-                version = model.telemetry().version();
-            }
-
-            //display the current time
-            _date = model.time().get().now;
-            timeWidget.update(dt);
-            batt.setBat(t.BattPercentage);
-            
-            //get the current lap time
-            auto& ts = model.logger().get().lapElapsed;
-            _lap = DateTime(0,0,0,ts.hours(),ts.minutes(),ts.seconds());
-            lapTime.update(dt);
-
-            //show hide icons based on app state
-            const auto& appState = model.app().get().state;
-            lapTime.setVisible(appState == AppState::LOGGING);
-            
-            stopIcon.setVisible(appState == AppState::LOGGING);
-            settingsIcon.setVisible(appState != AppState::LOGGING);
-            powerIcon.setVisible(appState != AppState::LOGGING);
-
-            if (appState != AppState::LOGGING && appState_prev == AppState::LOGGING) {
-                playIcon.setIcon(epd_bitmap_play);
-            }else if (appState == AppState::LOGGING && appState_prev != AppState::LOGGING) {
-                playIcon.setIcon(epd_bitmap_loop);
-            }
-            appState_prev = appState;
-
-            //update map widget
-            // map.update(dt);
-
+    if (version != model.telemetry().version()) {
+        for (auto& disp:dataDisplays) {
+            disp.update(t);
         }
+        version = model.telemetry().version();
+    }
+
+    //display the current time
+    _date = model.time().get();
+    timeWidget.update(dt);
+    batt.setBat(t.BattPercentage);
+    
+    //get the current lap time
+    //auto& ts = model.logger().get().lapElapsed;
+    //_lap = timeData(0,0,0,ts.hours(),ts.minutes(),ts.seconds(),0);
+    //lapTime.update(dt);
+
+    //show hide icons based on app state
+    const auto& appState = model.app().get().state;
+    lapTime.setVisible(appState == AppState::LOGGING);
+    
+    stopIcon.setVisible(appState == AppState::LOGGING);
+    settingsIcon.setVisible(appState != AppState::LOGGING);
+    powerIcon.setVisible(appState != AppState::LOGGING);
+
+    if (appState != AppState::LOGGING && appState_prev == AppState::LOGGING) {
+        playIcon.setIcon(epd_bitmap_play);
+    }else if (appState == AppState::LOGGING && appState_prev != AppState::LOGGING) {
+        playIcon.setIcon(epd_bitmap_loop);
+    }
+    appState_prev = appState;
+
+    //update map widget
+    // map.update(dt);
+
+}
 
         void handleInput(physIO input) override {
             switch (model.app().get().state) {
@@ -137,12 +137,13 @@ class MainScreen : public UIScreen {
         TimeWidget timeWidget;
         TimeWidget lapTime;
 
+        timeData _date;
+        timeData _lap;
+
         std::vector<BigDataWidget> dataDisplays;
 
         // MapWidget map;
 
-        DateTime _date;
-        DateTime _lap;
         uint32_t version = 0;
         AppState appState_prev = AppState::IDLE;
 };

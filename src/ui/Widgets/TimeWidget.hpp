@@ -3,10 +3,11 @@
 
 #include "UI/Widgets/Widget.hpp"
 #include "SelectableText.hpp"
+#include "DataModel/TimeDataProvider.hpp"
 
 class TimeWidget : public Widget {
 public:
-    TimeWidget(int x, int y, DateTime* date=nullptr)
+    TimeWidget(int x, int y, timeData* date=nullptr)
         : Widget(x, y),
           _date(date),
           hourText(x, y, ""),
@@ -23,24 +24,18 @@ public:
                                         minuteText.isSelected() ||
                                         secondText.isSelected();}
 
-    void setDate(DateTime* date) { 
-        _date=date;
-    }
-    DateTime getDate() const { return *_date; }
-
     void update(float dt) override;
 
 private:
     enum class EditField { Hour, Minute, Second };
     EditField focusField = EditField::Hour;
-    DateTime *_date;
+    timeData* _date;
 
     SelectableTextWidget hourText;
     SelectableTextWidget minuteText;;
     SelectableTextWidget secondText;
 
-    void incrementField(EditField field);
-    void decrementField(EditField field);
+    void editField(EditField field, int val);
     void moveFocusLeft();
     void moveFocusRight();
 };
