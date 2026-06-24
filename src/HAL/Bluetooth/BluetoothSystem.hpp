@@ -110,4 +110,13 @@ class BluetoothSystem {
      * @param report Structural advertising data
      */
     static void scan_discovery(ble_gap_evt_adv_report_t* report);
+
+    /**
+     * Callback invoked by BT_Device when a device is removed from btDevices
+     * due to an unexpected disconnect (e.g. device powered off / out of range).
+     * Marks the matching deviceList entry as not connected (without un-saving it)
+     * and notifies the UI via deviceListCallback.
+     * @param MAC address of the device that was disconnected
+     */
+    static void onDeviceUnexpectedDisconnect(MacAddress MAC);
 };

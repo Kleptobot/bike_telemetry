@@ -36,7 +36,11 @@
 #define     SENSOR_LOCATION_CHAIN_RING              16
 
 class BT_Device {
+  public:
+    using DeviceDisconnectedCallback = std::function<void(MacAddress MAC)>;
+
   private:
+    static DeviceDisconnectedCallback _onUnexpectedDisconnect;
 
   protected:
     BLEClientService        bat_serv  = BLEClientService(GATT_BAT_UUID);
@@ -62,6 +66,8 @@ class BT_Device {
     static void removeDevice(std::unique_ptr<BT_Device> device);
 
     static void disconnect_callback(uint16_t conn_handle, uint8_t reason);
+
+    static void onUnexpectedDisconnect(DeviceDisconnectedCallback cb) { _onUnexpectedDisconnect = cb; }
     
     static void bat_notify_callback(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len);
 
@@ -76,6 +82,7 @@ class BT_Device {
     MacAddress getMac() {return MAC;}
     E_Type_BT_Device getType() const {return bt_type;}
     bool begun() const {return _begun;}
+    bool disconnected() const {return _disconnected;}
     uint8_t readBatt() const {return u8_Batt;}
     uint16_t getConnHandle(){return _conn_handle;};
     

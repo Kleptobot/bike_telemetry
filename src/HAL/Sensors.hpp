@@ -10,6 +10,8 @@
 #define BAT_CHARGE_STATE 23 // LOW for charging, HIGH not charging
 #define VBAT_MV_PER_LBS (0.003395996F)
 
+#define DS3231 true
+
 class SensorSystem {
 public:
     SensorSystem() {
@@ -20,7 +22,11 @@ public:
     void init();
     bool update(bool i2cBusy);
 
-    const RTC_DS3231& RTC() {return _rtc;}
+    #if DS3231
+        const RTC_DS3231& RTC() {return _rtc;}
+    #else
+        const RTC_PCF8563& RTC() {return _rtc;}
+    #endif
     DateTime now() const {return _now;}
     int16_t batt() const {return _nBattPercentage;}
     imu_data imu() const {return _imu;}
@@ -34,7 +40,12 @@ private:
     static const uint16_t RTC_Read_Period = 450;
 
     LSM6DS3* _myIMU;
-    RTC_DS3231 _rtc;
+    #if DS3231
+        RTC_DS3231 _rtc;
+    #else
+        RTC_PCF8563 _rtc;
+    #endif
+
     Dps3xx _dps;
     
     uint32_t lastDSPTime = 0, lastIMUTime = 0, lastRTCTime = 0, lastBATTime = 0;

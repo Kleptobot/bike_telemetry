@@ -41,7 +41,9 @@ bool SensorSystem::update(bool i2cBusy) {
             _setTime = false;
             _rtc.adjust(_newDate);
         }
-        _f32_RTC_Temp = _rtc.getTemperature();
+        #if DS3231
+            _f32_RTC_Temp = _rtc.getTemperature();
+        #endif
         dps_dat.f32_RTC_Temp = _f32_RTC_Temp;
         _now = _rtc.now();
 

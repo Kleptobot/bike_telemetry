@@ -18,6 +18,7 @@ void BluetoothSystem::init(IStorage* storage) {
     // Callbacks for Central
     Bluefruit.Central.setDisconnectCallback(BT_Device::disconnect_callback);
     Bluefruit.Central.setConnectCallback(connect_callback);
+    BT_Device::onUnexpectedDisconnect(onDeviceUnexpectedDisconnect);
 
     /* Start Central Scanning
     * - Enable auto scan if disconnected
@@ -189,6 +190,19 @@ void BluetoothSystem::disconnectDevice(const BluetoothDevice& device) {
         }
     }
     if (deviceListCallback) {
+        deviceListCallback(deviceList);
+    }
+}
+
+void BluetoothSystem::onDeviceUnexpectedDisconnect(MacAddress MAC) {
+    for (auto it = deviceList.begin(); it != deviceList.end(); it++) {
+        if ((*it).MAC == MAC) {
+            (*it).connected = false;
+            break;
+        }
+    }
+    if (deviceListCallback) {
+        Serial.println("device disconnected");
         deviceListCallback(deviceList);
     }
 }
