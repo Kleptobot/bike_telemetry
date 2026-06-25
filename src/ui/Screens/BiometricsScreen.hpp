@@ -13,7 +13,7 @@ class BiometricsScreen : public UIScreen {
         BiometricsScreen (DataModel& model) : 
             UIScreen(model),
             birthdayLabel(5,5,"Birthday:"),
-            dateWidget{110,5, &_birthday},
+            dateWidget{110,5, _birthday},
             massLabel(5,32,"Mass:"),
             massWidget(110,32, String(0)),
             calorieLabel(5,59,"Calory Calc:"),

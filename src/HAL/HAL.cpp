@@ -21,7 +21,7 @@ void HAL::init() {
     bluetoothSystem.init(&storageSystem);
     for (int i=0; i<5; i++) {
         inputSystem.update(false);
-        delay(100);
+        delay(50);
     }
     if (!inputs().SD_Det.state) {   //SD card pin is inverted, low means card is present
         while (!storageSystem.init()) {

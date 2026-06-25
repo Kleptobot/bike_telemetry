@@ -5,15 +5,14 @@
 #include "UI/Widgets/SmallDataWidget.hpp"
 #include "UI/Widgets/IconWidget.hpp"
 #include "UI/Widgets/TimeWidget.hpp"
+#include "UI/Widgets/DurationWidget.hpp"
 #include "UI/GFX.h"
-// #include "UI/Widgets/MapWidget.hpp"
 
 class MainScreen : public UIScreen {
     public:
         MainScreen (DataModel& model) : 
             UIScreen(model),
             batt(202,5),
-            // map(30,30,80,80, model),
             gpsIcon(5,5,16,16,epd_bitmap_antenna),
 
             settingsIcon    (88,300,16,16,epd_bitmap_gear),
@@ -21,8 +20,8 @@ class MainScreen : public UIScreen {
             stopIcon        (136,300,16,16,epd_bitmap_stop),
             powerIcon       (136,300,16,16,epd_bitmap_power),
 
-            timeWidget(30,5,&_date),
-            lapTime(5,280,&_lap) {}
+            timeWidget(30,5,model.time().get()),
+            lapTime(5,280, model.logger().get().lapElapsed) {}
 
         void onEnter() override {
             auto& l = model.layout().get();
@@ -49,14 +48,11 @@ void update(float dt) override {
     }
 
     //display the current time
-    _date = model.time().get();
     timeWidget.update(dt);
     batt.setBat(t.BattPercentage);
     
     //get the current lap time
-    //auto& ts = model.logger().get().lapElapsed;
-    //_lap = timeData(0,0,0,ts.hours(),ts.minutes(),ts.seconds(),0);
-    //lapTime.update(dt);
+    lapTime.update(dt);
 
     //show hide icons based on app state
     const auto& appState = model.app().get().state;
@@ -72,10 +68,6 @@ void update(float dt) override {
         playIcon.setIcon(epd_bitmap_loop);
     }
     appState_prev = appState;
-
-    //update map widget
-    // map.update(dt);
-
 }
 
         void handleInput(physIO input) override {
@@ -122,9 +114,6 @@ void update(float dt) override {
             playIcon.render();
             stopIcon.render();
             powerIcon.render();
-
-            // render map
-            // map.render();
         }
     
     private:
@@ -135,14 +124,9 @@ void update(float dt) override {
         IconWidget stopIcon;
         IconWidget powerIcon;
         TimeWidget timeWidget;
-        TimeWidget lapTime;
-
-        timeData _date;
-        timeData _lap;
+        DurationWidget lapTime;
 
         std::vector<BigDataWidget> dataDisplays;
-
-        // MapWidget map;
 
         uint32_t version = 0;
         AppState appState_prev = AppState::IDLE;

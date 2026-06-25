@@ -3,6 +3,7 @@
 
 void TCXLogger::startLogging(const timeData& currentTime) {
   _startTime = currentTime;
+  _currentTime = currentTime;
   laps.clear();
   laps.push_back({currentTime, 1, 1, 0, 0, 0, 0});
   resetTotals();

@@ -18,8 +18,8 @@ class IconWidget : public Widget {
         }
 
         void setIcon(const uint8_t* icon) {
+            if (_icon != icon) invalidate();
             _icon = icon;
-            invalidate();
         }
 
     private:

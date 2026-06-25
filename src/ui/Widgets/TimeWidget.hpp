@@ -7,7 +7,7 @@
 
 class TimeWidget : public Widget {
 public:
-    TimeWidget(int x, int y, timeData* date=nullptr)
+    TimeWidget(int x, int y, timeData& date)
         : Widget(x, y),
           _date(date),
           hourText(x, y, ""),
@@ -29,7 +29,7 @@ public:
 private:
     enum class EditField { Hour, Minute, Second };
     EditField focusField = EditField::Hour;
-    timeData* _date;
+    timeData& _date;
 
     SelectableTextWidget hourText;
     SelectableTextWidget minuteText;;

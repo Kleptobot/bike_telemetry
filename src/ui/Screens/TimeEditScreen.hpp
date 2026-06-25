@@ -10,8 +10,8 @@ class TimeEditScreen : public UIScreen {
     public:
         TimeEditScreen (DataModel& model) : 
             UIScreen(model),
-            timeWidget{5,5, &_date},
-            dateWidget{5,30, &_date},
+            timeWidget{5,5, _date},
+            dateWidget{5,30, _date},
             UTCOffsetLabel{5,55, "UTC offset: "},
             UTCOffsetDisp{UTCOffsetLabel.width() + 10,55, ""},
             backWidget{5,87,"Back",epd_bitmap_left},

@@ -40,7 +40,7 @@ void TimeWidget::update(float dt) {
     minuteText.setSelected(focusField == EditField::Minute && selected);
     secondText.setSelected(focusField == EditField::Second && selected);
 
-    auto lt = _date->local();
+    auto lt = _date.local();
 
     if(lt.hour < 10) hourText.setText("0"+String(lt.hour));
     else hourText.setText(String(lt.hour));
@@ -75,18 +75,18 @@ void TimeWidget::moveFocusRight() {
 void TimeWidget::editField(EditField field, int val) {
     switch (field) {
         case EditField::Hour:
-            _date->add_hours(val);
-            hourText.setText(String( _date->hour()));
+            _date.add_hours(val);
+            hourText.setText(String( _date.hour()));
             break;
 
         case EditField::Minute:
-            _date->add_minutes(val);
-            minuteText.setText(String( _date->minute()));
+            _date.add_minutes(val);
+            minuteText.setText(String( _date.minute()));
             break;
 
         case EditField::Second:
-            _date->add_seconds(val);
-            secondText.setText(String( _date->second()));
+            _date.add_seconds(val);
+            secondText.setText(String( _date.second()));
             break;
 
         default: break;

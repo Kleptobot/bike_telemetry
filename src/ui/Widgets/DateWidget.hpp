@@ -7,7 +7,7 @@
 
 class DateWidget : public Widget {
     public:
-        DateWidget(int x, int y, timeData* date=nullptr)
+        DateWidget(int x, int y, timeData& date)
             : Widget(x, y),
             _date(date),
             dayText(x, y, ""),
@@ -29,7 +29,7 @@ class DateWidget : public Widget {
     private:
         enum class EditField { Day, Month, Year };
         EditField focusField = EditField::Day;
-        timeData* _date;
+        timeData& _date;
 
         SelectableTextWidget dayText;
         SelectableTextWidget monthText;

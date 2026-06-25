@@ -144,19 +144,17 @@ void csc::csc_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len)
     }
   
     //check for overflow of speed evt
-    u16_speed_delta = 0;
-    if (u16_SpeedEvt>u16_SpeedEvt_Prev)
-    {
-      u16_speed_delta = u16_SpeedEvt - u16_SpeedEvt_Prev;
+    if (u16_SpeedEvt != u16_SpeedEvt_Prev) {
+      u16_speed_delta = 0;
+      if (u16_SpeedEvt>u16_SpeedEvt_Prev) {
+        u16_speed_delta = u16_SpeedEvt - u16_SpeedEvt_Prev;
+      } else {
+        u16_speed_delta = u16_SpeedEvt + (65535 - u16_SpeedEvt_Prev);
+      }
       u16_SpeedEvt_Prev = u16_SpeedEvt;
+      millis_at_spd_evt = millis();
+      exp_next_spd_evt = millis_at_spd_evt + uint(u16_speed_delta*1.024);
     }
-    else if(u16_SpeedEvt_Prev>u16_SpeedEvt)
-    {
-      u16_speed_delta = u16_SpeedEvt + (65535 - u16_SpeedEvt_Prev);
-      u16_SpeedEvt_Prev = u16_SpeedEvt;
-    }
-    millis_at_spd_evt = millis();
-    exp_next_spd_evt = millis_at_spd_evt + uint(u16_speed_delta*1.024);
 
      //check for overflow of speed count
     u32_WheelCount_delta=0;
@@ -193,18 +191,17 @@ void csc::csc_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len)
     }
 
     //check for overflow of crank evt
-    u16_crank_delta = 0;
-    if (u16_CrankEvt>u16_CrankEvt_Prev)
-    {
-      u16_crank_delta = u16_CrankEvt - u16_CrankEvt_Prev;
+    if (u16_CrankEvt != u16_CrankEvt_Prev) {
+      u16_crank_delta = 0;
+      if (u16_CrankEvt>u16_CrankEvt_Prev) {
+        u16_crank_delta = u16_CrankEvt - u16_CrankEvt_Prev;
+      } else {
+        u16_crank_delta = u16_CrankEvt + (65535 - u16_CrankEvt_Prev);
+      }
+      millis_at_cad_evt = millis();
+      exp_next_cad_evt = millis_at_cad_evt + uint(u16_crank_delta/1024.0);
+      u16_CrankEvt_Prev = u16_CrankEvt;
     }
-    else if(u16_CrankEvt_Prev>u16_CrankEvt)
-    {
-      u16_crank_delta = u16_CrankEvt + (65535 - u16_CrankEvt_Prev);
-    }
-    millis_at_cad_evt = millis();
-    exp_next_cad_evt = millis_at_cad_evt + uint(u16_crank_delta/1024.0);
-    u16_CrankEvt_Prev = u16_CrankEvt;
 
     //check for overflow of crank count
     u16_CrankCount_delta = 0;

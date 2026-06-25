@@ -39,7 +39,7 @@ void DateWidget::update(float dt) {
     monthText.setSelected(selected && focusField == EditField::Month);
     yearText.setSelected(selected && focusField == EditField::Year);
     
-    auto lt = _date->local();
+    auto lt = _date.local();
 
     if(lt.day < 10) dayText.setText("0"+String(lt.day));
     else dayText.setText(String(lt.day));
@@ -74,18 +74,18 @@ void DateWidget::moveFocusRight() {
 void DateWidget::editField(EditField field, int val) {
     switch (field) {
         case EditField::Day:
-            _date->add_days(val);
-            dayText.setText(String( _date->day()));
+            _date.add_days(val);
+            dayText.setText(String( _date.day()));
             break;
 
         case EditField::Month:
-            _date->add_months(val);
-            monthText.setText(String( _date->month()));
+            _date.add_months(val);
+            monthText.setText(String( _date.month()));
             break;
 
         case EditField::Year:
-            _date->add_years(val);
-            yearText.setText(String( _date->year()));
+            _date.add_years(val);
+            yearText.setText(String( _date.year()));
             break;
 
         default: break;

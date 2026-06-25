@@ -25,6 +25,7 @@ void SensorSystem::init() {
     int16_t prs_mr = 2;
     int16_t prs_osr = 2;
     _dps.startMeasureBothCont(temp_mr, temp_osr, prs_mr, prs_osr);
+    lastBATTime = millis() - BAT_Read_Period;
 }
 
 bool SensorSystem::update(bool i2cBusy) {
