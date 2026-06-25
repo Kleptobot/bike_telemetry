@@ -11,6 +11,7 @@ struct timeDuration {
  
     long totalSeconds() const { return _totalSeconds; }
     long days()    const { return _totalSeconds / 86400L; }
+    long totalHours() const { return _totalSeconds / 3600L; } // raw, unwrapped (e.g. 27 for a 27h lap)
     int  hours()   const { return (int)((_totalSeconds % 86400L) / 3600L); }
     int  minutes() const { return (int)((_totalSeconds % 3600L) / 60L); }
     int  seconds() const { return (int)(_totalSeconds % 60L); }
