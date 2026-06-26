@@ -1,4 +1,6 @@
-#pragma once
+#ifndef MAC_H
+#define MAC_H
+
 #include <Arduino.h>
 
 struct MacAddress {
@@ -114,3 +116,5 @@ struct MacAddress {
         return true;
     }
 };
+
+#endif /* MAC_H */

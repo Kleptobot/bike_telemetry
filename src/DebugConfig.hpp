@@ -1,4 +1,5 @@
-#pragma once
+#ifndef DEBUGCONFIG_H
+#define DEBUGCONFIG_H
 
 #ifndef DEBUG_INVALIDATE
 #define DEBUG_INVALIDATE 0
@@ -20,3 +21,5 @@ extern const bool ENABLE_INVALIDATE_DEBUG;
 extern const bool ENABLE_GPS_DEBUG;
 extern const bool ENABLE_INPUTS_DEBUG;
 extern const bool ENABLE_BLUETOOTH_DEBUG;
+
+#endif /* DEBUGCONFIG_H */

@@ -1,12 +1,12 @@
-#ifndef _BUTTON_H_
-#define _BUTTON_H_
+#ifndef BUTTON_H
+#define BUTTON_H
 
 #include <Arduino.h>
 #include "InputInterface.hpp"
 
 class button
 {
-  private:
+    private:
     bool& _state;
     bool _state_prev;
     bool _RE, _FE;
@@ -18,7 +18,7 @@ class button
     static const uint16_t _nHeldPressTime = 1500;
     static const uint16_t _nShortPressTime = 50;
 
-  public:
+    public:
     button(bool& state) :
         _state(state),
         _state_prev(state),
@@ -33,8 +33,8 @@ class button
     void process();
 
     const buttonState state() const {
-      return {_state,_RE,_FE,_short,_long_RE,_heldTime,_releaseTime};
+        return {_state,_RE,_FE,_short,_long_RE,_heldTime,_releaseTime};
     }
 };
 
-#endif // _BUTTON_H_
+#endif /* BUTTON_H */

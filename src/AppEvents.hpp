@@ -1,4 +1,5 @@
-#pragma once
+#ifndef APPEVENTS_H
+#define APPEVENTS_H
 
 #include <Arduino.h>
 #include <variant>
@@ -36,3 +37,5 @@ struct AppEvent {
     AppEventType type;
     std::variant<int,float,BluetoothDevice,timeData,NMEArateChange> payload;
 };
+
+#endif /* APPEVENTS_H */

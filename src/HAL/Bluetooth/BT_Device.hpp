@@ -1,5 +1,5 @@
-#ifndef BT_DEVICE
-#define BT_DEVICE
+#ifndef BT_DEVICE_H
+#define BT_DEVICE_H
 
 #include <Arduino.h>
 #include <vector>
@@ -95,4 +95,4 @@ class BT_Device {
     virtual void begin() {};
 };
 
- #endif /* BT_DEVICE */
+ #endif /* BT_DEVICE_H */

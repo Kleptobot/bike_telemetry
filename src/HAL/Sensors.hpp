@@ -1,4 +1,6 @@
-#pragma once
+#ifndef SENSORS_H
+#define SENSORS_H
+
 #include <Arduino.h>
 #include <RTClib.h>
 #include <Dps3xx.h>
@@ -59,3 +61,5 @@ private:
     bool _setTime = false;
 
 };
+
+#endif /* SENSORS_H */

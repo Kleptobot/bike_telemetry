@@ -1,5 +1,5 @@
-#ifndef _INPUTSYSTEM_H_
-#define _INPUTSYSTEM_H_
+#ifndef INPUTSYSTEM_H
+#define INPUTSYSTEM_H
 
 #include <Arduino.h>
 #include <Adafruit_MCP23X17.h>
@@ -78,4 +78,4 @@ private:
     static GpsEnableCallback gpsEnableCallback;
 };
 
-#endif // _INPUTSYSTEM_H_
+#endif /* INPUTSYSTEM_H */

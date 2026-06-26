@@ -1,4 +1,6 @@
-#pragma once
+#ifndef DATAMDOEL_H
+#define DATAMDOEL_H
+
 #include "TelemetryDataProvider.hpp"
 #include "BluetoothDataProvider.hpp"
 #include "TimeDataProvider.hpp"
@@ -34,3 +36,5 @@ private:
     LoggerDataProvider _logger;
     SDStateProvider _SD;
 };
+
+#endif

@@ -1,5 +1,5 @@
-#ifndef csc_H
-#define csc_H
+#ifndef CSC_H
+#define CSC_H
 
 #include <Arduino.h>
 #include <vector>

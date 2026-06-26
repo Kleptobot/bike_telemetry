@@ -1,4 +1,6 @@
-#pragma once
+#ifndef INPUTINTERFACE_H
+#define INPUTINTERFACE_H
+
 #include <Arduino.h>
 
 typedef struct {
@@ -20,3 +22,5 @@ typedef struct {
     buttonState Select;
     buttonState SD_Det;
 } physIO;
+
+#endif /* INPUTINTERFACE_H */

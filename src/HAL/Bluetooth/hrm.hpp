@@ -1,5 +1,5 @@
-#ifndef hrm_H
-#define hrm_H
+#ifndef HRM_H
+#define HRM_H
 
 #include <Arduino.h>
 #include <vector>
@@ -54,4 +54,4 @@ public:
     }
   }
 };
-#endif
+#endif /* HRM_H */

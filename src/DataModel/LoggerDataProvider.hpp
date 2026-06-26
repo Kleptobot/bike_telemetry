@@ -1,4 +1,6 @@
-#pragma once
+#ifndef LOGGERDATAPROVIDER_H
+#define LOGGERDATAPROVIDER_H
+
 #include <Arduino.h>
 #include "DataModel/TimeDataProvider.hpp"
 
@@ -21,3 +23,5 @@ private:
     LoggerData _data;
     uint32_t _version = 0;
 };
+
+#endif

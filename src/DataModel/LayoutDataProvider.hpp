@@ -1,4 +1,6 @@
-#pragma once
+#ifndef LAYOUTDATAPROVIDER_H
+#define LAYOUTDATAPROVIDER_H
+
 #include <Arduino.h>
 #include "TelemetryDataProvider.hpp"
 
@@ -20,3 +22,5 @@ private:
     LayoutData _data{};
     uint32_t _version = 0;
 };
+
+#endif

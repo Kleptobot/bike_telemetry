@@ -1,4 +1,6 @@
-#pragma once
+#ifndef STORAGEINTERFACE_H
+#define STORAGEINTERFACE_H
+
 #include <SdFat.h>
 
 class IStorage {
@@ -8,3 +10,5 @@ public:
     virtual bool remove(const char* path) = 0;
     virtual ~IStorage() = default;
 };
+
+#endif /* STORAGEINTERFACE_H */

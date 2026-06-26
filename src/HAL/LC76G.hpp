@@ -78,119 +78,119 @@ class LC76G
 
 
     public:
-      LC76G(IStorage& storage) 
-      : _state(STATE_IDLE),
-        _state_prev(STATE_IDLE),
-        _mode(MODE_RECEIVE),
-        _stateEntry(millis()),
-        _lastI2cAction(millis()),
-        _wire(nullptr),
-        _storage(storage),
-        _rxLength(0),
-        _transactionLength(0) {}
+    LC76G(IStorage& storage) 
+    : _state(STATE_IDLE),
+    _state_prev(STATE_IDLE),
+    _mode(MODE_RECEIVE),
+    _stateEntry(millis()),
+    _lastI2cAction(millis()),
+    _wire(nullptr),
+    _storage(storage),
+    _rxLength(0),
+    _transactionLength(0) {}
 
-        //enum of all avaialble commands
-        enum CmdId : int16_t {
-            PAIR_LOW_POWER_ENTRY_RTC_MODE,
-            GET_NMEA_MSG_RATE,
-            SET_NMEA_MSG_RATE,
-            GET_NAVIGATION_MODE,
-            SET_NAVIGATION_MODE,
-            GET_STATIC_THRESHOLD,
-            SET_STATIC_THRESHOLD,
-            RESTORE_DEFAULT_SETTING,
-            GET_GLP_STATUS,
-            GLP_ENABLE,
-            GNSS_SUBSYS_HOT_START,
-            GNSS_SUBSYS_WARM_START,
-            GNSS_SUBSYS_COLD_START,
-            SET_NMEA_RATE,
-            GET_NMEA_RATE,
-            SAVE_TO_NVRAM
-        };
+    //enum of all avaialble commands
+    enum CmdId : int16_t {
+        PAIR_LOW_POWER_ENTRY_RTC_MODE,
+        GET_NMEA_MSG_RATE,
+        SET_NMEA_MSG_RATE,
+        GET_NAVIGATION_MODE,
+        SET_NAVIGATION_MODE,
+        GET_STATIC_THRESHOLD,
+        SET_STATIC_THRESHOLD,
+        RESTORE_DEFAULT_SETTING,
+        GET_GLP_STATUS,
+        GLP_ENABLE,
+        GNSS_SUBSYS_HOT_START,
+        GNSS_SUBSYS_WARM_START,
+        GNSS_SUBSYS_COLD_START,
+        SET_NMEA_RATE,
+        GET_NMEA_RATE,
+        SAVE_TO_NVRAM
+    };
 
-        struct CommandDef {
-            CmdId             cmdId;    // logical ID
+    struct CommandDef {
+        CmdId             cmdId;    // logical ID
 
-            const char* cmd;            // command body to send
-            int (*build)(               // builder to use for this command
-                char* outBuf,
-                uint16_t outSize,
-                const char* cmd,
-                const void* payload
-            );                            
+        const char* cmd;            // command body to send
+        int (*build)(               // builder to use for this command
+            char* outBuf,
+            uint16_t outSize,
+            const char* cmd,
+            const void* payload
+        );                            
 
-            const char* response;       // response body for matching against
-            bool (*decode)(             // decoder to use for this response
-                Sentence resp,
-                int& numArgs,
-                void* payload         
-            );
-            uint32_t          timeoutMs;  
-        };
+        const char* response;       // response body for matching against
+        bool (*decode)(             // decoder to use for this response
+            Sentence resp,
+            int& numArgs,
+            void* payload         
+        );
+        uint32_t          timeoutMs;  
+    };
 
-        inline static const CommandDef COMMANDS[] = {
-            {PAIR_LOW_POWER_ENTRY_RTC_MODE, "PAIR650", &build_no_args, nullptr, nullptr, 200 },
-            {GET_NMEA_MSG_RATE, "PAIR063", &build_1u8, "$PAIR063", &decode_2u8, 90000 },
-            {SET_NMEA_MSG_RATE, "PAIR062", &build_2u8, "PAIR001,062", &decode_1u8, 90000 },
-            {GET_NAVIGATION_MODE, "PAIR081", &build_no_args, "$PAIR081", &decode_1u8, 90000 },
-            {SET_NAVIGATION_MODE, "PAIR080", &build_1u8, "$PAIR001,080", &decode_none, 90000 },
-            {GET_STATIC_THRESHOLD, "PAIR071", &build_no_args, "$PAIR071", &decode_1u8, 90000 },
-            {SET_STATIC_THRESHOLD, "PAIR070", &build_1u8, "$PAIR001,070", &decode_none, 90000 },
-            {RESTORE_DEFAULT_SETTING, "PAIR514", &build_no_args, nullptr, nullptr, 200 },
-            {GET_GLP_STATUS, "PAIR681", &build_no_args, "$PAIR681", &decode_1u8, 90000 },
-            {GLP_ENABLE, "PAIR680", &build_1u8, "PAIR001,680", &decode_none, 90000 },
-            {GNSS_SUBSYS_HOT_START, "PAIR004", &build_no_args, nullptr, nullptr, 200 },
-            {GNSS_SUBSYS_WARM_START, "PAIR005", &build_no_args, nullptr, nullptr, 200 },
-            {GNSS_SUBSYS_COLD_START, "PAIR006", &build_no_args, nullptr, nullptr, 200 },
-            {SET_NMEA_RATE, "PQTMCFGMSGRATE,W", &build_1char_1u8, nullptr, nullptr, 10000 },
-            {GET_NMEA_RATE, "PQTMCFGMSGRATE,R", &build_1char, "$PQTMCFGMSGRATE,OK", nullptr, 10000 },
-            {SAVE_TO_NVRAM, "PAIR511", &build_no_args, "PAIR001,511,1", nullptr, 10000 }
+    inline static const CommandDef COMMANDS[] = {
+        {PAIR_LOW_POWER_ENTRY_RTC_MODE, "PAIR650", &build_no_args, nullptr, nullptr, 200 },
+        {GET_NMEA_MSG_RATE, "PAIR063", &build_1u8, "$PAIR063", &decode_2u8, 90000 },
+        {SET_NMEA_MSG_RATE, "PAIR062", &build_2u8, "PAIR001,062", &decode_1u8, 90000 },
+        {GET_NAVIGATION_MODE, "PAIR081", &build_no_args, "$PAIR081", &decode_1u8, 90000 },
+        {SET_NAVIGATION_MODE, "PAIR080", &build_1u8, "$PAIR001,080", &decode_none, 90000 },
+        {GET_STATIC_THRESHOLD, "PAIR071", &build_no_args, "$PAIR071", &decode_1u8, 90000 },
+        {SET_STATIC_THRESHOLD, "PAIR070", &build_1u8, "$PAIR001,070", &decode_none, 90000 },
+        {RESTORE_DEFAULT_SETTING, "PAIR514", &build_no_args, nullptr, nullptr, 200 },
+        {GET_GLP_STATUS, "PAIR681", &build_no_args, "$PAIR681", &decode_1u8, 90000 },
+        {GLP_ENABLE, "PAIR680", &build_1u8, "PAIR001,680", &decode_none, 90000 },
+        {GNSS_SUBSYS_HOT_START, "PAIR004", &build_no_args, nullptr, nullptr, 200 },
+        {GNSS_SUBSYS_WARM_START, "PAIR005", &build_no_args, nullptr, nullptr, 200 },
+        {GNSS_SUBSYS_COLD_START, "PAIR006", &build_no_args, nullptr, nullptr, 200 },
+        {SET_NMEA_RATE, "PQTMCFGMSGRATE,W", &build_1char_1u8, nullptr, nullptr, 10000 },
+        {GET_NMEA_RATE, "PQTMCFGMSGRATE,R", &build_1char, "$PQTMCFGMSGRATE,OK", nullptr, 10000 },
+        {SAVE_TO_NVRAM, "PAIR511", &build_no_args, "PAIR001,511,1", nullptr, 10000 }
 
-        };
+    };
 
-        using ResponseCallback = void (*)(int numArgs, const void* payload, void* userContext);
+    using ResponseCallback = void (*)(int numArgs, const void* payload, void* userContext);
 
     // Unified state machine
     enum State {
-      STATE_IDLE,
-      STATE_STEP1A_SEND,
-      STATE_STEP1A_DELAY,
-      STATE_STEP1B_READ,
-      STATE_STEP1B_DELAY,
-      STATE_STEP2A_SEND,
-      STATE_STEP2A_DELAY,
-      STATE_STEP2B_TRANSACT,
-      STATE_PROCESS_RECEIVE,
-      STATE_COMPLETE_RECEIVE,
-      STATE_COMPLETE_TRANSMIT,
-      STATE_ERROR
+        STATE_IDLE,
+        STATE_STEP1A_SEND,
+        STATE_STEP1A_DELAY,
+        STATE_STEP1B_READ,
+        STATE_STEP1B_DELAY,
+        STATE_STEP2A_SEND,
+        STATE_STEP2A_DELAY,
+        STATE_STEP2B_TRANSACT,
+        STATE_PROCESS_RECEIVE,
+        STATE_COMPLETE_RECEIVE,
+        STATE_COMPLETE_TRANSMIT,
+        STATE_ERROR
     };
 
     struct PendingResponse {
-      CmdId commandId;
-      ResponseCallback callback;
-      void* userContext;
-      uint32_t sendTimeMs;
-      uint32_t timeoutMs;
+        CmdId commandId;
+        ResponseCallback callback;
+        void* userContext;
+        uint32_t sendTimeMs;
+        uint32_t timeoutMs;
     };
 
     struct Payload1U8 {
-      uint8_t a;
+        uint8_t a;
     };
 
     struct Payload2U8 {
-      uint8_t a;
-      uint8_t b;
+        uint8_t a;
+        uint8_t b;
     };
 
     struct Payload1Ch1U8 {
-      char a[10];
-      uint8_t b;
+        char a[10];
+        uint8_t b;
     };
 
     struct Payload1Ch {
-      char a[10];
+        char a[10];
     };
     
     // Initialize the GPS module
@@ -217,12 +217,12 @@ class LC76G
 
     TinyGPSPlus& gps() { return _gps; };
     void closeDataFile() {
-      dataFile.flush();
-      dataFile.close();
-      delay(50);
+        dataFile.flush();
+        dataFile.close();
+        delay(50);
     }
 
-  private:
+    private:
     // I2C addresses
     static const uint8_t ADDR_CR_OR_CW = 0x50;
     static const uint8_t ADDR_READ = 0x54;
@@ -243,14 +243,14 @@ class LC76G
     static const uint8_t i2c_DELAY = 10;
 
     struct TxCommand {
-      std::vector<uint8_t> data;
-      TxCommand(const uint8_t* buf, uint16_t len) : data(buf, buf + len) {}
+        std::vector<uint8_t> data;
+        TxCommand(const uint8_t* buf, uint16_t len) : data(buf, buf + len) {}
     };
     
     // Operation mode
     enum Mode {
-      MODE_RECEIVE,
-      MODE_TRANSMIT
+        MODE_RECEIVE,
+        MODE_TRANSMIT
     };
   
     State _state, _state_prev;
@@ -297,11 +297,11 @@ class LC76G
     void processSentence(Sentence s);
 
     uint16_t getCommand(CmdId cmdId) {
-      for (uint16_t i =0; i< std::size(COMMANDS); ++i) {
-        if ( COMMANDS[i].cmdId == cmdId) return i;
-      }
-      return 0;
+        for (uint16_t i =0; i< std::size(COMMANDS); ++i) {
+            if ( COMMANDS[i].cmdId == cmdId) return i;
+        }
+        return 0;
     }
 };
 
-#endif
+#endif /* LC76G_H */

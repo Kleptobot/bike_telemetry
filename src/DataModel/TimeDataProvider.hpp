@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TIMEDATAPROVIDER_H
+#define TIMEDATAPROVIDER_H
+
 #include <Arduino.h>
 #include <RTClib.h>
 
@@ -182,7 +184,7 @@ public:
     // Returns a DateTime built from true UTC fields - the correct thing to
     // hand to an RTC chip (which has no concept of offset).
     DateTime utcDateTime() const {
-        return {_year, _month, _day, _hour, _minute, _second};
+        return {(uint16_t)_year, (uint8_t)_month, (uint8_t)_day, (uint8_t)_hour, (uint8_t)_minute, (uint8_t)_second};
     }
 
     // --- Unified Delta Methods ---
@@ -301,3 +303,5 @@ private:
     timeData _data{};
     uint32_t _version = 0;
 };
+
+#endif

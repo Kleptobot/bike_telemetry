@@ -1,4 +1,6 @@
-#pragma once
+#ifndef BLUETOOTHDATAPROVIDER_H
+#define BLUETOOTHDATAPROVIDER_H
+
 #include <vector>
 #include <cstdint>
 #include "HAL/BluetoothInterface.hpp"
@@ -17,3 +19,5 @@ private:
     std::vector<BluetoothDevice> _devices;
     uint32_t _version = 0;
 };
+
+#endif

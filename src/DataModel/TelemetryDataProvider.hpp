@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TELEMETRYDATAPROVIDER_H
+#define TELEMETRYDATAPROVIDER_H
+
 #include <Arduino.h>
 #include <variant>
 
@@ -211,3 +213,5 @@ private:
     std::vector<GPSPoint> _recent;
     const size_t _maxPoints = 600;
 };
+
+#endif

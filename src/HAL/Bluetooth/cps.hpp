@@ -1,5 +1,5 @@
-#ifndef cps_H
-#define cps_H
+#ifndef CPS_H
+#define CPS_H
 
 #include <Arduino.h>
 #include <vector>
@@ -68,4 +68,4 @@ class cps : public BT_Device {
     }
 };
 
- #endif /* cps_H */
+ #endif /* CPS_H */

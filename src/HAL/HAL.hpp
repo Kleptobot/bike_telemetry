@@ -1,5 +1,5 @@
-// HAL.h
-#pragma once
+#ifndef HAL_H
+#define HAL_H
 
 #include <TinyGPSPlus.h>
 #include <functional>
@@ -11,7 +11,7 @@
 #include "SDCard.hpp"
 
 class HAL {
-  public:
+    public:
     static HAL& inst() {
         static HAL instance;
         return instance;
@@ -24,7 +24,7 @@ class HAL {
     IStorage* SD() { return &storageSystem; }
     BluetoothSystem& bluetooth() { return bluetoothSystem; }
     void reInitStorage() {
-      while (!storageSystem.init()) {
+        while (!storageSystem.init()) {
             Serial.println("SD card detected, initializing...");
             delay(200);
         }
@@ -40,8 +40,8 @@ class HAL {
     void gpsWarmStart() { _LC76G.sendCommand(LC76G::GNSS_SUBSYS_WARM_START,nullptr,this,nullptr); }
     void gpsColdStart() { _LC76G.sendCommand(LC76G::GNSS_SUBSYS_COLD_START,nullptr,this,nullptr); }
     void setRMCRate() { 
-      LC76G::Payload1Ch1U8 p = {"RMC",1};
-      _LC76G.sendCommand(LC76G::SET_NMEA_RATE, &HAL::onPAIRResponse, this, &p);
+        LC76G::Payload1Ch1U8 p = {"RMC",1};
+        _LC76G.sendCommand(LC76G::SET_NMEA_RATE, &HAL::onPAIRResponse, this, &p);
     }
     void resetGPS();
 
@@ -57,7 +57,7 @@ class HAL {
     void buzzStart();
     void buzzStop();
 
-  private:
+    private:
     HAL() : _LC76G(storageSystem) {}
 
     //internal HAL systems
@@ -83,3 +83,5 @@ class HAL {
     static void onPAIRResponse(int numArgs, const void* payload, void* context);
     void handlePAIRResponse(int numArgs, const void* payload);
 };
+
+#endif /* HAL_H */

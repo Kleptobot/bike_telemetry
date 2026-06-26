@@ -218,7 +218,7 @@ void App::updateTelemetry(imu_data imu, dps_data dps, int16_t BattPercentage, fl
     int UTCoffset = model.time().get().offset();
     if (loc.isValid() && !_gpsNowValid) {
         //load gpsTime into _gpsNow DateTime object, adding in the saved UTC offset
-        _gpsNow = {rtcNow.year(), rtcNow.month(), rtcNow.day(), gpsNow.hour()+UTCoffset*60, gpsNow.minute(), gpsNow.second()};
+        _gpsNow = {rtcNow.year(), rtcNow.month(), rtcNow.day(), (uint8_t)((int)gpsNow.hour()+UTCoffset*60), gpsNow.minute(), gpsNow.second()};
         TimeSpan ts = _gpsNow - rtcNow;
         if (ts.totalseconds() > 30 || ts.totalseconds() < -30)
             HAL::inst().setTime(_gpsNow);

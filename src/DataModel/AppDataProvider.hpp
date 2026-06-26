@@ -1,6 +1,9 @@
-#pragma once
+#ifndef APPDATAPROVIDER_H
+#define APPDATAPROVIDER_H
+
 #include <Arduino.h>
 #include <RTClib.h>
+#include "TimeDataProvider.hpp"
 
 enum class AppState {
     BOOT,
@@ -123,3 +126,5 @@ private:
     AppData _data{};
     uint32_t _version = 0;
 };
+
+#endif

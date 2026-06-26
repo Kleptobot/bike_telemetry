@@ -1,6 +1,7 @@
-#pragma once
-#include <Arduino.h>
+#ifndef SDSTATEDATAPROVIDER_H
+#define SDSTATEDATAPROVIDER_H
 
+#include <Arduino.h>
 
 struct SDState {
     bool mounted = false;
@@ -21,3 +22,5 @@ private:
     SDState _data = {false, false};
     uint32_t _version = 0;
 };
+
+#endif

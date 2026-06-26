@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SENSORDATA_H
+#define SENSORDATA_H
 
 struct imu_data {
     float f32_acc_x;
@@ -26,3 +27,5 @@ struct location_data {
 inline bool operator!=(const location_data& lhs, const location_data& rhs) {
     return lhs.valid != rhs.valid || lhs.longitude != rhs.longitude || lhs.latitude != rhs.latitude;
 }
+
+#endif /* SENSORDATA_H */

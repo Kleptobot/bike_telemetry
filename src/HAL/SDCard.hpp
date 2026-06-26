@@ -1,4 +1,6 @@
-#pragma once
+#ifndef SDCARD_H
+#define SDCARD_H
+
 #include <Arduino.h>
 #include <SdFat.h>
 #include <memory>
@@ -27,3 +29,5 @@ private:
     bool mounted = false;
     mutable bool busy = false;
 };
+
+#endif /* SDCARD_H */
