@@ -5,34 +5,13 @@
 #include <SPI.h>
 #include <vector>
 #include <SdFat.h>
+#include "ILogger.hpp"
 #include "HAL/StorageInterface.hpp"
 #include "DataModel/DataModel.hpp"
 
 #define points_per_chunk 1800
 
-struct Trackpoint {
-    timeData currentTime;    // Time in ISO 8601 format
-    double latitude;
-    double longitude;
-    double altitude;
-    double heartRate;    // Optional
-    double power;        // Optional
-    double cadence;      // Optional
-    double speed;        // Optional: Instantaneous speed in meters per second
-    double distance;     // Cumulative distance in meters
-};
-
-struct Lap {
-  timeData startTime;
-  float maxHRM;
-  float totalHRM;
-  float totalCadence;
-  float maxSpeed;
-  float totalDistance;     // Cumulative distance in meters
-  uint16_t parts;
-};
-
-class TCXLogger {
+class TCXLogger : public ILogger {
 
   private:
     IStorage* _storage;
@@ -57,7 +36,7 @@ class TCXLogger {
     void dataTransfer(File32 *from, File32 *to);
       
   public:
-    TCXLogger(IStorage* storage, DataModel& model) : _storage(storage), _model(model) {};
+    explicit TCXLogger(IStorage* storage, DataModel& model) : _storage(storage), _model(model) {};
 
     void startLogging(const timeData& currentTime);
     void addTrackpoint(const Trackpoint& tp);

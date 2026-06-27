@@ -1,7 +1,10 @@
-#pragma once
+#ifndef APP_H
+#define APP_H
+
 #include "UI/UIManager.hpp"
 #include "HAL/HAL.hpp"
-#include "TCXLogger.hpp"
+#include "Loggers/TCXLogger.hpp"
+#include "Loggers/FITLogger.hpp"
 #include "AppEvents.hpp"
 #include "DataModel/DataModel.hpp"
 #include "HAL/BluetoothInterface.hpp"
@@ -52,7 +55,11 @@ private:
     
     std::queue<AppEvent> appEvents;
     IStorage* _storage = nullptr;
-    TCXLogger* logger = nullptr;
+    ILogger* _logger = nullptr;
+
+    TCXLogger* tcxLogger = nullptr;
+    FITLogger* fitLogger = nullptr;
+
     AppState state = AppState::BOOT, state_prev;
     TinyGPSLocation _lastLocation;
     DateTime _gpsNow;
@@ -78,3 +85,5 @@ private:
     void saveLayout();
     void loadLayout();
 };
+
+#endif /* APP_H */

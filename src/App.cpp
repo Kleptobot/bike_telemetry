@@ -14,7 +14,14 @@
 
 void App::begin(IStorage* storage) {
     _storage = storage;
-    logger = new TCXLogger(_storage, model);
+
+    //instantiate an instance of both loggers
+    tcxLogger = new TCXLogger(_storage, model);
+    fitLogger = new FITLogger(_storage);
+
+    //set the logger interface
+    _logger = fitLogger;
+
     state = AppState::BOOT;
     Disp::init();
 
@@ -123,7 +130,7 @@ void App::update() {
             else
                 HAL::inst().bluetooth().setMode(E_Type_BT_Mode::idle);
             if(state_prev==AppState::LOGGING) {
-                logger->finaliseLogging();
+                _logger->finaliseLogging();
                 model.logger().update({timeDuration(0), timeDuration(0)});
             }
             
@@ -147,13 +154,13 @@ void App::update() {
             HAL::inst().bluetooth().setMode(E_Type_BT_Mode::idle);
 
             if(state != state_prev)
-                logger->startLogging(currentTime);
+                _logger->startLogging(currentTime);
 
-            model.logger().update({logger->elapsed_Total(),logger->elapsed_Lap()});
+            model.logger().update({_logger->elapsed_Total(),_logger->elapsed_Lap()});
             
             //check if seconds has changed for logging tick
             if (currentTime.second() != lastSecond) {
-                logger->addTrackpoint({ currentTime,
+                _logger->addTrackpoint({ currentTime,
                                         tel.latitude,
                                         tel.longitude,
                                         tel.altitude,
