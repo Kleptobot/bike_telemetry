@@ -16,7 +16,7 @@ void App::begin(IStorage* storage) {
     _storage = storage;
 
     //instantiate an instance of both loggers
-    tcxLogger = new TCXLogger(_storage, model);
+    //tcxLogger = new TCXLogger(_storage, model);
     fitLogger = new FITLogger(_storage);
 
     //set the logger interface
@@ -83,13 +83,13 @@ void App::update() {
     if (startMessageConfig){
         switch (messageType)
         {
-        case 0: 
+        case 0: case 4: 
              HAL::inst().setNMEArates(messageType,1);
              messageType+=10;
              _messageSendMillis = _millis;
             break;
 
-        case 1: case 2: case 3: case 4: case 5: case 6: case 7: case 8: case 9:
+        case 1: case 2: case 3: case 5: case 6: case 7: case 8: case 9:
              HAL::inst().setNMEArates(messageType,0);
              messageType+=10;
              _messageSendMillis = _millis;
