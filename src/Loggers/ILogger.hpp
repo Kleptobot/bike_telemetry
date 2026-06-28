@@ -33,6 +33,17 @@ public:
     virtual bool finaliseLogging() = 0;
     virtual const timeDuration elapsed_Total() const = 0;
     virtual const timeDuration elapsed_Lap() const = 0;
+ 
+    // Not part of ILogger, but kept for parity with the original TCX logger's
+    // public surface in case call sites use these directly.
+    const String elapsedString_Total() const {
+        timeDuration ts = elapsed_Total();
+        return String(ts.hours()) + ":" + String(ts.minutes()) + ":" + String(ts.seconds());
+    }
+    const String elapsedString_Lap() const {
+        timeDuration ts = elapsed_Lap();
+        return String(ts.hours()) + ":" + String(ts.minutes()) + ":" + String(ts.seconds());
+    }
     
     virtual ~ILogger() = default;
 };

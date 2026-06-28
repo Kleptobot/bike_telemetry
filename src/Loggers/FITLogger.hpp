@@ -36,17 +36,6 @@ public:
     const timeDuration elapsed_Total() const override { return _currentTime - _startTime; }
     const timeDuration elapsed_Lap() const override { return _currentTime - laps.back().startTime; }
  
-    // Not part of ILogger, but kept for parity with the original TCX logger's
-    // public surface in case call sites use these directly.
-    const String elapsedString_Total() const {
-        timeDuration ts = elapsed_Total();
-        return String(ts.hours()) + ":" + String(ts.minutes()) + ":" + String(ts.seconds());
-    }
-    const String elapsedString_Lap() const {
-        timeDuration ts = elapsed_Lap();
-        return String(ts.hours()) + ":" + String(ts.minutes()) + ":" + String(ts.seconds());
-    }
- 
     std::vector<Lap> laps; // kept public to match original's `laps.back()` usage
  
 private:

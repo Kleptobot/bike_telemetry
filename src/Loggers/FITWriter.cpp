@@ -22,9 +22,6 @@ uint16_t FitWriter::crc16Update(uint16_t crc, uint8_t byte) {
 
 void FitWriter::rawWrite(const uint8_t* buf, size_t n) {
     _file.write(buf, n);
-    for (size_t i = 0; i < n; ++i) {
-        _crc = crc16Update(_crc, buf[i]);
-    }
     _dataSize += n;
 }
 
@@ -35,7 +32,6 @@ bool FitWriter::open(const String& path) {
     if (!_file) return false;
 
     _dataSize = 0;
-    _crc = 0;
 
     // Write a placeholder 14-byte header; data_size gets patched in close().
     uint8_t header[14] = {0};
@@ -45,19 +41,18 @@ bool FitWriter::open(const String& path) {
     uint16_t profileVersion = 2167;
     memcpy(&header[2], &profileVersion, 2);
     // header[4..7] data_size -- patched on close()
+    // header[8..11] = ".FIT"
     header[8]  = '.';
     header[9]  = 'F';
     header[10] = 'I';
     header[11] = 'T';
     // header[12..13] header_crc left as 0x0000 (optional, valid)
 
-    // The trailing file CRC covers header+data per spec, so we feed the
-    // header bytes through crc16Update here too -- but header bytes are
-    // NOT counted in _dataSize, since data_size must only reflect bytes
-    // written after the 14-byte header (definitions + data messages).
-    for (int i = 0; i < 14; ++i) {
-        _crc = crc16Update(_crc, header[i]);
-    }
+    // Header bytes are deliberately NOT fed into a CRC here. At this point
+    // data_size (bytes 4-7) is a placeholder (0) -- the real value is only
+    // known once all messages are written. close() recomputes the CRC in
+    // one pass over the FINAL on-disk bytes (real header + all data), which
+    // is the only way to guarantee the stored CRC matches what's on disk.
     _file.write(header, 14);
 
     return true;
@@ -101,9 +96,7 @@ void FitWriter::writeString(const char* s, uint8_t fieldSize) {
 
 void FitWriter::close() {
     // _dataSize is exactly "bytes written after the 14-byte header", so the
-    // end-of-data position is always 14 + _dataSize. Computing it this way
-    // avoids relying on size()/seekEnd() semantics, which differ slightly
-    // across SdFat versions.
+    // end-of-data position is always 14 + _dataSize.
     const uint32_t endOfDataPos = 14 + _dataSize;
 
     // Patch data_size (bytes 4-7 of header) now that we know the total.
@@ -111,6 +104,27 @@ void FitWriter::close() {
     uint8_t sizeBytes[4];
     memcpy(sizeBytes, &_dataSize, 4);
     _file.write(sizeBytes, 4);
+
+    // Compute the CRC in a single pass over the FINAL on-disk bytes (header
+    // with the real data_size already patched in, plus all data messages).
+    // Doing this here -- rather than incrementally during each write --
+    // guarantees the CRC matches exactly what ends up on disk, regardless
+    // of when data_size becomes known. Read back in fixed-size chunks
+    // rather than the whole file at once to keep RAM usage bounded.
+    _file.seekSet(0);
+    uint16_t crc = 0;
+    uint8_t buf[64];
+    uint32_t remaining = endOfDataPos;
+    while (remaining > 0) {
+        size_t chunkLen = remaining < sizeof(buf) ? remaining : sizeof(buf);
+        int n = _file.read(buf, chunkLen);
+        if (n <= 0) break; // read error -- shouldn't happen, but don't spin
+        for (int i = 0; i < n; ++i) {
+            crc = crc16Update(crc, buf[i]);
+        }
+        remaining -= n;
+    }
+    _crc = crc;
 
     // Return to end-of-data before appending the trailing CRC.
     _file.seekSet(endOfDataPos);

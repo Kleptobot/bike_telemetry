@@ -92,6 +92,7 @@ void FITLogger::startLogging(const timeData& currentTime) {
     _currentTime = currentTime;
     _lastDistanceM = 0;
     _lapStartDistanceM = 0;
+    _definitionsWritten = false;
     laps.clear();
 
     // TODO: match your existing filename scheme (date/time-based, etc.)

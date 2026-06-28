@@ -46,17 +46,6 @@ class TCXLogger : public ILogger {
     const timeDuration elapsed_Total() const {return _currentTime-_startTime;};
     const timeDuration elapsed_Lap() const {return _currentTime-laps.back().startTime;};
 
-    const String elapsedString_Total() const
-    {
-      timeDuration ts = elapsed_Total();
-      return String(ts.hours())+":"+String(ts.minutes())+":"+String(ts.seconds());
-    }
-    const String elapsedString_Lap() const
-    {
-      timeDuration ts = elapsed_Lap();
-      return String(ts.hours())+":"+String(ts.minutes())+":"+String(ts.seconds());
-    }
-
 };
 
 #endif /* TCXLogger_H */
