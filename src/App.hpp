@@ -84,6 +84,9 @@ private:
 
     void saveLayout();
     void loadLayout();
+
+    void saveTime();
+    void loadTime();
 };
 
 #endif /* APP_H */

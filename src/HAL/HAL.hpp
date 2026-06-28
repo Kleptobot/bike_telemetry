@@ -24,7 +24,7 @@ class HAL {
     IStorage* SD() { return &storageSystem; }
     BluetoothSystem& bluetooth() { return bluetoothSystem; }
     void reInitStorage() {
-        while (!storageSystem.init()) {
+        while (!storageSystem.init(sensorSystem.RTC())) {
             Serial.println("SD card detected, initializing...");
             delay(200);
         }

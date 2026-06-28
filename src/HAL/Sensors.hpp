@@ -25,7 +25,7 @@ public:
     bool update(bool i2cBusy);
 
     #if DS3231
-        const RTC_DS3231& RTC() {return _rtc;}
+        RTC_DS3231* RTC() {return &_rtc;}
     #else
         const RTC_PCF8563& RTC() {return _rtc;}
     #endif

@@ -1,6 +1,9 @@
 #include "SDCard.hpp"
 
-bool SDCardSystem::init() {
+RTC_DS3231* SDCardSystem::_rtc;
+
+bool SDCardSystem::init(RTC_DS3231* rtc) {
+    _rtc = rtc;
     if (mounted) return true;
 
     if (!sd.begin(SD_CS)) {
@@ -8,6 +11,7 @@ bool SDCardSystem::init() {
         return false;
     }
     mounted = true;
+    FsDateTime::setCallback(SDCardSystem::dateTime);
     Serial.println("[SDCardSystem] mounted (SdFs)");
     return true;
 }

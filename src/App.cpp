@@ -120,6 +120,7 @@ void App::update() {
             HAL::inst().resetGPS();
             loadBiometrics();
             loadLayout();
+            loadTime();
             ui.showScreen(ScreenID::MainMenu);
             state = AppState::IDLE;
             break;
@@ -247,6 +248,7 @@ void App::handleAppEvent(const AppEvent& e) {
     switch (e.type) {
         case AppEventType::SaveTime:
             HAL::inst().setTime(std::get<timeData>(e.payload).utcDateTime());
+            saveTime();
             break;
 
         case AppEventType::SaveBiometrics:
@@ -319,7 +321,6 @@ void App::saveBiometrics() {
     JsonDocument doc;
 
     auto& a = model.app().get();
-    int utcOffset = model.time().get().offset();
     
     doc["birthday"] = a.birthday.unixtime();
     doc["mass"] = a.mass;
@@ -329,7 +330,6 @@ void App::saveBiometrics() {
     doc["zone3Start"] = a.zone3Start;
     doc["zone4Start"] = a.zone4Start;
     doc["zone5Start"] = a.zone5Start;
-    doc["UTCOffset"] = utcOffset;
 
     if (_storage->exists("/biometrics.txt"))
         _storage->remove("/biometrics.txt");
@@ -360,7 +360,6 @@ void App::loadBiometrics() {
         AppData a;
         uint32_t unix = jsonBuffer["birthday"];
         timeData bd(unix, 0);
-        int UTCOffset;
         a.birthday = bd;
         a.mass = jsonBuffer["mass"];
         a.caloricProfile = fromString(jsonBuffer["caloricProfile"]);
@@ -369,10 +368,8 @@ void App::loadBiometrics() {
         a.zone3Start = jsonBuffer["zone3Start"];
         a.zone4Start = jsonBuffer["zone4Start"];
         a.zone5Start = jsonBuffer["zone5Start"];
-        UTCOffset = jsonBuffer["UTCOffset"];
 
         model.app().update(a);
-        model.time().setUTCOffset(UTCOffset);
         dataFile.close();
     }
 }
@@ -421,5 +418,41 @@ void App::loadLayout() {
 
         model.layout().update({displays});
         dataFile.close();
+    }
+}
+
+void App::saveTime() {
+    JsonDocument doc;
+
+    int utcOffset = model.time().get().offset();
+    doc["UTCOffset"] = utcOffset;
+
+    if (_storage->exists("/time.txt"))
+        _storage->remove("/time.txt");
+
+    File32 dataFile = _storage->openFile("/time.txt", FILE_WRITE);
+
+    serializeJson(doc, dataFile);
+    dataFile.close();
+
+}
+
+void App::loadTime() {
+    if (_storage->exists("time.txt")) {
+        Serial.println("Found time.txt");
+        // Open file for reading
+        File32 dataFile = _storage->openFile("/time.txt", FILE_READ);
+        // Allocate the memory pool on the stack.
+        JsonDocument jsonBuffer;
+        // Parse the root object
+
+        DeserializationError error = deserializeJson(jsonBuffer, dataFile);
+
+        if (error) {
+            Serial.print("deserializeJson() failed: ");
+            return;
+        }
+        int UTCOffset = jsonBuffer["UTCOffset"];
+        model.time().setUTCOffset(UTCOffset);
     }
 }
