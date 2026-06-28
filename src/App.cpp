@@ -139,7 +139,7 @@ void App::update() {
 
             //on SD card detection go back to boot
             if (HAL::inst().inputs().SD_Det.FE) {
-                HAL::inst().reInitStorage();
+                HAL::inst().reInitStorage(&model.time().get() );
                 state = AppState::BOOT;
             } else if (HAL::inst().inputs().SD_Det.RE) {
                 //SD card removed

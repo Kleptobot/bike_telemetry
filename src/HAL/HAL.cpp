@@ -9,7 +9,7 @@ void HAL::init_low() {
     _sleep = false;
 }
 
-void HAL::init() {
+void HAL::init(timeData* date) {
     //turn the gps power supply on
     inputSystem.setOutput(GPIOB3, true);
     inputSystem.update(false);
@@ -24,7 +24,7 @@ void HAL::init() {
         delay(50);
     }
     if (!inputs().SD_Det.state) {   //SD card pin is inverted, low means card is present
-        while (!storageSystem.init(sensorSystem.RTC())) {
+        while (!storageSystem.init(date)) {
             Serial.println("SD card detected, initializing...");
             delay(200);
         }

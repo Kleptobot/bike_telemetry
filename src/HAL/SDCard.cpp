@@ -1,9 +1,9 @@
 #include "SDCard.hpp"
 
-RTC_DS3231* SDCardSystem::_rtc;
+timeData* SDCardSystem::_date;
 
-bool SDCardSystem::init(RTC_DS3231* rtc) {
-    _rtc = rtc;
+bool SDCardSystem::init(timeData* date) {
+    _date = date;
     if (mounted) return true;
 
     if (!sd.begin(SD_CS)) {

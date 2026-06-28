@@ -27,12 +27,13 @@ void loop() {
         Serial.begin(115200);
         delay(500);
         
-        HAL::inst().init();
+        HAL::inst().init(&App::instance().getModel().time().get());
         App::instance().begin(HAL::inst().SD());
         started = true;
         Serial.println("App started");
         Serial.printf("Free heap: %d bytes\n", dbgHeapTotal() - dbgHeapUsed());
         Serial.println("SD card det state: " + String(HAL::inst().inputs().SD_Det.state));
+        
     }
 
     //update the HAL and App

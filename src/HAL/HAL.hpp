@@ -18,13 +18,13 @@ class HAL {
     }
 
     void init_low();
-    void init();
+    void init(timeData* date);
     void update();
     physIO inputs() { return inputSystem.state(); };
     IStorage* SD() { return &storageSystem; }
     BluetoothSystem& bluetooth() { return bluetoothSystem; }
-    void reInitStorage() {
-        while (!storageSystem.init(sensorSystem.RTC())) {
+    void reInitStorage(timeData* date) {
+        while (!storageSystem.init(date)) {
             Serial.println("SD card detected, initializing...");
             delay(200);
         }
