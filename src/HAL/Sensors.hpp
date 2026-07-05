@@ -5,6 +5,7 @@
 #include <RTClib.h>
 #include <Dps3xx.h>
 #include <LSM6DS3.h>
+#include <functional>
 #include "SensorData.hpp"
 
 #define LSM6DS3_ADDR 0x6A //I2C device address 0x6A
@@ -29,11 +30,18 @@ public:
     #else
         const RTC_PCF8563& RTC() {return _rtc;}
     #endif
+    
     DateTime now() const {return _now;}
     int16_t batt() const {return _nBattPercentage;}
     imu_data imu() const {return _imu;}
     dps_data dps() const {return dps_dat;}
     void setTime(DateTime date);
+
+    using DPSCallback = std::function<void(data_record f32_Alt)>;
+    using IMUCallback = std::function<void(data_record f32_acc_z)>;
+
+    void onDPS(DPSCallback cb) { dpsCallback = cb; }
+    void onIMU(IMUCallback cb) { imuCallback = cb; }
 
 private:
     static const uint16_t BAT_Read_Period = 29999;
@@ -59,6 +67,9 @@ private:
     DateTime _now, _newDate;
     int16_t _nBattPercentage;
     bool _setTime = false;
+
+    DPSCallback dpsCallback;
+    IMUCallback imuCallback;
 
 };
 

@@ -5,7 +5,7 @@
 #include <vector>
 #include <memory>
 #include <bluefruit.h>
-#include <functional>
+#include "HAL/SensorData.hpp"
 
 #include "BT_Device.hpp"
 
@@ -15,6 +15,7 @@ private:
   BLEClientCharacteristic hrm_meas = BLEClientCharacteristic(UUID16_CHR_HEART_RATE_MEASUREMENT);
   BLEClientCharacteristic hrm_loc = BLEClientCharacteristic(UUID16_CHR_BODY_SENSOR_LOCATION);
 
+  static std::vector<hrm*> _hrmDevices;
 
   static void hrm_notify_callback(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len);
 
@@ -22,6 +23,13 @@ private:
   hrm() {
     this->bt_type = E_Type_BT_Device::bt_hrm;
   }; 
+
+  void removeFromLocalList() override {
+    _hrmDevices.erase(
+      std::remove(_hrmDevices.begin(), _hrmDevices.end(), this),
+      _hrmDevices.end()
+    );
+  }
 
 protected:
   hrm(MacAddress MAC) {
@@ -37,17 +45,25 @@ public:
 
   static void create_hrm(MacAddress MAC) {
     btDevices.emplace_back(std::unique_ptr<hrm>(new hrm(MAC)));
+    _hrmDevices.push_back(static_cast<hrm*>(btDevices.back().get()));
   };
 
-  static std::vector<float> getHRM();
+  static data_record getHRM();
 
   void hrm_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len);
   void discover(uint16_t conn_handle);
   bool discovered() override {return hrm_meas.discovered();};
   void begin();
 
+  void disconnect(uint16_t conn_handle, uint8_t reason) override {
+    (void) conn_handle;
+    (void) reason;
+    
+    BT_Device::disconnect(conn_handle, reason);
+  };
+
   void update(uint32_t now) override {
-    f32_bpm = 0.99f * f32_bpm + 0.01f * (float)u16_bpm;
+    f32_bpm = 0.999f * f32_bpm + 0.001f * (float)u16_bpm;
     if (ENABLE_BLUETOOTH_DEBUG) {
       Serial.print("Smoothed BPM: ");
       Serial.println(f32_bpm);

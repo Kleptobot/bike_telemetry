@@ -5,9 +5,9 @@
 #include <vector>
 #include <memory>
 #include <bluefruit.h>
-#include <functional>
 
 #include "BT_Device.hpp"
+#include "HAL/SensorData.hpp"
 
 // Cycling Speed and Cadence configuration
 #define     GATT_CPS_UUID                           0x1818
@@ -24,12 +24,21 @@ class cps : public BT_Device {
     BLEClientCharacteristic cps_feat  = BLEClientCharacteristic(GATT_CPS_FEATURE_UUID);
     BLEClientCharacteristic cps_loc   = BLEClientCharacteristic(GATT_SENSOR_LOCATION_UUID);
 
+    static std::vector<cps*> _cpsDevices;
+
     bool _CadencePresent, _TorquePresent, _BalancePresent, _ForceMagPresent;
     uint16_t u16_feature;
     uint8_t u8_location;
 
     cps(){
       this->bt_type = E_Type_BT_Device::bt_cps;
+    }
+
+    void removeFromLocalList() override {
+      _cpsDevices.erase(
+        std::remove(_cpsDevices.begin(), _cpsDevices.end(), this),
+        _cpsDevices.end()
+      );
     }
 
   protected:
@@ -46,14 +55,15 @@ class cps : public BT_Device {
     static void create_cps(MacAddress MAC)
     {
       btDevices.push_back(std::unique_ptr<cps>(new cps(MAC)));
+      _cpsDevices.push_back(static_cast<cps*>(btDevices.back().get()));
     };
 
     static void cps_notify_callback(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len);
-    static std::vector<float> getPower();
-    static std::vector<float> getCadence();
-    static std::vector<float> getTorque();
-    static std::vector<float> getPedalBalance();
-    static std::vector<float> getForceMagnitude();
+    static data_record getPower();
+    static data_record getCadence();
+    static data_record getTorque();
+    static data_record getPedalBalance();
+    static data_record getForceMagnitude();
 
     void begin();
 
@@ -63,9 +73,14 @@ class cps : public BT_Device {
     
     bool discovered() override;
 
-    void update(uint32_t now) override {
-      
-    }
+    void update(uint32_t now) override {}
+    
+    void disconnect(uint16_t conn_handle, uint8_t reason) override {
+      (void) conn_handle;
+      (void) reason;
+    
+      BT_Device::disconnect(conn_handle, reason);
+    };
 };
 
  #endif /* CPS_H */

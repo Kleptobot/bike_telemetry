@@ -93,10 +93,11 @@ class BluetoothSystem {
     static MacAddress toConnectMAC;
     static DeviceListCallback deviceListCallback;
     static IStorage* _storage;
+    static uint32_t lastBatUpdate;
 
 
     /**
-    * Callback invoked when an connection is established
+    * Callback invoked when a connection is established
     * @param conn_handle
     */
     static void connect_callback(uint16_t conn_handle);
@@ -121,6 +122,7 @@ class BluetoothSystem {
     * @param MAC address of the device that was disconnected
     */
     static void onDeviceUnexpectedDisconnect(MacAddress MAC);
+    
 };
 
 #endif /* BLUETOOTHSYSTEM_H */

@@ -1,27 +1,21 @@
 #include <iterator>
 #include "cps.hpp"
 
-void cps::cps_notify_callback(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len)
-{
+std::vector<cps*> cps::_cpsDevices;
+
+void cps::cps_notify_callback(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len) {
   //itterate the members of the bt device base
-  for (auto it = btDevices.begin(); it != btDevices.end(); it++)
-  {
-    //check the type of the member
-    if((*it)->getType() == E_Type_BT_Device::bt_cps)
-    {
-      //compare the conn handle of the evt with the conn handle of the device servic (static cast to a cps safe because we know the type)
-      if (chr->connHandle() == static_cast<cps*>((*it).get())->cps_serv.connHandle())
-      {
-        //call the underlying notify method for the instance (again static cast)
-        static_cast<cps*>((*it).get())->cps_notify(chr, data, len);
-        return;
-      }
+  for (cps* dev : _cpsDevices) {
+    //compare the conn handle of the evt with the conn handle of the device servic (static cast to a cps safe because we know the type)
+    if (chr->connHandle() == dev->cps_serv.connHandle()) {
+      //call the underlying notify method for the instance (again static cast)
+      dev->cps_notify(chr, data, len);
+      return;
     }
   }
 }
 
-void cps::begin()
-{
+void cps::begin() {
   // Initialize cps client
   cps_serv.begin();
 
@@ -44,8 +38,7 @@ void cps::begin()
 };
 
 
-void cps::discover(uint16_t conn_handle)
-{
+void cps::discover(uint16_t conn_handle) {
   if (cps_serv.discover(conn_handle))
   {
     _conn_handle = conn_handle;
@@ -73,13 +66,11 @@ void cps::discover(uint16_t conn_handle)
   }
 }
 
-bool cps::discovered()
-{
+bool cps::discovered() {
   return cps_meas.discovered();
 }
 
-void cps::cps_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len)
-{
+void cps::cps_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len) {
   //https://github.com/oesmith/gatt-xml/blob/master/org.bluetooth.service.cycling_power.xml
 
   uint16_t power;
@@ -134,76 +125,70 @@ void cps::cps_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len)
   Serial.print("Force Magnitude: "); Serial.println(f32_force_magnitude);
 }
 
-std::vector<float> cps::getPower()
-{
-  std::vector<float> power_values;
-  for (auto it = btDevices.begin(); it != btDevices.end(); it++)
-  {
-    if((*it)->getType() == E_Type_BT_Device::bt_csc)
-    {
-      cps* temp_cps = static_cast<cps*>((*it).get());
-      power_values.push_back(temp_cps->f32_power);
-    }
+data_record cps::getPower() {
+  data_record power = {0, false};
+  for (cps* dev : _cpsDevices) {
+    power.value += dev->f32_power;
+    power.live = true;
   }
-  return power_values;
+  if (_cpsDevices.size() > 0) {
+    power.value /= _cpsDevices.size();
+  }
+  return power;
 }
 
-std::vector<float> cps::getCadence()
-{
-  std::vector<float> cadences;
-  for (auto it = btDevices.begin(); it != btDevices.end(); it++)
-  {
-    if((*it)->getType() == E_Type_BT_Device::bt_csc)
-    {
-      cps* temp_cps = static_cast<cps*>((*it).get());
-      if(temp_cps->_CadencePresent)
-        cadences.push_back(temp_cps->f32_cadence);
+data_record cps::getCadence() {
+  data_record cadences = {0, false};
+  for (cps* dev : _cpsDevices) {
+    if(dev->_CadencePresent) {
+      cadences.value += dev->f32_cadence;
+      cadences.live = true;
     }
+  }
+  if (_cpsDevices.size() > 0) {
+    cadences.value /= _cpsDevices.size();
   }
   return cadences;
 }
 
-std::vector<float> cps::getTorque()
-{
-  std::vector<float> torque_values;
-  for (auto it = btDevices.begin(); it != btDevices.end(); it++)
-  {
-    if((*it)->getType() == E_Type_BT_Device::bt_csc)
-    {
-      cps* temp_cps = static_cast<cps*>((*it).get());
-      if(temp_cps->_TorquePresent)
-        torque_values.push_back(temp_cps->f32_torque);
+data_record cps::getTorque() {
+  data_record torque_values = {0, false};
+  for (cps* dev : _cpsDevices) {
+    if(dev->_TorquePresent) {
+      torque_values.value += dev->f32_torque;
+      torque_values.live = true;
     }
+  }
+  if (_cpsDevices.size() > 0) {
+    torque_values.value /= _cpsDevices.size();
   }
   return torque_values;
 }
 
-std::vector<float> cps::getPedalBalance()
-{
-  std::vector<float> pedal_balance_values;
-  for (auto it = btDevices.begin(); it != btDevices.end(); it++)
-  {
-    if((*it)->getType() == E_Type_BT_Device::bt_csc)
-    {
-      cps* temp_cps = static_cast<cps*>((*it).get());
-      if(temp_cps->_BalancePresent)
-        pedal_balance_values.push_back(temp_cps->f32_pedal_balance);
+data_record cps::getPedalBalance() {
+  data_record pedal_balance_values = {0, false};
+  for (cps* dev : _cpsDevices) {
+    if(dev->_BalancePresent) {
+      pedal_balance_values.value += dev->f32_pedal_balance;
+      pedal_balance_values.live = true;
     }
+  }
+  if (_cpsDevices.size() > 0) {
+    pedal_balance_values.value /= _cpsDevices.size();
   }
   return pedal_balance_values;
 }
 
-std::vector<float> cps::getForceMagnitude()
-{
-  std::vector<float> force_magnitude_values;
-  for (auto it = btDevices.begin(); it != btDevices.end(); it++)
-  {
-    if((*it)->getType() == E_Type_BT_Device::bt_csc)
-    {
-      cps* temp_cps = static_cast<cps*>((*it).get());
-      if(temp_cps->_ForceMagPresent)
-        force_magnitude_values.push_back(temp_cps->f32_force_magnitude);
+data_record cps::getForceMagnitude() {
+  data_record force_magnitude_values = {0, false};
+  for (cps* dev : _cpsDevices) {
+    if(dev->_ForceMagPresent) {
+      force_magnitude_values.value += dev->f32_force_magnitude;
+      force_magnitude_values.live = true;
     }
+  }
+  if (_cpsDevices.size() > 0) {
+    force_magnitude_values.value /= _cpsDevices.size();
   }
   return force_magnitude_values;
 }

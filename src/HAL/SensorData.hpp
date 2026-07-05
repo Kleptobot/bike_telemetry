@@ -24,6 +24,11 @@ struct location_data {
     double latitude;
 };
 
+struct data_record { 
+    float value;
+    bool live;
+};
+
 inline bool operator!=(const location_data& lhs, const location_data& rhs) {
     return lhs.valid != rhs.valid || lhs.longitude != rhs.longitude || lhs.latitude != rhs.latitude;
 }

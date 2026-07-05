@@ -5,7 +5,7 @@
 #include <vector>
 #include <memory>
 #include <bluefruit.h>
-#include <functional>
+#include "HAL/SensorData.hpp"
 
 #include "BT_Device.hpp"
 
@@ -50,6 +50,8 @@ class csc : public BT_Device {
     BLEClientCharacteristic csc_feat  = BLEClientCharacteristic(GATT_CSC_FEATURE_UUID);
     BLEClientCharacteristic csc_loc   = BLEClientCharacteristic(GATT_SENSOR_LOCATION_UUID);
 
+    static std::vector<csc*> _cscDevices;
+
     // Body sensor location value is 8 bit
     const char* feat_str[4] = {"other", "Speed", "Cadence", "Speed & Cadence"};
     const float f32_circ = 2127;
@@ -63,6 +65,13 @@ class csc : public BT_Device {
     
     csc(){
       this->bt_type = E_Type_BT_Device::bt_csc;
+    }
+
+    void removeFromLocalList() override {
+      _cscDevices.erase(
+        std::remove(_cscDevices.begin(), _cscDevices.end(), this),
+        _cscDevices.end()
+      );
     }
 
   protected:
@@ -80,12 +89,13 @@ class csc : public BT_Device {
     static void create_csc(MacAddress MAC)
     {
       btDevices.push_back(std::unique_ptr<csc>(new csc(MAC)));
+      _cscDevices.push_back(static_cast<csc*>(btDevices.back().get()));
     };
 
     static void csc_notify_callback(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len);
 
-    static std::vector<float> getSpeed();
-    static std::vector<float> getCadence();
+    static data_record getSpeed();
+    static data_record getCadence();
 
     void begin();
 
@@ -97,35 +107,7 @@ class csc : public BT_Device {
 
     void disconnect(uint16_t conn_handle, uint8_t reason) override;
 
-    void update(uint32_t now) override {
-      float f32_kph_est = 0, f32_cad_est = 0;
-      
-      //use the last known u16_CrankCount_delta delta and an adjusted time delta to come up with an actual cadance estimate
-      if (now>exp_next_cad_evt) {
-        uint32_t diff = now - exp_next_cad_evt;
-        uint32_t delta_adjusted = u16_crank_delta + diff * 0.9765625; //convert milliseconds into 1/1024ths of a second
-        if ( delta_adjusted > 0)
-          f32_cad_est = 61140.0 *float(u16_CrankCount_delta)/float(delta_adjusted);
-      }else{
-        f32_cad_est = f32_cadence_raw;
-      }
-      
-      //low pass filter the cadance estimate
-      f32_cadence = f32_cad_est * 0.001 + f32_cadence * 0.999;
-
-      //use the last known wheelcount delta and an adjusted time delta to come up with an actual speed estimate
-      if(now>exp_next_spd_evt) {
-        uint32_t diff = now - exp_next_spd_evt;
-        uint32_t delta_adjusted = u16_speed_delta + diff * 0.9765625;
-        if ( delta_adjusted > 0)
-          f32_kph_est = f32_circ * 3.6684 *float(u32_WheelCount_delta)/float(delta_adjusted);
-      }else{
-        f32_kph_est = f32_kph_raw;
-      }
-      
-      //low pass filter the speed estimate
-      f32_kph = f32_kph_est * 0.001 + f32_kph * 0.999;
-    };
+    void update(uint32_t now) override;
 };
 
  #endif /* CSC_H */

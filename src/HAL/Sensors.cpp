@@ -58,6 +58,7 @@ bool SensorSystem::update(bool i2cBusy) {
         if (ret != 0)
         {
             // Serial.print("FAIL! ret = ");
+            _dpsValid = false;
         }
         else
         {
@@ -77,10 +78,13 @@ bool SensorSystem::update(bool i2cBusy) {
 
             //estimate altitude from pressure and temperature
             float Tb = 273.15+dps_dat.f32_DSP_Temp;
-            float P_Pb = pow(dps_dat.f32_DSP_Pa/101325,-0.1902663539);
+            float P_Pb = pow(dps_dat.f32_DSP_Pa/101325.0,-0.1902663539);
             float Lb = 0.0065;
             dps_dat.f32_Alt = (Tb*P_Pb-Tb)/(Lb*P_Pb);
             _dpsValid = true;
+        }
+        if (dpsCallback) {
+            dpsCallback({dps_dat.f32_Alt, _dpsValid});
         }
         dps_dat.dpsValid = _dpsValid;
         update = true;
@@ -94,6 +98,9 @@ bool SensorSystem::update(bool i2cBusy) {
         _imu.f32_gyro_z = _myIMU->readFloatGyroZ();
         lastIMUTime = millis();
         update = true;
+        if (imuCallback) {
+            imuCallback({_imu.f32_acc_z,true});
+        }
     } else if (millis() - lastBATTime > BAT_Read_Period) {
         //get BAT data
         digitalWrite(VBAT_ENABLE, LOW);

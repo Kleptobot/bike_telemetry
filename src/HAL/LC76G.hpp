@@ -216,6 +216,7 @@ class LC76G
     void sendCommand(CmdId cmdId, ResponseCallback cb, void* userCtx, const void* payload);
 
     TinyGPSPlus& gps() { return _gps; };
+    const TinyGPSPlus& gps() const { return _gps; };
     void closeDataFile() {
         dataFile.flush();
         dataFile.close();

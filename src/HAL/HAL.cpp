@@ -37,10 +37,32 @@ void HAL::init(timeData* date) {
     resetDisplay();
 
     inputSystem.setOutput(GPIOB6,true); //turn on the screen backlight
+
+    //set up some callbacks
+    sensorSystem.onDPS([this](data_record alt) {
+        altFusion.altitudeDPSUpdate(alt.value);
+        _dpsValid = alt.live;
+    });
+    sensorSystem.onIMU([this](data_record acc_z) {
+        altFusion.altitudeIMUUpdate(acc_z.value);
+    });
 }
 
 void HAL::update() {
     _LC76G.update();
+
+    //check the age of the gps altitude measurement
+    if (_LC76G.gps().altitude.age() < gpsAltAge) {
+        altFusion.altitudeGPSCorrect(_LC76G.gps().altitude.meters());
+    }
+    gpsAltAge = _LC76G.gps().altitude.age();
+
+    //check the age of the gps speed measurement
+    auto gpsSpd = _LC76G.gps().speed;
+    if (gpsSpd.age() < lastGPSSpdUpdate) {
+        //speedRecord.gps = {(float)gpsSpd.kmph(),millis(),true};
+    }
+    lastGPSSpdUpdate = gpsSpd.age();
 
     //Call GPIO inputs, pass in busy state of i2c
     if(inputSystem.update(_LC76G.isBusy())) {
@@ -55,65 +77,31 @@ void HAL::update() {
     }
     bluetoothSystem.update();
 
-    //agregate speed from gps and sensors
-    f32_kph = 0;
-    std::vector<float> speed = csc::getSpeed();
-    if(_LC76G.gps().speed.isValid()) {
-        speed.push_back(_LC76G.gps().speed.kmph());
+    if (_dpsValid) {
+        f32_alt = altFusion.altitude();
+    } else {
+        f32_alt = _LC76G.gps().altitude.meters();
     }
-    if(speed.size()>0) {
-        f32_kph = std::accumulate(speed.begin(), speed.end(), 0.0f)/speed.size();
+    
+    auto spd = csc::getSpeed();
+    f32_kmh = 0;
+    if (spd.live) {
+        f32_kmh = spd.value;
+    } else if (gpsSpd.isValid()) {
+        f32_kmh = gpsSpd.kmph();
     }
 
-    //agregate cadence from sensors
-    std::vector<float> cadence = csc::getCadence();
     f32_cadence = 0;
-    if(cadence.size()>0) {
-        f32_cadence = std::accumulate(cadence.begin(), cadence.end(), 0.0f)/cadence.size();
+    if (csc::getCadence().live) {
+        f32_cadence = csc::getCadence().value;
     }
-
-    //agregate heartrate from sensors
-    std::vector<float> heartrates = hrm::getHRM();
     f32_bpm = 0;
-    if(heartrates.size()>0) {
-        f32_bpm = std::accumulate(heartrates.begin(), heartrates.end(), 0.0f)/heartrates.size();
+    if (hrm::getHRM().live) {
+        f32_bpm = hrm::getHRM().value;
     }
-
-    //agregate power from sensors
-    std::vector<float> pow = cps::getPower();
-    if(pow.size()>0) {
-        f32_pow = std::accumulate(pow.begin(), pow.end(), 0.0f)/pow.size();
-    }
-
-    //agregate altitude from gps and dps
-    f32_alt = 0;
-    std::vector<float> altitudes;
-    if (sensorSystem.dps().dpsValid) {
-        altitudes.push_back(sensorSystem.dps().f32_Alt);
-    }
-    if (_LC76G.gps().altitude.isValid()) {
-        altitudes.push_back(_LC76G.gps().altitude.meters());
-    }
-    if (altitudes.size()>0) {
-        f32_alt = std::accumulate(altitudes.begin(), altitudes.end(), 0.0f) / altitudes.size();
-    }
-
-    f32_temp = (sensorSystem.dps().f32_DSP_Temp + sensorSystem.dps().f32_RTC_Temp)/2;
-
-    //if the telemetry callback has been set, run it
-    if (telemetryCallback) {
-        telemetryCallback(sensorSystem.imu(),
-                          sensorSystem.dps(),
-                          sensorSystem.batt(),
-                          f32_kph,
-                          f32_cadence,
-                          f32_temp,
-                          f32_alt,
-                          f32_bpm,
-                          f32_pow,
-                          _LC76G.gps().location,
-                          sensorSystem.now(),
-                          _LC76G.gps().time);
+    f32_pow = 0;
+    if (cps::getPower().live) {
+        f32_pow = cps::getPower().value;
     }
 
     //if reset time is non zero check if 100ms has passed since the trigger, then reset time to zero and write reset pin high
@@ -149,45 +137,12 @@ void HAL::buzzStop() {
     inputSystem.setOutput(GPIOB2, false);
 }
 
-void HAL::displayGPSInfo() {
-  Serial.println("\n--- GPS Status ---");
-  
-  if (_LC76G.gps().location.isValid()) {
-    Serial.print("Lat: ");
-    Serial.print(_LC76G.gps().location.lat(), 6);
-    Serial.print(" Lng: ");
-    Serial.println(_LC76G.gps().location.lng(), 6);
-    Serial.print("Alt: ");
-    Serial.print(_LC76G.gps().altitude.meters());
-    Serial.println(" m");
-
-  } else {
-    Serial.println("Waiting for gps fix...");
-  }
-  
-  if (_LC76G.gps().satellites.isValid()) {
-    Serial.print("Satellites: ");
-    Serial.println(_LC76G.gps().satellites.value());
-  }
-  
-  if (_LC76G.gps().speed.isValid()) {
-    Serial.print("Speed: ");
-    Serial.print(_LC76G.gps().speed.kmph());
-    Serial.println(" km/h");
-  }
-}
-
 void HAL::sleep() {
     Serial.println("sleep");
     if (!_sleep) {
         _sleep = true;
         _LC76G.sendCommand(LC76G::PAIR_LOW_POWER_ENTRY_RTC_MODE,&HAL::onSleep,this,nullptr);
     }
-}
-
-void HAL::getNMEArates(uint8_t type) {
-    LC76G::Payload1U8 p = {type};
-    _LC76G.sendCommand(LC76G::GET_NMEA_MSG_RATE,&HAL::onPAIRResponse,this,&p);
 }
 
 void HAL::setNMEArates(uint8_t type, uint8_t rate) {

@@ -5,6 +5,7 @@ std::vector<BluetoothDevice> BluetoothSystem::deviceList;
 BluetoothSystem::DeviceListCallback BluetoothSystem::deviceListCallback;
 E_Type_BT_Mode BluetoothSystem::_mode, BluetoothSystem::_mode_prev;
 IStorage* BluetoothSystem::_storage;
+uint32_t BluetoothSystem::lastBatUpdate = millis() - 10000;
 
 void BluetoothSystem::init(IStorage* storage) {
     deviceList.clear();
@@ -67,12 +68,20 @@ void BluetoothSystem::update() {
             break;
     }
     _mode_prev = _mode;
+    uint32_t now = millis();
     for (auto it = deviceList.begin(); it != deviceList.end(); it++ ) {
         (*it).connected = BT_Device::deviceWithMacDiscovered((*it).MAC);
         if ((*it).connected) {
             BT_Device* dev = BT_Device::getDeviceWithMAC((*it).MAC);
             (*it).batt = dev->readBatt();
-            dev->update(millis());
+            dev->update(now);
+        }
+    }
+
+    if (now - lastBatUpdate > 10000) {
+        lastBatUpdate = now;
+        if (deviceListCallback) {
+            deviceListCallback(deviceList);
         }
     }
 }

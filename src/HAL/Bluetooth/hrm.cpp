@@ -1,34 +1,28 @@
 #include "hrm.hpp"
 
-void hrm::hrm_notify_callback(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len)
-{
+std::vector<hrm*> hrm::_hrmDevices;
+
+void hrm::hrm_notify_callback(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len) {
   //itterate the members of the bt device base
-  for (auto it = btDevices.begin(); it != btDevices.end(); it++)
+  for (auto it = _hrmDevices.begin(); it != _hrmDevices.end(); it++)
   {
-    //check the type of the member
-    if((*it).get()->getType() == E_Type_BT_Device::bt_hrm)
+    //compare the conn handle of the evt with the conn handle of the device servic (static cast to an hrm safe because we know the type)
+    if (chr->connHandle() == (*it)->hrm_serv.connHandle())
     {
-      //compare the conn handle of the evt with the conn handle of the device servic (static cast to an hrm safe because we know the type)
-      if (chr->connHandle() == static_cast<hrm*>((*it).get())->hrm_serv.connHandle())
-      {
-        //call the underlying notify method for the instance (again static cast)
-        static_cast<hrm*>((*it).get())->hrm_notify(chr, data, len);
-        return;
-      }
+      //call the underlying notify method for the instance (again static cast)
+      (*it)->hrm_notify(chr, data, len);
+      return;
     }
   }
 }
 
-void hrm::hrm_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len)
-{
-  if ( data[0] & bit(0) )
-  {
+void hrm::hrm_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len) {
+  if ( data[0] & bit(0) ) {
     memcpy(&u16_bpm, data+1, 2);
-  }
-  else
-  {
+  } else {
     u16_bpm = data[1];
   }
+  
   if (ENABLE_BLUETOOTH_DEBUG) {
     Serial.print("Received HRM Measurement: ");
     Serial.print(u16_bpm);
@@ -36,8 +30,7 @@ void hrm::hrm_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len)
   }
 }
 
-void hrm::begin()
-{
+void hrm::begin() {
   // Initialize HRM client
   hrm_serv.begin();
 
@@ -59,8 +52,7 @@ void hrm::begin()
   return;
 }
 
-void hrm::discover(uint16_t conn_handle)
-{
+void hrm::discover(uint16_t conn_handle) {
   Serial.println("Connected");
   Serial.print("Discovering HRM Service ... ");
 
@@ -140,15 +132,14 @@ void hrm::discover(uint16_t conn_handle)
   f32_bpm=0;
 }
 
-std::vector<float> hrm::getHRM()
-{
-  std::vector<float> heartrates;
-  for (auto it = btDevices.begin(); it != btDevices.end(); it++)
-  {
-    if(((*it)->getType() == E_Type_BT_Device::bt_hrm) && (*it)->discovered())
-    {
-      heartrates.push_back(static_cast<hrm*>((*it).get())->f32_bpm);
-    }
+data_record hrm::getHRM() {
+  data_record heartrates = {0, false};
+  for (hrm* dev : _hrmDevices) {
+    heartrates.value += dev->f32_bpm;
+    heartrates.live = true;
+  }
+  if (_hrmDevices.size() > 0) {
+    heartrates.value /= _hrmDevices.size();
   }
   return heartrates;
 }

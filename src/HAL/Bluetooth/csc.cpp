@@ -1,27 +1,22 @@
 #include <iterator>
 #include "csc.hpp"
 
-void csc::csc_notify_callback(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len)
-{
+std::vector<csc*> csc::_cscDevices;
+
+void csc::csc_notify_callback(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len) {
   //itterate the members of the bt device base
-  for (auto it = btDevices.begin(); it != btDevices.end(); it++)
-  {
-    //check the type of the member
-    if((*it)->getType() == E_Type_BT_Device::bt_csc)
+  for (csc* dev : _cscDevices) {
+    //compare the conn handle of the evt with the conn handle of the device servic (static cast to a csc, safe because we know the type)
+    if (chr->connHandle() == dev->csc_serv.connHandle() )
     {
-      //compare the conn handle of the evt with the conn handle of the device servic (static cast to a csc, safe because we know the type)
-      if (chr->connHandle() == static_cast<csc*>((*it).get())->csc_serv.connHandle())
-      {
-        //call the underlying notify method for the instance (again static cast)
-        static_cast<csc*>((*it).get())->csc_notify(chr, data, len);
-        return;
-      }
+      //call the underlying notify method for the instance (again static cast)
+      dev->csc_notify(chr, data, len);
+      return;
     }
   }
 }
 
-void csc::begin()
-{
+void csc::begin() {
   // Initialize csc client
   csc_serv.begin();
 
@@ -46,8 +41,7 @@ void csc::begin()
   return;
 };
 
-void csc::discover(uint16_t conn_handle)
-{
+void csc::discover(uint16_t conn_handle) {
   // If csc is not found, disconnect and return
   if (csc_serv.discover(conn_handle) )
   {
@@ -120,24 +114,21 @@ bool csc::discovered()
   return csc_meas.discovered();
 }
 
-void csc::csc_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len)
-{
+void csc::csc_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len) {
   // https://github.com/oesmith/gatt-xml/blob/master/org.bluetooth.service.cycling_speed_and_cadence.xml
   
   uint8_t offset = 1;
   uint32_t u32_WheelCount;
   uint16_t u16_SpeedEvt, u16_CrankCount, u16_CrankEvt;
 
-  if ((data[0] & 0x01) ==1)
-  {
+  if ((data[0] & 0x01) ==1) {
     memcpy(&u32_WheelCount, data+offset, 4);
     offset += 4;
     memcpy(&u16_SpeedEvt, data+offset, 2);
     offset += 2;
 
     //check for disconnect
-    if(_disconnected)
-    {
+    if(_disconnected) {
       u16_SpeedEvt_Prev=u16_SpeedEvt;
       u32_WheelCount_Prev=u32_WheelCount;
       _disconnected=false;
@@ -158,33 +149,27 @@ void csc::csc_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len)
 
      //check for overflow of speed count
     u32_WheelCount_delta=0;
-    if (u32_WheelCount >= u32_WheelCount_Prev)
-    {
+    if (u32_WheelCount >= u32_WheelCount_Prev) {
       u32_WheelCount_delta = u32_WheelCount-u32_WheelCount_Prev;
-    }
-    else if(u32_WheelCount_Prev>u32_WheelCount)
-    {
+    } else if(u32_WheelCount_Prev>u32_WheelCount) {
       u32_WheelCount_delta = u32_WheelCount + (4294967295 - u32_WheelCount_Prev);
     }
     u32_WheelCount_Prev = u32_WheelCount;
 
     //calculate the rate of change and convert to km/h
     f32_kph_raw = 0;
-    if (u16_speed_delta > 0)
-    {
+    if (u16_speed_delta > 0) {
       f32_kph_raw = f32_circ * 3.6684 *float(u32_WheelCount_delta)/float(u16_speed_delta);
     }
   }
-  if ((data[0] & 0x02) == 2)
-  {
+  if ((data[0] & 0x02) == 2) {
     memcpy(&u16_CrankCount, data+offset, 2);
     offset += 2;
     memcpy(&u16_CrankEvt, data+offset, 2);
     offset += 2;
 
     //check for disconnect
-    if(_disconnected)
-    {
+    if(_disconnected) {
       u16_CrankEvt_Prev = u16_CrankEvt;
       u16_CrankCount_Prev = u16_CrankCount;
       _disconnected=false;
@@ -205,57 +190,50 @@ void csc::csc_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len)
 
     //check for overflow of crank count
     u16_CrankCount_delta = 0;
-    if (u16_CrankCount>u16_CrankCount_Prev)
-    {
+    if (u16_CrankCount>u16_CrankCount_Prev) {
       u16_CrankCount_delta = u16_CrankCount - u16_CrankCount_Prev;
-    }
-    else if(u16_CrankCount_Prev>u16_CrankCount)
-    {
+    } else if(u16_CrankCount_Prev>u16_CrankCount) {
       u16_CrankCount_delta = u16_CrankCount + (65535 - u16_CrankCount_Prev);
     }
     u16_CrankCount_Prev = u16_CrankCount;
     
     //calculate rate of change and convert to rpm
     f32_cadence_raw = 0;
-    if (u16_crank_delta>0)
-    {
+    if (u16_crank_delta>0) {
       f32_cadence_raw = 61140.0 *float(u16_CrankCount_delta)/float(u16_crank_delta);
     }
   }
 }
 
-std::vector<float> csc::getSpeed()
-{
-  std::vector<float> speeds;
-  for (auto it = btDevices.begin(); it != btDevices.end(); it++)
-  {
-    if((*it)->getType() == E_Type_BT_Device::bt_csc)
-    {
-      csc* temp_csc = static_cast<csc*>((*it).get());
-      if(temp_csc->b_speed_present)
-        speeds.push_back(temp_csc->f32_kph);
+data_record csc::getSpeed() {
+  data_record speed = {0, false};
+  for (csc* dev : _cscDevices) {
+    if(dev->b_speed_present) {
+      speed.value += dev->f32_kph;
+      speed.live = true;
     }
   }
-  return speeds;
+  if (_cscDevices.size() > 0) {
+    speed.value /= _cscDevices.size();
+  }
+  return speed;
 }
 
-std::vector<float> csc::getCadence()
-{
-  std::vector<float> cadences;
-  for (auto it = btDevices.begin(); it != btDevices.end(); it++)
-  {
-    if((*it)->getType() == E_Type_BT_Device::bt_csc)
-    {
-      csc* temp_csc = static_cast<csc*>((*it).get());
-      if(temp_csc->b_cadence_present)
-        cadences.push_back(temp_csc->f32_cadence);
+data_record csc::getCadence() {
+  data_record cadence = {0, false};
+  for (csc* dev : _cscDevices) {
+    if(dev->b_cadence_present) {
+      cadence.value += dev->f32_cadence;
+      cadence.live = true;
     }
   }
-  return cadences;
+  if (_cscDevices.size() > 0) {
+    cadence.value /= _cscDevices.size();
+  }
+  return cadence;
 }
 
-void csc::disconnect(uint16_t conn_handle, uint8_t reason)
-{
+void csc::disconnect(uint16_t conn_handle, uint8_t reason) {
   (void) conn_handle;
   (void) reason;
 
@@ -264,3 +242,33 @@ void csc::disconnect(uint16_t conn_handle, uint8_t reason)
 
   BT_Device::disconnect(conn_handle,reason);
 }
+
+void csc::update(uint32_t now) {
+  float f32_kph_est = 0, f32_cad_est = 0;
+  
+  //use the last known u16_CrankCount_delta delta and an adjusted time delta to come up with an actual cadance estimate
+  if (now>exp_next_cad_evt) {
+    uint32_t diff = now - exp_next_cad_evt;
+    uint32_t delta_adjusted = u16_crank_delta + diff * 0.9765625; //convert milliseconds into 1/1024ths of a second
+    if ( delta_adjusted > 0)
+      f32_cad_est = 61140.0 *float(u16_CrankCount_delta)/float(delta_adjusted);
+  }else{
+    f32_cad_est = f32_cadence_raw;
+  }
+  
+  //low pass filter the cadance estimate
+  f32_cadence = f32_cad_est * 0.001 + f32_cadence * 0.999;
+
+  //use the last known wheelcount delta and an adjusted time delta to come up with an actual speed estimate
+  if(now>exp_next_spd_evt) {
+    uint32_t diff = now - exp_next_spd_evt;
+    uint32_t delta_adjusted = u16_speed_delta + diff * 0.9765625;
+    if ( delta_adjusted > 0)
+      f32_kph_est = f32_circ * 3.6684 *float(u32_WheelCount_delta)/float(delta_adjusted);
+  }else{
+    f32_kph_est = f32_kph_raw;
+  }
+  
+  //low pass filter the speed estimate
+  f32_kph = f32_kph_est * 0.001 + f32_kph * 0.999;
+};

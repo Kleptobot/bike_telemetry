@@ -24,10 +24,10 @@ void BT_Device::removeDeviceWithMAC(MacAddress MAC) {
     Serial.println(btDevices.size());
     for (auto it = btDevices.begin(); it != btDevices.end(); it++) {
         if((*it)->getMac()==MAC) {
-            // disconnect() removes this entry from btDevices itself, so we must
-            // not touch `it` after calling it, and must not erase again here.
+            (*it).get()->removeFromLocalList();
             (*it).get()->disconnect(22);
             Serial.println(btDevices.size());
+            btDevices.erase(it);
             return;
         }
     }
@@ -37,6 +37,7 @@ void BT_Device::removeDeviceWithMAC(MacAddress MAC) {
 void BT_Device::removeDevice(std::unique_ptr<BT_Device> device) {
     auto it = std::find(btDevices.begin(), btDevices.end(), device); 
     if (it != btDevices.end()) {
+        (*it).get()->removeFromLocalList();
         (*it).get()->disconnect(22);
         btDevices.erase(it);
         return;

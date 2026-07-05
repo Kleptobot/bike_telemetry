@@ -55,6 +55,7 @@ class BT_Device {
     bool _disconnected;
 
     BT_Device(){};
+    virtual void removeFromLocalList() {};
 
   public:
     virtual ~BT_Device() {};

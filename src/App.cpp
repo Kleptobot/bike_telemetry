@@ -36,11 +36,6 @@ void App::begin(IStorage* storage) {
 
     ui.begin(ScreenID::MainMenu);
 
-    // Register callback with HAL
-    HAL::inst().onTelemetry([this](imu_data imu, dps_data dps, int BattPercentage, float speed, float cadence, float temp, float alt, float bpm, float pow, TinyGPSLocation loc, DateTime rtcNow, TinyGPSTime gpsNow) {
-        this->updateTelemetry(imu, dps, BattPercentage, speed, cadence, temp, alt, bpm, pow, loc, rtcNow, gpsNow);
-    });
-
     HAL::inst().bluetooth().onDeviceList([this](std::vector<BluetoothDevice> devices) {
         this->updateBluetooth(devices);
     });
@@ -53,6 +48,7 @@ void App::begin(IStorage* storage) {
 }
 
 void App::update() {
+    updateTelemetry();
     // Any periodic application-level behavior here
     Telemetry tel = model.telemetry().get();
     const timeData& currentTime = model.time().get();
@@ -185,17 +181,21 @@ void App::update() {
     model.app().setState(state);
 }
 
-void App::updateTelemetry(imu_data imu, dps_data dps, int16_t BattPercentage, float speed, float cadence, float temp, float alt, float bpm, float pow, TinyGPSLocation loc, DateTime rtcNow, TinyGPSTime gpsNow) {
+void App::updateTelemetry() {
     float distance = 0;
 
     // /Haversine formula
+    auto gpsLoc = HAL::inst().getGPSLocation();
+    auto gpsNow = HAL::inst().getGPSTime();
+    auto rtcNow = HAL::inst().getRTCtime();
+
     if (rtcNow.secondstime() != _lastSeconds) {
-        if ( loc.isValid() && _lastLocation.isValid()) {
+        if ( gpsLoc.isValid() && _lastLocation.isValid()) {
             double deg2rad = M_PI/180.0;
             double theta1 = _lastLocation.lat()*deg2rad;
-            double theta2 = loc.lat()*deg2rad;
+            double theta2 = gpsLoc.lat()*deg2rad;
             double phi1 = _lastLocation.lng()*deg2rad;
-            double phi2 = loc.lng()*deg2rad;
+            double phi2 = gpsLoc.lng()*deg2rad;
 
             double s1 = sin((theta2 - theta1)/2.0);
             s1 = s1*s1;
@@ -205,33 +205,34 @@ void App::updateTelemetry(imu_data imu, dps_data dps, int16_t BattPercentage, fl
 
             distance = 2.0*6371000.0*asin(sqrt(s1+c1*s2)); //distance in m
         }
-        _lastLocation = loc;
+        _lastLocation = gpsLoc;
         _lastSeconds = rtcNow.secondstime();
     }
-    model.telemetry().update({  imu,
-                                dps,
-                                BattPercentage,
-                                speed,
-                                cadence,
-                                temp,
-                                alt,
-                                bpm,
-                                pow,
-                                loc.isValid(),
-                                loc.lng(),
-                                loc.lat(),
+
+    model.telemetry().update({  HAL::inst().getIMUData(),
+                                HAL::inst().getDPSData(),
+                                HAL::inst().getBatteryPercentage(),
+                                HAL::inst().getSpeed(),
+                                HAL::inst().getCadence(),
+                                HAL::inst().getTemperature(),
+                                HAL::inst().getAltitude(),
+                                HAL::inst().getHeartRate(),
+                                HAL::inst().getPower(),
+                                gpsLoc.isValid(),
+                                gpsLoc.lng(),
+                                gpsLoc.lat(),
                                 distance});
 
     //when gps time goes valid, check if the RTC time needs to be re-synced
     int UTCoffset = model.time().get().offset();
-    if (loc.isValid() && !_gpsNowValid) {
+    if (gpsLoc.isValid() && !_gpsNowValid) {
         //load gpsTime into _gpsNow DateTime object, adding in the saved UTC offset
         _gpsNow = {rtcNow.year(), rtcNow.month(), rtcNow.day(), (uint8_t)((int)gpsNow.hour()+UTCoffset*60), gpsNow.minute(), gpsNow.second()};
         TimeSpan ts = _gpsNow - rtcNow;
         if (ts.totalseconds() > 30 || ts.totalseconds() < -30)
             HAL::inst().setTime(_gpsNow);
     }
-    _gpsNowValid = loc.isValid();
+    _gpsNowValid = gpsLoc.isValid();
     
     model.time().update({rtcNow, UTCoffset});
 }
@@ -301,8 +302,7 @@ void App::handleAppEvent(const AppEvent& e) {
             HAL::inst().gpsSaveNVRAM();
             break;
 
-        case AppEventType::setGPSNMEARate:
-            {
+        case AppEventType::setGPSNMEARate: {
                 NMEArateChange change = std::get<NMEArateChange>(e.payload);
                 HAL::inst().setNMEArates(change.type, change.rate);
             }
@@ -358,7 +358,7 @@ void App::loadBiometrics() {
         }
 
         AppData a;
-        uint32_t unix = jsonBuffer["birthday"];
+        long long unix = jsonBuffer["birthday"];
         timeData bd(unix, 0);
         a.birthday = bd;
         a.mass = jsonBuffer["mass"];
