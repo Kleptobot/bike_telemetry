@@ -95,10 +95,12 @@ void HAL::update() {
     if (csc::getCadence().live) {
         f32_cadence = csc::getCadence().value;
     }
+    
     f32_bpm = 0;
     if (hrm::getHRM().live) {
         f32_bpm = hrm::getHRM().value;
     }
+
     f32_pow = 0;
     if (cps::getPower().live) {
         f32_pow = cps::getPower().value;
@@ -117,6 +119,14 @@ void HAL::update() {
             _resetDispTime = 0;
         }
     }
+
+    f32_grade = 0;
+    if (f32_kmh >0)
+    {
+        //rise in m/s * 3.6 to convert to km/h, then divide by speed in km/h to get grade as a percentage
+        f32_grade = altFusion.rise()*3.6f*100.0f/f32_kmh;
+    }
+    
 }
 
 void HAL::resetGPS() {

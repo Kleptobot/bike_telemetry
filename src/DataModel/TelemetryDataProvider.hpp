@@ -26,6 +26,7 @@ enum class TelemetryType : uint8_t {
     Distance,
     TotalDist,
     Location,
+    Grade,
     Undefined
 };
 
@@ -44,6 +45,7 @@ struct Telemetry {
     double latitude;        //degrees
     float distance;         //meters
     float totalDistance;    //meters
+    float grade;
 
     Telemetry(){}
     Telemetry(
@@ -59,7 +61,8 @@ struct Telemetry {
         bool validLocation_,
         double longitude_,
         double latitude_,
-        float distance_
+        float distance_,
+        float grade_
     )
         : imu(imu_)
         , dps(dps_)
@@ -74,6 +77,7 @@ struct Telemetry {
         , longitude(longitude_)
         , latitude(latitude_)
         , distance(distance_)
+        , grade(grade_)
         , totalDistance(distance_)
     {}
 
@@ -96,6 +100,7 @@ struct Telemetry {
         latitude       = _new.latitude;
         distance       = _new.distance;
         totalDistance  += _new.totalDistance;
+        grade          = _new.grade;
 
         return *this;
     }
@@ -111,7 +116,8 @@ inline TelemetryType& operator++(TelemetryType& t) {
         case TelemetryType::Power : t = TelemetryType::Distance; break;
         case TelemetryType::Distance : t = TelemetryType::TotalDist; break;
         case TelemetryType::TotalDist : t = TelemetryType::Location; break;
-        case TelemetryType::Location : t = TelemetryType::Speed; break;
+        case TelemetryType::Location : t = TelemetryType::Grade; break;
+        case TelemetryType::Grade: t = TelemetryType::Speed; break;
         default: t = TelemetryType::Undefined;
     }
     return t;
@@ -119,7 +125,7 @@ inline TelemetryType& operator++(TelemetryType& t) {
 
 inline TelemetryType& operator--(TelemetryType& t) {
     switch(t){
-        case TelemetryType::Speed : t = TelemetryType::Location; break;
+        case TelemetryType::Speed : t = TelemetryType::Grade; break;
         case TelemetryType::Cadence : t = TelemetryType::Speed; break;
         case TelemetryType::Temperature : t = TelemetryType::Cadence; break;
         case TelemetryType::Altitude : t = TelemetryType::Temperature; break;
@@ -128,6 +134,7 @@ inline TelemetryType& operator--(TelemetryType& t) {
         case TelemetryType::Distance : t = TelemetryType::Power; break;
         case TelemetryType::TotalDist : t = TelemetryType::Distance; break;
         case TelemetryType::Location : t = TelemetryType::TotalDist; break;
+        case TelemetryType::Grade: t = TelemetryType::Location; break;
         default: t = TelemetryType::Undefined; break;
     }
     return t;
@@ -144,6 +151,7 @@ inline const char* toString(const TelemetryType& t) {
         case TelemetryType::Distance : return"Distance"; break;
         case TelemetryType::TotalDist : return"TotalDist"; break;
         case TelemetryType::Location : return"Location"; break;
+        case TelemetryType::Grade : return"Grade"; break;
         default: return "-"; break;
     }
 }
@@ -158,6 +166,7 @@ inline TelemetryType TelemetryTypefromString(String s) {
     if (s == "Distance") return TelemetryType::Distance;
     if (s == "TotalDist") return TelemetryType::TotalDist;
     if (s == "Location") return TelemetryType::Location;
+    if (s == "Grade") return TelemetryType::Grade;
     return TelemetryType::Undefined;
 }
 
@@ -171,7 +180,8 @@ inline std::variant<float, location_data> GetTelemetryValue(const Telemetry& t, 
         case TelemetryType::Power:        return t.power;
         case TelemetryType::Distance:     return t.distance;
         case TelemetryType::TotalDist:    return t.totalDistance / 1000.0;  //convert to km
-        case TelemetryType::Location:    return (location_data){t.validLocation, t.longitude, t.latitude};
+        case TelemetryType::Location:     return (location_data){t.validLocation, t.longitude, t.latitude};
+        case TelemetryType::Grade:        return t.grade;
         default: return 0.0f;
     }
 }
@@ -206,8 +216,7 @@ private:
             }
         }
     }
-
-private:
+    
     Telemetry _data{};
     uint32_t _version = 0;
     std::vector<GPSPoint> _recent;

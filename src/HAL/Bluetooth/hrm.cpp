@@ -4,13 +4,11 @@ std::vector<hrm*> hrm::_hrmDevices;
 
 void hrm::hrm_notify_callback(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len) {
   //itterate the members of the bt device base
-  for (auto it = _hrmDevices.begin(); it != _hrmDevices.end(); it++)
-  {
+  for (hrm* dev : _hrmDevices) {
     //compare the conn handle of the evt with the conn handle of the device servic (static cast to an hrm safe because we know the type)
-    if (chr->connHandle() == (*it)->hrm_serv.connHandle())
-    {
+    if (chr->connHandle() == dev->hrm_serv.connHandle()) {
       //call the underlying notify method for the instance (again static cast)
-      (*it)->hrm_notify(chr, data, len);
+      dev->hrm_notify(chr, data, len);
       return;
     }
   }
@@ -52,6 +50,10 @@ void hrm::begin() {
   return;
 }
 
+bool hrm::discovered() {
+  return hrm_meas.discovered();
+}
+
 void hrm::discover(uint16_t conn_handle) {
   Serial.println("Connected");
   Serial.print("Discovering HRM Service ... ");
@@ -66,6 +68,8 @@ void hrm::discover(uint16_t conn_handle) {
 
     return;
   }
+
+  _conn_handle = conn_handle;
 
   // Once HRM service is found, we continue to discover its characteristic
   Serial.println("Found it");
@@ -142,4 +146,23 @@ data_record hrm::getHRM() {
     heartrates.value /= _hrmDevices.size();
   }
   return heartrates;
+}
+
+void hrm::disconnect(uint16_t conn_handle, uint8_t reason) {
+  (void)reason;
+  (void)conn_handle;
+
+  f32_bpm = 0;
+  Serial.println("HRM Disconnected");
+
+  // Call the base class disconnect method to handle any additional cleanup
+  BT_Device::disconnect(conn_handle, reason);
+}
+
+void hrm::update(uint32_t now) {
+  f32_bpm = 0.999f * f32_bpm + 0.001f * (float)u16_bpm;
+  if (ENABLE_BLUETOOTH_DEBUG) {
+    Serial.print("Smoothed BPM: ");
+    Serial.println(f32_bpm);
+  }
 }

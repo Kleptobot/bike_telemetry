@@ -167,7 +167,8 @@ class BigDataWidget : public Widget {
                 case TelemetryType::Distance: return "m  ";
                 case TelemetryType::TotalDist: return "km ";
                 case TelemetryType::Location: return "";
-                default: return "-";
+                case TelemetryType::Grade: return "%  ";
+                default: return " - ";
             }
         }
 };

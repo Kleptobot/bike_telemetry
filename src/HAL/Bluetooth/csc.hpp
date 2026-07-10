@@ -51,6 +51,8 @@ class csc : public BT_Device {
     BLEClientCharacteristic csc_loc   = BLEClientCharacteristic(GATT_SENSOR_LOCATION_UUID);
 
     static std::vector<csc*> _cscDevices;
+    
+    static void csc_notify_callback(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len);
 
     // Body sensor location value is 8 bit
     const char* feat_str[4] = {"other", "Speed", "Cadence", "Speed & Cadence"};
@@ -92,7 +94,6 @@ class csc : public BT_Device {
       _cscDevices.push_back(static_cast<csc*>(btDevices.back().get()));
     };
 
-    static void csc_notify_callback(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len);
 
     static data_record getSpeed();
     static data_record getCadence();

@@ -58,6 +58,7 @@ class HAL {
     float getAltitude() const { return f32_alt; }
     float getHeartRate() const { return f32_bpm; }
     float getPower() const { return f32_pow; }
+    float getGrade() const { return f32_grade; }
 
     TinyGPSLocation getGPSLocation() const { return _LC76G.gps().location; }
     TinyGPSTime getGPSTime() const { return _LC76G.gps().time; }
@@ -78,7 +79,7 @@ class HAL {
     AltitudeFusion altFusion;
 
     // private memeber variables
-    float f32_kmh, f32_cadence, f32_temp, f32_alt, f32_bpm, f32_pow;
+    float f32_kmh, f32_cadence, f32_temp, f32_alt, f32_bpm, f32_pow, f32_grade;
     uint8_t _rxBuffer[1024];
     uint32_t _resetGPSTime, _resetDispTime;
     bool _sleep;

@@ -150,8 +150,10 @@ void App::update() {
         case AppState::LOGGING:
             HAL::inst().bluetooth().setMode(E_Type_BT_Mode::idle);
 
-            if(state != state_prev)
+            if(state != state_prev) {
                 _logger->startLogging(currentTime);
+                model.telemetry().resetDistance();
+            }
 
             model.logger().update({_logger->elapsed_Total(),_logger->elapsed_Lap()});
             
@@ -221,7 +223,8 @@ void App::updateTelemetry() {
                                 gpsLoc.isValid(),
                                 gpsLoc.lng(),
                                 gpsLoc.lat(),
-                                distance});
+                                distance,
+                                HAL::inst().getGrade()});
 
     //when gps time goes valid, check if the RTC time needs to be re-synced
     int UTCoffset = model.time().get().offset();
