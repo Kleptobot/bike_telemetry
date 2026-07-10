@@ -43,6 +43,7 @@ void loop() {
     //read the state of the gps enable pin, if its low then sleep
     if ( !App::instance().getGpsEnableState() ) {
         digitalWrite(D6, false); //turn off the auxilary supply
+        delay(200);
         NRF_POWER->SYSTEMOFF = 1;
     }
 }

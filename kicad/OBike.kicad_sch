@@ -5155,12 +5155,12 @@
 			)
 			(embedded_fonts no)
 		)
-		(symbol "Timer_RTC:DS3231M"
+		(symbol "Timer_RTC:PCF8523T"
 			(exclude_from_sim no)
 			(in_bom yes)
 			(on_board yes)
-			(property "Reference" "U2"
-				(at 2.1941 -10.16 0)
+			(property "Reference" "U"
+				(at -10.16 8.89 0)
 				(effects
 					(font
 						(size 1.27 1.27)
@@ -5168,8 +5168,8 @@
 					(justify left)
 				)
 			)
-			(property "Value" "DS3231M"
-				(at 2.1941 -12.7 0)
+			(property "Value" "PCF8523T"
+				(at 3.81 8.89 0)
 				(effects
 					(font
 						(size 1.27 1.27)
@@ -5178,7 +5178,7 @@
 				)
 			)
 			(property "Footprint" "Package_SO:SOIC-8_3.9x4.9mm_P1.27mm"
-				(at 0 -15.24 0)
+				(at 20.32 -8.89 0)
 				(effects
 					(font
 						(size 1.27 1.27)
@@ -5186,16 +5186,7 @@
 					(hide yes)
 				)
 			)
-			(property "Datasheet" "http://datasheets.maximintegrated.com/en/ds/DS3231.pdf"
-				(at 6.858 1.27 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "Description" "Extremely Accurate I2C-Integrated RTC/TCXO/Crystal SOIC-16"
+			(property "Datasheet" "https://www.nxp.com/docs/en/data-sheet/PCF8523.pdf"
 				(at 0 0 0)
 				(effects
 					(font
@@ -5204,7 +5195,7 @@
 					(hide yes)
 				)
 			)
-			(property "ki_keywords" "RTC TCXO Realtime Time Clock Crystal Oscillator I2C"
+			(property "Description" "Realtime Clock/Calendar I2C Interface, SOIC-8"
 				(at 0 0 0)
 				(effects
 					(font
@@ -5213,7 +5204,7 @@
 					(hide yes)
 				)
 			)
-			(property "ki_fp_filters" "SOIC*7.5x10.3mm*P1.27mm*"
+			(property "ki_keywords" "I2C RTC Clock Calendar"
 				(at 0 0 0)
 				(effects
 					(font
@@ -5222,7 +5213,16 @@
 					(hide yes)
 				)
 			)
-			(symbol "DS3231M_0_1"
+			(property "ki_fp_filters" "SOIC*3.9x4.9mm*P1.27mm*"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(symbol "PCF8523T_0_1"
 				(rectangle
 					(start -10.16 7.62)
 					(end 10.16 -7.62)
@@ -5235,7 +5235,7 @@
 					)
 				)
 			)
-			(symbol "DS3231M_1_1"
+			(symbol "PCF8523T_1_1"
 				(pin input line
 					(at -12.7 5.08 0)
 					(length 2.54)
@@ -5246,7 +5246,7 @@
 							)
 						)
 					)
-					(number "8"
+					(number "6"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -5264,7 +5264,7 @@
 							)
 						)
 					)
-					(number "7"
+					(number "5"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -5272,28 +5272,28 @@
 						)
 					)
 				)
-				(pin bidirectional line
+				(pin input line
+					(at -12.7 -2.54 0)
+					(length 2.54)
+					(name "OSCI"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin output line
 					(at -12.7 -5.08 0)
 					(length 2.54)
-					(name "~{RST}"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "4"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin power_in line
-					(at -2.54 10.16 270)
-					(length 2.54)
-					(name "VCC"
+					(name "OSCO"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -5309,16 +5309,16 @@
 					)
 				)
 				(pin power_in line
-					(at 0 10.16 270)
+					(at -2.54 10.16 270)
 					(length 2.54)
-					(name "VBAT"
+					(name "VDD"
 						(effects
 							(font
 								(size 1.27 1.27)
 							)
 						)
 					)
-					(number "6"
+					(number "8"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -5329,32 +5329,14 @@
 				(pin power_in line
 					(at 0 -10.16 90)
 					(length 2.54)
-					(name "GND"
+					(name "VSS"
 						(effects
 							(font
 								(size 1.27 1.27)
 							)
 						)
 					)
-					(number "5"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin open_collector line
-					(at 12.7 5.08 180)
-					(length 2.54)
-					(name "32KHZ"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "1"
+					(number "4"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -5362,10 +5344,10 @@
 						)
 					)
 				)
-				(pin open_collector line
-					(at 12.7 -2.54 180)
+				(pin power_in line
+					(at 2.54 10.16 270)
 					(length 2.54)
-					(name "~{INT}/SQW"
+					(name "VBAT"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -5373,6 +5355,24 @@
 						)
 					)
 					(number "3"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin open_collector line
+					(at 12.7 0 180)
+					(length 2.54)
+					(name "~{INT1}/CLKOUT"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "7"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -10118,16 +10118,6 @@
 	)
 	(wire
 		(pts
-			(xy 21.59 55.88) (xy 24.13 55.88)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "a83689a0-c2c8-41ca-b7a4-ae419d426571")
-	)
-	(wire
-		(pts
 			(xy 68.58 208.28) (xy 71.12 208.28)
 		)
 		(stroke
@@ -11806,28 +11796,6 @@
 					(size 1.27 1.27)
 				)
 				(justify left)
-				(hide yes)
-			)
-		)
-	)
-	(global_label "3V3"
-		(shape output)
-		(at 21.59 55.88 180)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right)
-		)
-		(uuid "4727a6aa-2e58-4730-8831-4fdb488e3612")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 15.0972 55.88 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
 				(hide yes)
 			)
 		)
@@ -13721,7 +13689,7 @@
 				(hide yes)
 			)
 		)
-		(property "MANUFACTURER" ""
+		(property "MANUFACTURER" "JST"
 			(at 379.73 147.32 0)
 			(effects
 				(font
@@ -13731,15 +13699,6 @@
 			)
 		)
 		(property "Field6" ""
-			(at 379.73 147.32 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikiey PN" ""
 			(at 379.73 147.32 0)
 			(effects
 				(font
@@ -13826,6 +13785,15 @@
 				(hide yes)
 			)
 		)
+		(property "MANUFACTURER" "STMicroelectronics"
+			(at 146.05 86.36 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "df55a6a1-d735-4060-ada9-24d1d96e5df3")
 		)
@@ -13836,100 +13804,6 @@
 			(project "OBike"
 				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
 					(reference "D7")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:R")
-		(at 27.94 55.88 270)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom no)
-		(on_board yes)
-		(dnp no)
-		(uuid "0353ee18-c271-4aaa-befb-47c70625831d")
-		(property "Reference" "R13"
-			(at 24.892 58.674 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "0R"
-			(at 28.448 58.674 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Resistor_SMD:R_0603_1608Metric"
-			(at 27.94 54.102 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 27.94 55.88 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Resistor"
-			(at 27.94 55.88 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MANUFACTURER" ""
-			(at 27.94 55.88 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Field6" ""
-			(at 27.94 55.88 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikiey PN" ""
-			(at 27.94 55.88 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "7fb56d94-9b23-43aa-8438-8c24a61557d0")
-		)
-		(pin "2"
-			(uuid "9acf44af-892b-4085-8883-3c2411b7f410")
-		)
-		(instances
-			(project "OBike"
-				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
-					(reference "R13")
 					(unit 1)
 				)
 			)
@@ -14062,7 +13936,7 @@
 				(hide yes)
 			)
 		)
-		(property "Digikiey PN" ""
+		(property "MANUFACTURER" "Analog Devices Inc"
 			(at 132.08 110.49 0)
 			(effects
 				(font
@@ -14090,112 +13964,6 @@
 			(project ""
 				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
 					(reference "U6")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:C")
-		(at 78.74 160.02 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "0765f2ae-cb75-40e4-af31-e6c186e64d1d")
-		(property "Reference" "C11"
-			(at 82.55 158.7499 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "0.1uF"
-			(at 82.55 161.2899 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "Capacitor_SMD:C_0805_2012Metric"
-			(at 79.7052 163.83 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 78.74 160.02 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Unpolarized capacitor"
-			(at 78.74 160.02 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MANUFACTURER" ""
-			(at 78.74 160.02 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikey PN" "1276-2442-1-ND"
-			(at 78.74 160.02 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Field6" ""
-			(at 78.74 160.02 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikiey PN" ""
-			(at 78.74 160.02 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "396e9c4e-47a4-436b-ac92-4b75a48cec17")
-		)
-		(pin "2"
-			(uuid "05f9fadb-067f-4d0f-a345-9bf56a57386f")
-		)
-		(instances
-			(project "OBike"
-				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
-					(reference "C11")
 					(unit 1)
 				)
 			)
@@ -14294,112 +14062,6 @@
 			(project "OBike"
 				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
 					(reference "R3")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:C")
-		(at 262.89 124.46 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "096ed020-3d44-4f43-b76d-e7610d3f459d")
-		(property "Reference" "C9"
-			(at 266.7 123.1899 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "1.0uF"
-			(at 266.7 125.7299 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "Capacitor_SMD:C_0805_2012Metric"
-			(at 263.8552 128.27 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 262.89 124.46 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Unpolarized capacitor"
-			(at 262.89 124.46 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MANUFACTURER" ""
-			(at 262.89 124.46 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikey PN" "1276-1066-1-ND"
-			(at 262.89 124.46 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Field6" ""
-			(at 262.89 124.46 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikiey PN" ""
-			(at 262.89 124.46 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "cd8fb688-7b67-44e7-9a01-9db1f99a40c3")
-		)
-		(pin "2"
-			(uuid "9c9f7bd2-575b-4d26-86d4-0784bf1f3fa7")
-		)
-		(instances
-			(project "OBike"
-				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
-					(reference "C9")
 					(unit 1)
 				)
 			)
@@ -14554,7 +14216,7 @@
 				(hide yes)
 			)
 		)
-		(property "Digikiey PN" ""
+		(property "MANUFACTURER" "Analog Devices Inc"
 			(at 133.35 85.09 0)
 			(effects
 				(font
@@ -14641,7 +14303,7 @@
 				(hide yes)
 			)
 		)
-		(property "MANUFACTURER" ""
+		(property "MANUFACTURER" "KEMET"
 			(at 154.94 111.76 0)
 			(effects
 				(font
@@ -14651,15 +14313,6 @@
 			)
 		)
 		(property "Digikey PN" "399-C0603C104K3RACTUCT-ND"
-			(at 154.94 111.76 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikiey PN" ""
 			(at 154.94 111.76 0)
 			(effects
 				(font
@@ -14678,6 +14331,297 @@
 			(project "OBike"
 				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
 					(reference "C17")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C")
+		(at 255.27 218.44 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "10f662d8-2c08-4702-98aa-b18ef43a3c93")
+		(property "Reference" "C13"
+			(at 259.08 217.1699 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "0.1uF"
+			(at 259.08 219.7099 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_0805_2012Metric"
+			(at 256.2352 222.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 255.27 218.44 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Unpolarized capacitor"
+			(at 255.27 218.44 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" "Samsung"
+			(at 255.27 218.44 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Digikey PN" "1276-2442-1-ND"
+			(at 255.27 218.44 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Field6" ""
+			(at 255.27 218.44 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "9c758599-ad0c-44e2-a335-242b762365c7")
+		)
+		(pin "2"
+			(uuid "f7203b4a-c4ab-4f4c-a70d-a8f40d43186b")
+		)
+		(instances
+			(project "OBike"
+				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
+					(reference "C13")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C")
+		(at 90.17 160.02 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "1237fe79-8652-4cbd-b50e-2194b4689cab")
+		(property "Reference" "C12"
+			(at 93.98 158.7499 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "1.0uF"
+			(at 93.98 161.2899 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_0805_2012Metric"
+			(at 91.1352 163.83 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 90.17 160.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Unpolarized capacitor"
+			(at 90.17 160.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" "Samsung"
+			(at 90.17 160.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Field6" ""
+			(at 90.17 160.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Digikey PN" "1276-1066-1-ND"
+			(at 90.17 160.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "77f71a64-c8d4-41cf-bfd4-0073d91f99a1")
+		)
+		(pin "2"
+			(uuid "bd92c7d6-1e02-48a9-9d52-33fb6656ab69")
+		)
+		(instances
+			(project "OBike"
+				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
+					(reference "C12")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C")
+		(at 78.74 160.02 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "152f6354-3787-4c90-a0a6-6f3a90605cf7")
+		(property "Reference" "C11"
+			(at 82.55 158.7499 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "0.1uF"
+			(at 82.55 161.2899 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_0805_2012Metric"
+			(at 79.7052 163.83 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 78.74 160.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Unpolarized capacitor"
+			(at 78.74 160.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" "Samsung"
+			(at 78.74 160.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Digikey PN" "1276-2442-1-ND"
+			(at 78.74 160.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Field6" ""
+			(at 78.74 160.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "b2f78e9e-7145-48ba-91f2-bcfe5aaab2e7")
+		)
+		(pin "2"
+			(uuid "ef8821dc-6669-4ae2-a1eb-e21a6b1e5835")
+		)
+		(instances
+			(project "OBike"
+				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
+					(reference "C11")
 					(unit 1)
 				)
 			)
@@ -14846,15 +14790,6 @@
 			)
 		)
 		(property "Digikey PN" "609-F34G-1A7Q1-E8C40CT-ND"
-			(at 394.97 72.39 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikiey PN" ""
 			(at 394.97 72.39 0)
 			(effects
 				(font
@@ -15072,7 +15007,7 @@
 				(hide yes)
 			)
 		)
-		(property "MANUFACTURER" ""
+		(property "MANUFACTURER" "Toshiba Semiconductor"
 			(at 218.44 78.74 0)
 			(effects
 				(font
@@ -15082,15 +15017,6 @@
 			)
 		)
 		(property "Field6" ""
-			(at 218.44 78.74 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikiey PN" ""
 			(at 218.44 78.74 0)
 			(effects
 				(font
@@ -15152,16 +15078,16 @@
 	)
 	(symbol
 		(lib_id "Device:C")
-		(at 266.7 218.44 0)
+		(at 262.89 124.46 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
 		(dnp no)
 		(fields_autoplaced yes)
-		(uuid "19d6b3cf-218a-46a0-a788-281c8af8c4d4")
-		(property "Reference" "C14"
-			(at 270.51 217.1699 0)
+		(uuid "1a4f878e-41eb-4234-8ae9-a18681b0f154")
+		(property "Reference" "C9"
+			(at 266.7 123.1899 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15170,7 +15096,7 @@
 			)
 		)
 		(property "Value" "1.0uF"
-			(at 270.51 219.7099 0)
+			(at 266.7 125.7299 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15179,7 +15105,7 @@
 			)
 		)
 		(property "Footprint" "Capacitor_SMD:C_0805_2012Metric"
-			(at 267.6652 222.25 0)
+			(at 263.8552 128.27 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15188,7 +15114,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 266.7 218.44 0)
+			(at 262.89 124.46 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15197,7 +15123,7 @@
 			)
 		)
 		(property "Description" "Unpolarized capacitor"
-			(at 266.7 218.44 0)
+			(at 262.89 124.46 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15205,17 +15131,8 @@
 				(hide yes)
 			)
 		)
-		(property "MANUFACTURER" ""
-			(at 266.7 218.44 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikey PN" "1276-1066-1-ND"
-			(at 266.7 218.44 0)
+		(property "MANUFACTURER" "Samsung"
+			(at 262.89 124.46 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15224,7 +15141,7 @@
 			)
 		)
 		(property "Field6" ""
-			(at 266.7 218.44 0)
+			(at 262.89 124.46 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15232,8 +15149,8 @@
 				(hide yes)
 			)
 		)
-		(property "Digikiey PN" ""
-			(at 266.7 218.44 0)
+		(property "Digikey PN" "1276-1066-1-ND"
+			(at 262.89 124.46 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15242,15 +15159,15 @@
 			)
 		)
 		(pin "1"
-			(uuid "0c481f10-fe2d-4fa4-8cfa-53cbd3c96a00")
+			(uuid "f5c58354-673c-4b01-a657-93ad0a6171a3")
 		)
 		(pin "2"
-			(uuid "a7a4d407-d091-492c-be31-99407396b445")
+			(uuid "aab0638e-6a6e-42bb-b52a-a3e82ff5c123")
 		)
 		(instances
 			(project "OBike"
 				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
-					(reference "C14")
+					(reference "C9")
 					(unit 1)
 				)
 			)
@@ -15354,7 +15271,7 @@
 				(hide yes)
 			)
 		)
-		(property "MANUFACTURER" ""
+		(property "MANUFACTURER" "SMC Diode Solutions"
 			(at 201.93 74.93 0)
 			(effects
 				(font
@@ -15364,15 +15281,6 @@
 			)
 		)
 		(property "Field6" ""
-			(at 201.93 74.93 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikiey PN" ""
 			(at 201.93 74.93 0)
 			(effects
 				(font
@@ -15391,6 +15299,103 @@
 			(project "OBike"
 				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
 					(reference "D3")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C")
+		(at 262.89 85.09 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "1ab8d365-85ba-45f2-9473-fa06f93ee152")
+		(property "Reference" "C8"
+			(at 266.7 83.8199 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "1.0uF"
+			(at 266.7 86.3599 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_0805_2012Metric"
+			(at 263.8552 88.9 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 262.89 85.09 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Unpolarized capacitor"
+			(at 262.89 85.09 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" "Samsung"
+			(at 262.89 85.09 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Field6" ""
+			(at 262.89 85.09 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Digikey PN" "1276-1066-1-ND"
+			(at 262.89 85.09 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "7ef8539f-916a-40d4-911c-d9c4b3746851")
+		)
+		(pin "2"
+			(uuid "48d55e16-ba3c-4f8f-b10f-546f76f7f2f2")
+		)
+		(instances
+			(project "OBike"
+				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
+					(reference "C8")
 					(unit 1)
 				)
 			)
@@ -15476,7 +15481,7 @@
 				(hide yes)
 			)
 		)
-		(property "MANUFACTURER" ""
+		(property "MANUFACTURER" "Toshiba Semiconductor"
 			(at 218.44 39.37 0)
 			(effects
 				(font
@@ -15486,15 +15491,6 @@
 			)
 		)
 		(property "Field6" ""
-			(at 218.44 39.37 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikiey PN" ""
 			(at 218.44 39.37 0)
 			(effects
 				(font
@@ -15556,112 +15552,6 @@
 	)
 	(symbol
 		(lib_id "Device:C")
-		(at 207.01 85.09 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "276cdd08-2776-4598-997a-14ef40465e18")
-		(property "Reference" "C7"
-			(at 210.82 83.8199 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "1.0uF"
-			(at 210.82 86.3599 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "Capacitor_SMD:C_0805_2012Metric"
-			(at 207.9752 88.9 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 207.01 85.09 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Unpolarized capacitor"
-			(at 207.01 85.09 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MANUFACTURER" ""
-			(at 207.01 85.09 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikey PN" "1276-1066-1-ND"
-			(at 207.01 85.09 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Field6" ""
-			(at 207.01 85.09 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikiey PN" ""
-			(at 207.01 85.09 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "fe236b1e-8b6d-438f-9723-346e09cdbc7b")
-		)
-		(pin "2"
-			(uuid "e27af0ad-9e5f-481f-af27-3a90906bcb01")
-		)
-		(instances
-			(project "OBike"
-				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
-					(reference "C7")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:C")
 		(at 151.13 86.36 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -15714,7 +15604,7 @@
 				(hide yes)
 			)
 		)
-		(property "MANUFACTURER" ""
+		(property "MANUFACTURER" "Samsung"
 			(at 151.13 86.36 0)
 			(effects
 				(font
@@ -15724,15 +15614,6 @@
 			)
 		)
 		(property "Digikey PN" "1276-1038-1-ND"
-			(at 151.13 86.36 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikiey PN" ""
 			(at 151.13 86.36 0)
 			(effects
 				(font
@@ -15931,7 +15812,7 @@
 				(hide yes)
 			)
 		)
-		(property "MANUFACTURER" ""
+		(property "MANUFACTURER" "Toshiba Semiconductor"
 			(at 274.32 118.11 0)
 			(effects
 				(font
@@ -15941,15 +15822,6 @@
 			)
 		)
 		(property "Field6" ""
-			(at 274.32 118.11 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikiey PN" ""
 			(at 274.32 118.11 0)
 			(effects
 				(font
@@ -16089,7 +15961,7 @@
 				(hide yes)
 			)
 		)
-		(property "MANUFACTURER" ""
+		(property "MANUFACTURER" "TE Connectivity"
 			(at 144.78 254 0)
 			(effects
 				(font
@@ -16099,15 +15971,6 @@
 			)
 		)
 		(property "Field6" ""
-			(at 144.78 254 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikiey PN" ""
 			(at 144.78 254 0)
 			(effects
 				(font
@@ -16700,7 +16563,7 @@
 				(hide yes)
 			)
 		)
-		(property "Digikey PN" "RMCF0805JT10K0CT-ND"
+		(property "Digikey PN" "RMCF0603JT47R0CT-ND"
 			(at 361.95 110.49 90)
 			(effects
 				(font
@@ -16728,112 +16591,6 @@
 			(project "OBike"
 				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
 					(reference "R36")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:C")
-		(at 262.89 45.72 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "49e7f4f3-0272-4f3a-a24b-91d3361947ca")
-		(property "Reference" "C6"
-			(at 266.7 44.4499 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "1.0uF"
-			(at 266.7 46.9899 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "Capacitor_SMD:C_0805_2012Metric"
-			(at 263.8552 49.53 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 262.89 45.72 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Unpolarized capacitor"
-			(at 262.89 45.72 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MANUFACTURER" ""
-			(at 262.89 45.72 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikey PN" "1276-1066-1-ND"
-			(at 262.89 45.72 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Field6" ""
-			(at 262.89 45.72 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikiey PN" ""
-			(at 262.89 45.72 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "fa9d282d-5b34-4246-b19c-b56aea644aa3")
-		)
-		(pin "2"
-			(uuid "36654c14-efb4-4569-acc4-d592995ab568")
-		)
-		(instances
-			(project "OBike"
-				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
-					(reference "C6")
 					(unit 1)
 				)
 			)
@@ -16937,7 +16694,7 @@
 				(hide yes)
 			)
 		)
-		(property "MANUFACTURER" ""
+		(property "MANUFACTURER" "SMC Diode Solutions"
 			(at 256.54 35.56 0)
 			(effects
 				(font
@@ -16947,15 +16704,6 @@
 			)
 		)
 		(property "Field6" ""
-			(at 256.54 35.56 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikiey PN" ""
 			(at 256.54 35.56 0)
 			(effects
 				(font
@@ -17057,112 +16805,6 @@
 		)
 	)
 	(symbol
-		(lib_id "Device:C")
-		(at 207.01 44.45 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "556eb7d3-1e5f-4a4e-b245-de1b8f0b1a38")
-		(property "Reference" "C5"
-			(at 210.82 43.1799 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "1.0uF"
-			(at 210.82 45.7199 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "Capacitor_SMD:C_0805_2012Metric"
-			(at 207.9752 48.26 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 207.01 44.45 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Unpolarized capacitor"
-			(at 207.01 44.45 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MANUFACTURER" ""
-			(at 207.01 44.45 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikey PN" "1276-1066-1-ND"
-			(at 207.01 44.45 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Field6" ""
-			(at 207.01 44.45 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikiey PN" ""
-			(at 207.01 44.45 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "d7852530-a656-493d-a166-2eaa5a8f19c4")
-		)
-		(pin "2"
-			(uuid "5e392759-55bd-41e9-b381-e87488c024d3")
-		)
-		(instances
-			(project "OBike"
-				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
-					(reference "C5")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "power:Earth")
 		(at 257.81 233.68 0)
 		(unit 1)
@@ -17223,6 +16865,103 @@
 			(project "OBike"
 				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
 					(reference "#PWR026")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C")
+		(at 207.01 85.09 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "58c6c257-d16f-4e44-9aca-73fd763977bc")
+		(property "Reference" "C7"
+			(at 210.82 83.8199 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "1.0uF"
+			(at 210.82 86.3599 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_0805_2012Metric"
+			(at 207.9752 88.9 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 207.01 85.09 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Unpolarized capacitor"
+			(at 207.01 85.09 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" "Samsung"
+			(at 207.01 85.09 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Field6" ""
+			(at 207.01 85.09 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Digikey PN" "1276-1066-1-ND"
+			(at 207.01 85.09 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "5bc75d84-9278-44b1-881d-6176770c1686")
+		)
+		(pin "2"
+			(uuid "ae5034a2-10a4-4474-97fa-ec819e0c5a1b")
+		)
+		(instances
+			(project "OBike"
+				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
+					(reference "C7")
 					(unit 1)
 				)
 			)
@@ -17445,7 +17184,7 @@
 				(hide yes)
 			)
 		)
-		(property "MANUFACTURER" ""
+		(property "MANUFACTURER" "KEMET"
 			(at 161.29 86.36 0)
 			(effects
 				(font
@@ -17455,15 +17194,6 @@
 			)
 		)
 		(property "Digikey PN" "399-C0603C330K3RACTUCT-ND"
-			(at 161.29 86.36 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikiey PN" ""
 			(at 161.29 86.36 0)
 			(effects
 				(font
@@ -17567,16 +17297,7 @@
 				(hide yes)
 			)
 		)
-		(property "MANUFACTURER" ""
-			(at 257.81 180.34 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikiey PN" ""
+		(property "MANUFACTURER" "Same Sky"
 			(at 257.81 180.34 0)
 			(effects
 				(font
@@ -17775,16 +17496,7 @@
 				(hide yes)
 			)
 		)
-		(property "MANUFACTURER" ""
-			(at 50.8 187.96 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikiey PN" ""
+		(property "MANUFACTURER" "Microchip"
 			(at 50.8 187.96 0)
 			(effects
 				(font
@@ -18035,7 +17747,7 @@
 				(hide yes)
 			)
 		)
-		(property "MANUFACTURER" "1276-1066-1-ND"
+		(property "MANUFACTURER" "Samsung"
 			(at 60.96 30.48 0)
 			(effects
 				(font
@@ -18053,7 +17765,7 @@
 				(hide yes)
 			)
 		)
-		(property "Digikiey PN" ""
+		(property "Digikey PN" "1276-1066-1-ND"
 			(at 60.96 30.48 0)
 			(effects
 				(font
@@ -18178,7 +17890,7 @@
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
-		(on_board yes)
+		(on_board no)
 		(dnp yes)
 		(uuid "6cc1c5b8-a735-458c-a4e2-e4776b79bc8c")
 		(property "Reference" "LS1"
@@ -18190,7 +17902,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "ASI09N40MTRQ"
+		(property "Value" "BUZZER MAGNETIC 5V8.5X8.5 SMD"
 			(at 368.3 210.8199 90)
 			(effects
 				(font
@@ -18199,7 +17911,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Mallory:ASI09N40M"
+		(property "Footprint" "CUI:CUI_CMT-8540S-SMT"
 			(at 373.38 196.85 0)
 			(effects
 				(font
@@ -18228,7 +17940,7 @@
 				(hide yes)
 			)
 		)
-		(property "Digikey PN" "458-ASI09N40MTRQCT-ND"
+		(property "Digikey PN" "102-3746-1-ND"
 			(at 373.38 196.85 90)
 			(effects
 				(font
@@ -18237,7 +17949,7 @@
 				(hide yes)
 			)
 		)
-		(property "Digikiey PN" ""
+		(property "MANUFACTURER" "Same Sky (Formerly CUI Devices)"
 			(at 373.38 196.85 90)
 			(effects
 				(font
@@ -18467,15 +18179,6 @@
 				(hide yes)
 			)
 		)
-		(property "Digikiey PN" ""
-			(at 195.58 30.48 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
 		(pin "1"
 			(uuid "e5ee2ac4-b256-4665-9457-a1d57d3f2e71")
 		)
@@ -18486,112 +18189,6 @@
 			(project "OBike"
 				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
 					(reference "R1")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:C")
-		(at 161.29 43.18 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "7f4503ac-b2a1-4227-a3d9-864a3fee512f")
-		(property "Reference" "C4"
-			(at 165.1 41.9099 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "1.0uF"
-			(at 165.1 44.4499 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "Capacitor_SMD:C_0805_2012Metric"
-			(at 162.2552 46.99 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 161.29 43.18 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Unpolarized capacitor"
-			(at 161.29 43.18 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MANUFACTURER" ""
-			(at 161.29 43.18 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikey PN" "1276-1066-1-ND"
-			(at 161.29 43.18 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Field6" ""
-			(at 161.29 43.18 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikiey PN" ""
-			(at 161.29 43.18 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "2ae8e8e0-a926-44bd-8cd1-4b68d7e1e550")
-		)
-		(pin "2"
-			(uuid "ecd58d79-1e45-4b12-8aa5-39672f96fb55")
-		)
-		(instances
-			(project "OBike"
-				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
-					(reference "C4")
 					(unit 1)
 				)
 			)
@@ -18651,7 +18248,7 @@
 				(hide yes)
 			)
 		)
-		(property "MANUFACTURER" ""
+		(property "MANUFACTURER" "KEMET"
 			(at 160.02 111.76 0)
 			(effects
 				(font
@@ -18661,15 +18258,6 @@
 			)
 		)
 		(property "Digikey PN" "399-C0603C330K3RACTUCT-ND"
-			(at 160.02 111.76 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikiey PN" ""
 			(at 160.02 111.76 0)
 			(effects
 				(font
@@ -18748,7 +18336,7 @@
 				(hide yes)
 			)
 		)
-		(property "MANUFACTURER" ""
+		(property "MANUFACTURER" "Samsung"
 			(at 48.26 30.48 0)
 			(effects
 				(font
@@ -18767,15 +18355,6 @@
 			)
 		)
 		(property "Field6" ""
-			(at 48.26 30.48 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikiey PN" ""
 			(at 48.26 30.48 0)
 			(effects
 				(font
@@ -18867,16 +18446,16 @@
 	)
 	(symbol
 		(lib_id "Device:C")
-		(at 90.17 160.02 0)
+		(at 161.29 43.18 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
 		(dnp no)
 		(fields_autoplaced yes)
-		(uuid "8a131471-87ae-4f5c-86eb-30c89a5e0ac1")
-		(property "Reference" "C12"
-			(at 93.98 158.7499 0)
+		(uuid "8b81ace5-991f-4c2b-a3e2-5c0db6c38f30")
+		(property "Reference" "C4"
+			(at 165.1 41.9099 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -18885,7 +18464,7 @@
 			)
 		)
 		(property "Value" "1.0uF"
-			(at 93.98 161.2899 0)
+			(at 165.1 44.4499 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -18894,7 +18473,7 @@
 			)
 		)
 		(property "Footprint" "Capacitor_SMD:C_0805_2012Metric"
-			(at 91.1352 163.83 0)
+			(at 162.2552 46.99 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -18903,7 +18482,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 90.17 160.02 0)
+			(at 161.29 43.18 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -18912,7 +18491,7 @@
 			)
 		)
 		(property "Description" "Unpolarized capacitor"
-			(at 90.17 160.02 0)
+			(at 161.29 43.18 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -18920,8 +18499,17 @@
 				(hide yes)
 			)
 		)
-		(property "MANUFACTURER" ""
-			(at 90.17 160.02 0)
+		(property "MANUFACTURER" "Samsung"
+			(at 161.29 43.18 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Field6" ""
+			(at 161.29 43.18 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -18930,25 +18518,7 @@
 			)
 		)
 		(property "Digikey PN" "1276-1066-1-ND"
-			(at 90.17 160.02 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Field6" ""
-			(at 90.17 160.02 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikiey PN" ""
-			(at 90.17 160.02 0)
+			(at 161.29 43.18 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -18957,120 +18527,15 @@
 			)
 		)
 		(pin "1"
-			(uuid "4025a367-b232-4ee6-8b36-8875e13d680e")
+			(uuid "8b2f3b71-bd86-451c-8eb1-0d38feee77a5")
 		)
 		(pin "2"
-			(uuid "ad607e1b-6245-4336-88e8-77b7d78dff65")
+			(uuid "a03de7e9-a657-409b-9859-f62d4cf74787")
 		)
 		(instances
 			(project "OBike"
 				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
-					(reference "C12")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:C")
-		(at 151.13 43.18 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "8b88b395-731e-4904-bc6b-9cbef0485f02")
-		(property "Reference" "C3"
-			(at 153.924 41.91 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "0.1uF"
-			(at 153.924 44.45 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "Capacitor_SMD:C_0805_2012Metric"
-			(at 152.0952 46.99 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 151.13 43.18 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Unpolarized capacitor"
-			(at 151.13 43.18 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MANUFACTURER" ""
-			(at 151.13 43.18 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikey PN" "1276-2442-1-ND"
-			(at 151.13 43.18 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Field6" ""
-			(at 151.13 43.18 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikiey PN" ""
-			(at 151.13 43.18 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "40158415-d736-4cef-ae36-b592e2e68016")
-		)
-		(pin "2"
-			(uuid "0b05b71f-3d93-4db2-aa6c-b110ad81ad1c")
-		)
-		(instances
-			(project "OBike"
-				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
-					(reference "C3")
+					(reference "C4")
 					(unit 1)
 				)
 			)
@@ -19403,15 +18868,6 @@
 				(hide yes)
 			)
 		)
-		(property "Digikiey PN" ""
-			(at 59.69 102.87 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
 		(pin "1"
 			(uuid "773beaf8-0893-4735-93b7-b06f79381373")
 		)
@@ -19572,111 +19028,6 @@
 		)
 	)
 	(symbol
-		(lib_id "Device:C")
-		(at 255.27 218.44 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "91e3b4d7-8b6d-48b3-b6cc-c51201e979c5")
-		(property "Reference" "C13"
-			(at 258.064 217.17 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "0.1uF"
-			(at 258.064 219.71 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "Capacitor_SMD:C_0805_2012Metric"
-			(at 256.2352 222.25 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 255.27 218.44 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Unpolarized capacitor"
-			(at 255.27 218.44 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MANUFACTURER" ""
-			(at 255.27 218.44 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikey PN" "1276-2442-1-ND"
-			(at 255.27 218.44 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Field6" ""
-			(at 255.27 218.44 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikiey PN" ""
-			(at 255.27 218.44 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "c5278649-af4b-4ee3-ab83-1e24492d871f")
-		)
-		(pin "2"
-			(uuid "284cf5e3-a6ab-4507-9698-a8076971aea8")
-		)
-		(instances
-			(project "OBike"
-				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
-					(reference "C13")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "power:Earth")
 		(at 207.01 91.44 0)
 		(unit 1)
@@ -19744,6 +19095,103 @@
 		)
 	)
 	(symbol
+		(lib_id "Device:C")
+		(at 207.01 44.45 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "97e73b01-876b-4dfa-9f82-ef803df2016e")
+		(property "Reference" "C5"
+			(at 210.82 43.1799 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "1.0uF"
+			(at 210.82 45.7199 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_0805_2012Metric"
+			(at 207.9752 48.26 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 207.01 44.45 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Unpolarized capacitor"
+			(at 207.01 44.45 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" "Samsung"
+			(at 207.01 44.45 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Field6" ""
+			(at 207.01 44.45 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Digikey PN" "1276-1066-1-ND"
+			(at 207.01 44.45 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "46288a25-c1bd-4139-9240-e6a0b25a9e2b")
+		)
+		(pin "2"
+			(uuid "e2264c38-eb17-41e1-901d-cb8f263bcbec")
+		)
+		(instances
+			(project "OBike"
+				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
+					(reference "C5")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "power:Earth")
 		(at 35.56 219.71 0)
 		(unit 1)
@@ -19805,6 +19253,200 @@
 			(project "OBike"
 				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
 					(reference "#PWR018")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C")
+		(at 262.89 45.72 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "9cd64d7e-4f07-4541-8f72-2141be5bf93c")
+		(property "Reference" "C6"
+			(at 266.7 44.4499 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "1.0uF"
+			(at 266.7 46.9899 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_0805_2012Metric"
+			(at 263.8552 49.53 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 262.89 45.72 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Unpolarized capacitor"
+			(at 262.89 45.72 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" "Samsung"
+			(at 262.89 45.72 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Field6" ""
+			(at 262.89 45.72 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Digikey PN" "1276-1066-1-ND"
+			(at 262.89 45.72 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "04be2e27-1982-4ce4-82b3-7aad9c926151")
+		)
+		(pin "2"
+			(uuid "36d8e01f-ee8f-4b2f-80fc-c0ea612a5e1f")
+		)
+		(instances
+			(project "OBike"
+				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
+					(reference "C6")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C")
+		(at 266.7 218.44 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "9d4d2a23-93d4-4924-8a78-09b75875ef19")
+		(property "Reference" "C14"
+			(at 270.51 217.1699 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "1.0uF"
+			(at 270.51 219.7099 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_0805_2012Metric"
+			(at 267.6652 222.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 266.7 218.44 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Unpolarized capacitor"
+			(at 266.7 218.44 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" "Samsung"
+			(at 266.7 218.44 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Field6" ""
+			(at 266.7 218.44 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Digikey PN" "1276-1066-1-ND"
+			(at 266.7 218.44 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "f8086332-35e0-4652-ac2b-4501aa63a48e")
+		)
+		(pin "2"
+			(uuid "b4687bba-3f10-49ca-9dc4-1860f5196034")
+		)
+		(instances
+			(project "OBike"
+				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
+					(reference "C14")
 					(unit 1)
 				)
 			)
@@ -19987,7 +19629,7 @@
 				(hide yes)
 			)
 		)
-		(property "MANUFACTURER" ""
+		(property "MANUFACTURER" "Toshiba Semiconductor"
 			(at 210.82 113.03 0)
 			(effects
 				(font
@@ -19997,15 +19639,6 @@
 			)
 		)
 		(property "Field6" ""
-			(at 210.82 113.03 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikiey PN" ""
 			(at 210.82 113.03 90)
 			(effects
 				(font
@@ -20216,6 +19849,15 @@
 				(hide yes)
 			)
 		)
+		(property "MANUFACTURER" "STMicroelectronics"
+			(at 144.78 111.76 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "493116bd-52a6-42e2-ba37-19fb6be3b121")
 		)
@@ -20364,7 +20006,7 @@
 				(hide yes)
 			)
 		)
-		(property "Digikiey PN" ""
+		(property "MANUFACTURER" "MCC"
 			(at 340.36 118.11 0)
 			(effects
 				(font
@@ -20483,112 +20125,6 @@
 			(project "OBike"
 				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
 					(reference "R15")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:C")
-		(at 262.89 85.09 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "aab0dbbe-365e-4999-94c1-7d3582b3f741")
-		(property "Reference" "C8"
-			(at 266.7 83.8199 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "1.0uF"
-			(at 266.7 86.3599 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "Capacitor_SMD:C_0805_2012Metric"
-			(at 263.8552 88.9 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 262.89 85.09 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Unpolarized capacitor"
-			(at 262.89 85.09 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MANUFACTURER" ""
-			(at 262.89 85.09 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikey PN" "1276-1066-1-ND"
-			(at 262.89 85.09 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Field6" ""
-			(at 262.89 85.09 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikiey PN" ""
-			(at 262.89 85.09 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "df7392f9-9a51-45ba-a5b8-e6881e2ead31")
-		)
-		(pin "2"
-			(uuid "92c7c869-e084-4999-b4a6-6c69b541fcb8")
-		)
-		(instances
-			(project "OBike"
-				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
-					(reference "C8")
 					(unit 1)
 				)
 			)
@@ -20910,16 +20446,7 @@
 				(hide yes)
 			)
 		)
-		(property "MANUFACTURER" ""
-			(at 201.93 35.56 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikiey PN" ""
+		(property "MANUFACTURER" "SMC Diode Solutions"
 			(at 201.93 35.56 0)
 			(effects
 				(font
@@ -21005,6 +20532,103 @@
 			(project "OBike"
 				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
 					(reference "#PWR020")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C")
+		(at 151.13 43.18 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "b7db9771-8ab4-4b88-b320-449d9f89f007")
+		(property "Reference" "C3"
+			(at 154.94 41.9099 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "0.1uF"
+			(at 154.94 44.4499 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_0805_2012Metric"
+			(at 152.0952 46.99 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 151.13 43.18 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Unpolarized capacitor"
+			(at 151.13 43.18 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" "Samsung"
+			(at 151.13 43.18 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Digikey PN" "1276-2442-1-ND"
+			(at 151.13 43.18 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Field6" ""
+			(at 151.13 43.18 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "1cdb9465-6d83-4069-9d72-3eb668055240")
+		)
+		(pin "2"
+			(uuid "32330940-bb39-4288-b12d-29873b699c7f")
+		)
+		(instances
+			(project "OBike"
+				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
+					(reference "C3")
 					(unit 1)
 				)
 			)
@@ -21167,6 +20791,109 @@
 			(project ""
 				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
 					(reference "J6")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Timer_RTC:PCF8523T")
+		(at 44.45 50.8 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "be08e439-9d49-47fb-8750-aa7a0bd1f37a")
+		(property "Reference" "U2"
+			(at 50.8 39.878 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "PCF8523T"
+			(at 53.594 41.656 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Package_SO:SOIC-8_3.9x4.9mm_P1.27mm"
+			(at 64.77 59.69 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "https://www.nxp.com/docs/en/data-sheet/PCF8523.pdf"
+			(at 44.45 50.8 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Realtime Clock/Calendar I2C Interface, SOIC-8"
+			(at 44.45 50.8 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Digikey PN" "568-12403-1-ND"
+			(at 44.45 50.8 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MANUFACTURER" "NXP USA Inc."
+			(at 44.45 50.8 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "4"
+			(uuid "4cfa567e-260f-44e5-8ac4-c45de84eff5f")
+		)
+		(pin "7"
+			(uuid "9bcb2c77-0842-4e4a-82cd-0a990c5d7846")
+		)
+		(pin "5"
+			(uuid "937cb165-c993-4deb-bc66-be6041fabd1f")
+		)
+		(pin "6"
+			(uuid "2aa6b6f4-ec24-462e-a5d4-cf8ee6e3ec63")
+		)
+		(pin "1"
+			(uuid "c3c06f08-7739-4624-a554-5eb302513778")
+		)
+		(pin "2"
+			(uuid "78188d6b-c23c-4114-ab57-dc887bd66eab")
+		)
+		(pin "8"
+			(uuid "aa36b527-6f71-400b-91e6-05cc411b844d")
+		)
+		(pin "3"
+			(uuid "426e55e3-1c6c-4a15-8a18-ed590bf4cabe")
+		)
+		(instances
+			(project ""
+				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
+					(reference "U2")
 					(unit 1)
 				)
 			)
@@ -21577,7 +21304,7 @@
 				(hide yes)
 			)
 		)
-		(property "Digikiey PN" ""
+		(property "MANUFACTURER" "Analog Devices Inc"
 			(at 147.32 215.9 0)
 			(effects
 				(font
@@ -21676,7 +21403,7 @@
 				(hide yes)
 			)
 		)
-		(property "Digikiey PN" ""
+		(property "MANUFACTURER" "MCC"
 			(at 393.7 228.6 0)
 			(effects
 				(font
@@ -21850,7 +21577,7 @@
 				(hide yes)
 			)
 		)
-		(property "MANUFACTURER" ""
+		(property "MANUFACTURER" "Toshiba Semiconductor"
 			(at 273.05 39.37 0)
 			(effects
 				(font
@@ -21860,15 +21587,6 @@
 			)
 		)
 		(property "Field6" ""
-			(at 273.05 39.37 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikiey PN" ""
 			(at 273.05 39.37 0)
 			(effects
 				(font
@@ -22067,7 +21785,7 @@
 				(hide yes)
 			)
 		)
-		(property "MANUFACTURER" ""
+		(property "MANUFACTURER" "KEMET"
 			(at 156.21 86.36 0)
 			(effects
 				(font
@@ -22077,15 +21795,6 @@
 			)
 		)
 		(property "Digikey PN" "399-C0603C104K3RACTUCT-ND"
-			(at 156.21 86.36 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikiey PN" ""
 			(at 156.21 86.36 0)
 			(effects
 				(font
@@ -22207,7 +21916,7 @@
 				(hide yes)
 			)
 		)
-		(property "MANUFACTURER" ""
+		(property "MANUFACTURER" "SMC Diode Solutions"
 			(at 256.54 114.3 0)
 			(effects
 				(font
@@ -22217,15 +21926,6 @@
 			)
 		)
 		(property "Field6" ""
-			(at 256.54 114.3 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikiey PN" ""
 			(at 256.54 114.3 0)
 			(effects
 				(font
@@ -22244,147 +21944,6 @@
 			(project "OBike"
 				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
 					(reference "D5")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Timer_RTC:DS3231M")
-		(at 44.45 50.8 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "d3ac5613-437d-4a8a-b199-e5f3d9fe3823")
-		(property "Reference" "U2"
-			(at 45.466 39.37 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "DS3231M"
-			(at 45.212 41.656 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "Package_SO:SOIC-8_3.9x4.9mm_P1.27mm"
-			(at 44.45 66.04 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "http://datasheets.maximintegrated.com/en/ds/DS3231.pdf"
-			(at 51.308 49.53 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Extremely Accurate I2C-Integrated RTC/TCXO/Crystal SOIC-16"
-			(at 44.45 50.8 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Manufacturer" "Analog Devices Inc./Maxim Integrated"
-			(at 44.45 50.8 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Manufacturer PN" "DS3231MZ+"
-			(at 44.45 50.8 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikey PN" "DS3231MZ+-ND"
-			(at 44.45 50.8 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MANUFACTURER" ""
-			(at 44.45 50.8 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Field6" ""
-			(at 44.45 50.8 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikiey PN" ""
-			(at 44.45 50.8 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "40038735-2dbf-4110-bf5e-52cf80aa4387")
-		)
-		(pin "3"
-			(uuid "53a65931-9bb1-45e3-92c9-d9b0561bb9f1")
-		)
-		(pin "7"
-			(uuid "83e13c5f-6087-4988-ba63-006d3e66e228")
-		)
-		(pin "8"
-			(uuid "e03c001d-b03e-48c2-adc4-fd85f2442e87")
-		)
-		(pin "6"
-			(uuid "83ac9f35-8d80-4cc0-8b3e-2d598907564b")
-		)
-		(pin "4"
-			(uuid "09c1c5fe-0571-4281-a47a-18ae3d965250")
-		)
-		(pin "5"
-			(uuid "b3484f0f-4917-4b95-92be-c37378a732b1")
-		)
-		(pin "2"
-			(uuid "aa09a919-f0fd-4e7d-a1be-a3d0a833d269")
-		)
-		(instances
-			(project "OBike"
-				(path "/b6c91502-91b9-44d0-9569-7774925b5f71"
-					(reference "U2")
 					(unit 1)
 				)
 			)
@@ -22636,7 +22195,7 @@
 				(hide yes)
 			)
 		)
-		(property "MANUFACTURER" ""
+		(property "MANUFACTURER" "Samsung"
 			(at 203.2 157.48 0)
 			(effects
 				(font
@@ -22646,15 +22205,6 @@
 			)
 		)
 		(property "Digikey PN" "1276-1038-1-ND"
-			(at 203.2 157.48 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikiey PN" ""
 			(at 203.2 157.48 0)
 			(effects
 				(font
@@ -22921,7 +22471,7 @@
 				(hide yes)
 			)
 		)
-		(property "MANUFACTURER" ""
+		(property "MANUFACTURER" "Toshiba Semiconductor"
 			(at 274.32 78.74 0)
 			(effects
 				(font
@@ -22931,15 +22481,6 @@
 			)
 		)
 		(property "Field6" ""
-			(at 274.32 78.74 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikiey PN" ""
 			(at 274.32 78.74 0)
 			(effects
 				(font
@@ -23932,7 +23473,7 @@
 				(hide yes)
 			)
 		)
-		(property "MANUFACTURER" ""
+		(property "MANUFACTURER" "SMC Diode Solutions"
 			(at 256.54 74.93 0)
 			(effects
 				(font
@@ -23942,15 +23483,6 @@
 			)
 		)
 		(property "Field6" ""
-			(at 256.54 74.93 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikiey PN" ""
 			(at 256.54 74.93 0)
 			(effects
 				(font
@@ -24095,7 +23627,7 @@
 				(hide yes)
 			)
 		)
-		(property "MANUFACTURER" ""
+		(property "MANUFACTURER" "Samsung"
 			(at 149.86 111.76 0)
 			(effects
 				(font
@@ -24105,15 +23637,6 @@
 			)
 		)
 		(property "Digikey PN" "1276-1044-1-ND"
-			(at 149.86 111.76 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikiey PN" ""
 			(at 149.86 111.76 0)
 			(effects
 				(font
@@ -24219,7 +23742,7 @@
 				(hide yes)
 			)
 		)
-		(property "MANUFACTURER" ""
+		(property "MANUFACTURER" "Infineon Technologies"
 			(at 97.79 31.75 0)
 			(effects
 				(font
@@ -24229,15 +23752,6 @@
 			)
 		)
 		(property "Field6" ""
-			(at 97.79 31.75 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikiey PN" ""
 			(at 97.79 31.75 0)
 			(effects
 				(font
@@ -24464,15 +23978,6 @@
 			)
 		)
 		(property "Digikey PN" "H11891CT-ND"
-			(at 142.24 130.81 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digikiey PN" ""
 			(at 142.24 130.81 0)
 			(effects
 				(font
