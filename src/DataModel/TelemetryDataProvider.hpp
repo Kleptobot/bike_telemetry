@@ -77,8 +77,8 @@ struct Telemetry {
         , longitude(longitude_)
         , latitude(latitude_)
         , distance(distance_)
-        , grade(grade_)
         , totalDistance(distance_)
+        , grade(grade_)
     {}
 
     Telemetry& operator=(const Telemetry& _new) {

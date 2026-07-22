@@ -11,6 +11,7 @@
 #include "UI/Screens/DisplayEditScreen.hpp"
 #include "UI/Screens/GPSScreen.hpp"
 #include "UI/Screens/UnmountSDScreen.hpp"
+#include "UI/Screens/BikeStatsScreen.hpp"
 
 void App::begin(IStorage* storage) {
     _storage = storage;
@@ -33,6 +34,7 @@ void App::begin(IStorage* storage) {
     ui.registerScreen<DisplayEditScreen>(ScreenID::DisplayEdit,App::instance().getModel());
     ui.registerScreen<GPSScreen>(ScreenID::GPSSettings,App::instance().getModel());
     ui.registerScreen<UnmountSDScreen>(ScreenID::UnmountSD,App::instance().getModel());
+    ui.registerScreen<BikeStatsScreen>(ScreenID::BikeStats,App::instance().getModel());
 
     ui.begin(ScreenID::MainMenu);
 
@@ -115,6 +117,7 @@ void App::update() {
             HAL::inst().bluetooth().loadDevices();
             HAL::inst().resetGPS();
             loadBiometrics();
+            loadBikeStats();
             loadLayout();
             loadTime();
             ui.showScreen(ScreenID::MainMenu);
@@ -180,7 +183,7 @@ void App::update() {
     }
     lastSecond = currentTime.second();
     state_prev = state;
-    model.app().setState(state);
+    //model.app().setState(state);
 }
 
 void App::updateTelemetry() {
@@ -211,10 +214,30 @@ void App::updateTelemetry() {
         _lastSeconds = rtcNow.secondstime();
     }
 
+    auto wheelRPM = HAL::inst().getWheelRPM();
+    auto gpsSpeed = HAL::inst().getGPSSpeed();
+    auto altVelocity = HAL::inst().altVelocity();
+
+    float speed = 0;
+    float circumference = model.bike().get().wheelCircumference;
+
+    if (wheelRPM.live) {
+        speed = wheelRPM.value * circumference * 0.00006;
+    } else if (gpsSpeed.live) {
+        speed = gpsSpeed.value;
+    }
+
+    float grade = 0;
+    if (speed >0 && altVelocity.live)
+    {
+        //rise in m/s * 3.6 to convert to km/h, then divide by speed in km/h to get grade as a percentage
+        grade = altVelocity.value*3.6f*100.0f/speed;
+    }
+
     model.telemetry().update({  HAL::inst().getIMUData(),
                                 HAL::inst().getDPSData(),
                                 HAL::inst().getBatteryPercentage(),
-                                HAL::inst().getSpeed(),
+                                speed,
                                 HAL::inst().getCadence(),
                                 HAL::inst().getTemperature(),
                                 HAL::inst().getAltitude(),
@@ -224,7 +247,7 @@ void App::updateTelemetry() {
                                 gpsLoc.lng(),
                                 gpsLoc.lat(),
                                 distance,
-                                HAL::inst().getGrade()});
+                                grade});
 
     //when gps time goes valid, check if the RTC time needs to be re-synced
     int UTCoffset = model.time().get().offset();
@@ -315,6 +338,10 @@ void App::handleAppEvent(const AppEvent& e) {
             HAL::inst().unMountSD();
             break;
 
+        case AppEventType::SaveBikeStats:
+            saveBikeStats();
+            break;
+
         default:
             break;
     }
@@ -360,7 +387,7 @@ void App::loadBiometrics() {
             return;
         }
 
-        AppData a;
+        BioData a;
         long long unix = jsonBuffer["birthday"];
         timeData bd(unix, 0);
         a.birthday = bd;
@@ -373,6 +400,49 @@ void App::loadBiometrics() {
         a.zone5Start = jsonBuffer["zone5Start"];
 
         model.app().update(a);
+        dataFile.close();
+    }
+}
+
+void App::saveBikeStats() {
+    JsonDocument doc;
+
+    auto& a = model.bike().get();
+    
+    doc["mass"] = a.mass;
+    doc["wheelCircumference"] = a.wheelCircumference;
+
+    if (_storage->exists("/bikeStats.txt"))
+        _storage->remove("/bikeStats.txt");
+
+    File32 dataFile = _storage->openFile("/bikeStats.txt", FILE_WRITE);
+
+    serializeJson(doc, dataFile);
+    dataFile.close();
+}
+
+void App::loadBikeStats() {
+    
+    if (_storage->exists("bikeStats.txt")) {
+        Serial.println("Found bikeStats.txt");
+        // Open file for reading
+        File32 dataFile = _storage->openFile("/bikeStats.txt", FILE_READ);
+        // Allocate the memory pool on the stack.
+        JsonDocument jsonBuffer;
+        // Parse the root object
+
+        DeserializationError error = deserializeJson(jsonBuffer, dataFile);
+
+        if (error) {
+            Serial.print("deserializeJson() failed: ");
+            return;
+        }
+
+        BikeData a;
+        a.mass = jsonBuffer["mass"];
+        a.wheelCircumference = jsonBuffer["wheelCircumference"];
+
+        model.bike().update(a);
         dataFile.close();
     }
 }

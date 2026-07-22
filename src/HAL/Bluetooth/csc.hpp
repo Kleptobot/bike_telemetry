@@ -85,7 +85,7 @@ class csc : public BT_Device {
 
   public:
     bool b_speed_present, b_cadence_present;
-    float f32_kph_raw, f32_kph, f32_cadence_raw, f32_cadence;
+    float raw_wheel_rpm, f32_wheel_rpm, f32_cadence_raw, f32_cadence;
     virtual ~csc(){};
     
     static void create_csc(MacAddress MAC)

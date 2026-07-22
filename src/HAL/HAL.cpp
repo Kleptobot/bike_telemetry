@@ -83,12 +83,10 @@ void HAL::update() {
         f32_alt = _LC76G.gps().altitude.meters();
     }
     
-    auto spd = csc::getSpeed();
-    f32_kmh = 0;
-    if (spd.live) {
-        f32_kmh = spd.value;
-    } else if (gpsSpd.isValid()) {
-        f32_kmh = gpsSpd.kmph();
+    wheelRPM = csc::getSpeed();
+    gpsKmh = {0, false};
+    if (gpsSpd.isValid()) {
+        gpsKmh = {(float)gpsSpd.kmph(), true};
     }
 
     f32_cadence = 0;
@@ -120,12 +118,7 @@ void HAL::update() {
         }
     }
 
-    f32_grade = 0;
-    if (f32_kmh >0)
-    {
-        //rise in m/s * 3.6 to convert to km/h, then divide by speed in km/h to get grade as a percentage
-        f32_grade = altFusion.rise()*3.6f*100.0f/f32_kmh;
-    }
+    
     
 }
 

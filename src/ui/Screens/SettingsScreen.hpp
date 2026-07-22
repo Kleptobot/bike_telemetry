@@ -22,6 +22,7 @@ public:
             {"GPS",         epd_bitmap_antenna_large,       ScreenID::GPSSettings}, 
             {"Time",        epd_bitmap_clock_large,         ScreenID::TimeMenu},
             {"Biometrics",  epd_bitmap_heart_large,         ScreenID::Biometrics},
+            {"Bike Stats",  epd_bitmap_heart_large,         ScreenID::BikeStats},
             {"Display",     epd_bitmap_disp_edit,           ScreenID::DisplayEdit},
             {"Unmount SD",  epd_bitmap_icons8_micro_sd_32,  ScreenID::UnmountSD},
             {"Back",        epd_bitmap_left_arrow_large,    ScreenID::MainMenu}

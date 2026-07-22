@@ -52,13 +52,15 @@ class HAL {
     void buzzStop();
 
     int16_t getBatteryPercentage() const { return sensorSystem.batt(); }
-    float getSpeed() const { return f32_kmh; }
+    data_record getGPSSpeed() const { return gpsKmh; }
+    data_record getWheelRPM() const { return wheelRPM; }
+    data_record altVelocity() const { return {altFusion.rise(), _dpsValid}; }
     float getCadence() const { return f32_cadence; }
     float getTemperature() const { return f32_temp; }
     float getAltitude() const { return f32_alt; }
     float getHeartRate() const { return f32_bpm; }
     float getPower() const { return f32_pow; }
-    float getGrade() const { return f32_grade; }
+    
 
     TinyGPSLocation getGPSLocation() const { return _LC76G.gps().location; }
     TinyGPSTime getGPSTime() const { return _LC76G.gps().time; }
@@ -79,7 +81,8 @@ class HAL {
     AltitudeFusion altFusion;
 
     // private memeber variables
-    float f32_kmh, f32_cadence, f32_temp, f32_alt, f32_bpm, f32_pow, f32_grade;
+    float f32_cadence, f32_temp, f32_alt, f32_bpm, f32_pow;
+    data_record gpsKmh, wheelRPM;
     uint8_t _rxBuffer[1024];
     uint32_t _resetGPSTime, _resetDispTime;
     bool _sleep;

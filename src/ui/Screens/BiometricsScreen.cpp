@@ -13,7 +13,11 @@ void BiometricsScreen::handleInput(physIO input) {
             break;
         case EditField::Mass:
             if (massWidget.isSelected()) {
-                if (input.Up.press) ++_mass;
+                if (input.Up.state && massWidget.shouldRepeat(input.Up.heldTime)) {
+                    ++_mass;
+                } else if (input.Down.state && massWidget.shouldRepeat(input.Down.heldTime)) {
+                    --_mass;
+                } else if (input.Up.press) ++_mass;
                 else if (input.Down.press) --_mass;
             }
             if(input.Select.press) massWidget.setSelected(!massWidget.isSelected());

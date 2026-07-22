@@ -25,7 +25,8 @@ enum class AppEventType {
     saveGPSNVRAM,
     setGPSNMEARate,
     UnmountSD,
-    Sleep
+    Sleep,
+    SaveBikeStats
 };
 
 struct NMEArateChange {

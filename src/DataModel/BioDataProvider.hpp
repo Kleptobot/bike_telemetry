@@ -56,7 +56,7 @@ inline CaloricProfile fromString(String s) {
     return c;
 }
 
-struct AppData {
+struct BioData {
     AppState state;
     timeData birthday = DateTime(1993,5,21);
     uint16_t mass = 75;
@@ -67,9 +67,8 @@ struct AppData {
     uint8_t zone4Start = 151; // bpm
     uint8_t zone5Start = 162; // bpm
 
-    AppData(){}
-    AppData(
-        AppState s, 
+    BioData(){}
+    BioData(
         timeData b, 
         uint16_t m, 
         CaloricProfile c, 
@@ -78,8 +77,7 @@ struct AppData {
         uint8_t z3, 
         uint8_t z4, 
         uint8_t z5) 
-        : state(s)
-        , birthday(b)
+        : birthday(b)
         , mass(m)
         , caloricProfile(c)
         , zone1Start(z1)
@@ -88,8 +86,7 @@ struct AppData {
         , zone4Start(z4)
         , zone5Start(z5) {}
 
-    AppData& operator=(const AppData& other) {
-        state = other.state;
+    BioData& operator=(const BioData& other) {
         birthday = other.birthday;
         mass = other.mass;
         caloricProfile = other.caloricProfile;
@@ -102,13 +99,13 @@ struct AppData {
     }
 };
 
-class AppDataProvider {
+class BioDataProvider {
 public:
-    const AppData& get() const { return _data; }
+    const BioData& get() const { return _data; }
     uint32_t version() const { return _version; }
 
 
-    void update(const AppData& newData) {
+    void update(const BioData& newData) {
         _data.birthday = newData.birthday;
         _data.mass = newData.mass;
         _data.caloricProfile = newData.caloricProfile;
@@ -122,8 +119,8 @@ public:
 
 private:
     friend class App;
-    void setState(AppState s) { _data.state = s; }
-    AppData _data{};
+    //void setState(AppState s) { _data.state = s; }
+    BioData _data{};
     uint32_t _version = 0;
 };
 

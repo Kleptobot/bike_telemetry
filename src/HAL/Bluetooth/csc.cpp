@@ -61,9 +61,10 @@ void csc::discover(uint16_t conn_handle) {
       u16_SpeedEvt_Prev = 0;
       u16_CrankCount_Prev = 0;
       u16_CrankEvt_Prev = 0;
-      f32_kph_raw = 0;
+      //f32_kph_raw = 0;
+      raw_wheel_rpm = 0;
       f32_cadence_raw = 0;
-      f32_kph = 0;
+      f32_wheel_rpm = 0;
       f32_cadence = 0;
 
       u8_feature = csc_feat.read8();
@@ -142,7 +143,7 @@ void csc::csc_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len) 
       }
       u16_SpeedEvt_Prev = u16_SpeedEvt;
       millis_at_spd_evt = millis();
-      exp_next_spd_evt = millis_at_spd_evt + uint(u16_speed_delta*1.024);
+      exp_next_spd_evt = millis_at_spd_evt + uint(u16_speed_delta*0.9765625); //convert 1/1024ths of a second into milliseconds
     }
 
      //check for overflow of speed count
@@ -155,9 +156,14 @@ void csc::csc_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len) 
     u32_WheelCount_Prev = u32_WheelCount;
 
     //calculate the rate of change and convert to km/h
-    f32_kph_raw = 0;
+    raw_wheel_rpm = 0;
     if (u16_speed_delta > 0) {
-      f32_kph_raw = f32_circ * 3.6684 *float(u32_WheelCount_delta)/float(u16_speed_delta);
+      //speed delta is in 1024ths of a second, 3.6 * 1024/1000 = 3.6864
+      //f32_kph_raw = f32_circ * 3.6864 *float(u32_WheelCount_delta)/float(u16_speed_delta);
+
+      //csc time delta is in 1/1024ths of a second
+      //
+      raw_wheel_rpm = 61140.0 * float(u32_WheelCount_delta)/float(u16_speed_delta);
     }
   }
   if ((data[0] & 0x02) == 2) {
@@ -182,7 +188,7 @@ void csc::csc_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len) 
         u16_crank_delta = u16_CrankEvt + (65535 - u16_CrankEvt_Prev);
       }
       millis_at_cad_evt = millis();
-      exp_next_cad_evt = millis_at_cad_evt + uint(u16_crank_delta/1024.0);
+      exp_next_cad_evt = millis_at_cad_evt + uint(u16_crank_delta*0.9765625); //convert 1/1024ths of a second into milliseconds
       u16_CrankEvt_Prev = u16_CrankEvt;
     }
 
@@ -198,6 +204,7 @@ void csc::csc_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len) 
     //calculate rate of change and convert to rpm
     f32_cadence_raw = 0;
     if (u16_crank_delta>0) {
+      //61140 is 60*1024, so this is converting the crank delta and time delta into revolutions per minute
       f32_cadence_raw = 61140.0 *float(u16_CrankCount_delta)/float(u16_crank_delta);
     }
   }
@@ -207,7 +214,7 @@ data_record csc::getSpeed() {
   data_record speed = {0, false};
   for (csc* dev : _cscDevices) {
     if(dev->b_speed_present) {
-      speed.value += dev->f32_kph;
+      speed.value += dev->f32_wheel_rpm;
       speed.live = true;
     }
   }
@@ -243,7 +250,7 @@ void csc::disconnect(uint16_t conn_handle, uint8_t reason) {
 }
 
 void csc::update(uint32_t now) {
-  float f32_kph_est = 0, f32_cad_est = 0;
+  float est_wheel_rpm = 0, f32_cad_est = 0;
   
   //use the last known u16_CrankCount_delta delta and an adjusted time delta to come up with an actual cadance estimate
   if (now>exp_next_cad_evt) {
@@ -263,11 +270,11 @@ void csc::update(uint32_t now) {
     uint32_t diff = now - exp_next_spd_evt;
     uint32_t delta_adjusted = u16_speed_delta + diff * 0.9765625;
     if ( delta_adjusted > 0)
-      f32_kph_est = f32_circ * 3.6684 *float(u32_WheelCount_delta)/float(delta_adjusted);
+      est_wheel_rpm = 61140.0 * float(u32_WheelCount_delta)/float(delta_adjusted);
   }else{
-    f32_kph_est = f32_kph_raw;
+    est_wheel_rpm = raw_wheel_rpm;
   }
   
   //low pass filter the speed estimate
-  f32_kph = f32_kph_est * 0.001 + f32_kph * 0.999;
+  f32_wheel_rpm = est_wheel_rpm * 0.001 + f32_wheel_rpm * 0.999;
 };

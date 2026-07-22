@@ -82,6 +82,9 @@ private:
     void saveBiometrics();
     void loadBiometrics();
 
+    void saveBikeStats();
+    void loadBikeStats();
+
     void saveLayout();
     void loadLayout();
 
