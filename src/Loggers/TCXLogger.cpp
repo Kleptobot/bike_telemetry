@@ -33,7 +33,7 @@ void TCXLogger::writeLapHeader(uint16_t lapIndex, File32 *file) {
         ts = elapsed_Lap();
     }
 
-    auto& a = _model.app().get();
+    auto& a = _model.bio().get();
     float age = timeDuration(_currentTime - a.birthday).days()/356.25;
 
     float avgHRM = float(lp.totalHRM) / float(ts._totalSeconds);

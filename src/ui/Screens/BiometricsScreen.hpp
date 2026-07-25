@@ -40,13 +40,13 @@ class BiometricsScreen : public UIScreen {
                 });
                 //register the save press event callback to send a change screen and app save event
                 saveWidget.setOnPress([this] () {
-                    this->model.app().update({_birthday,_mass,_caloricProfile,_zone1Start,_zone2Start,_zone3Start,_zone4Start,_zone5Start});
+                    this->model.bio().update({_birthday,_mass,_caloricProfile,_zone1Start,_zone2Start,_zone3Start,_zone4Start,_zone5Start});
                     emitAppEvent({AppEventType::SaveBiometrics,0});
                     emitUIEvent(UIEventType::ChangeScreen, ScreenID::SettingsMenu);
                 });
             }
         void onEnter() override {
-            auto& a = model.app().get();
+            auto& a = model.bio().get();
             _birthday = a.birthday;
             _mass = a.mass;
             _caloricProfile = a.caloricProfile;

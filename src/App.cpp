@@ -183,7 +183,7 @@ void App::update() {
     }
     lastSecond = currentTime.second();
     state_prev = state;
-    //model.app().setState(state);
+    model.setAppState(state);
 }
 
 void App::updateTelemetry() {
@@ -233,6 +233,8 @@ void App::updateTelemetry() {
         //rise in m/s * 3.6 to convert to km/h, then divide by speed in km/h to get grade as a percentage
         grade = altVelocity.value*3.6f*100.0f/speed;
     }
+
+    float gearRatio = HAL::inst().getCadence()/wheelRPM.value;
 
     model.telemetry().update({  HAL::inst().getIMUData(),
                                 HAL::inst().getDPSData(),
@@ -350,7 +352,7 @@ void App::handleAppEvent(const AppEvent& e) {
 void App::saveBiometrics() {
     JsonDocument doc;
 
-    auto& a = model.app().get();
+    auto& a = model.bio().get();
     
     doc["birthday"] = a.birthday.unixtime();
     doc["mass"] = a.mass;
@@ -399,7 +401,7 @@ void App::loadBiometrics() {
         a.zone4Start = jsonBuffer["zone4Start"];
         a.zone5Start = jsonBuffer["zone5Start"];
 
-        model.app().update(a);
+        model.bio().update(a);
         dataFile.close();
     }
 }
@@ -454,8 +456,13 @@ void App::saveLayout() {
 
     JsonArray d = doc["displays"].to<JsonArray>();
 
-    for (auto member : l.displays) {
-        d.add(toString(member));
+    //for (auto member : l.displays) {
+    for (int j = 0; j < l.displays.size(); j++) {
+        d[j]["x0"] = l.displays[j].x0;
+        d[j]["y0"] = l.displays[j].y0;
+        d[j]["x1"] = l.displays[j].x1;
+        d[j]["y1"] = l.displays[j].y1;
+        d[j]["type"] = toString(l.displays[j].type);
     }
 
     if (_storage->exists("/layout.txt"))
@@ -483,10 +490,10 @@ void App::loadLayout() {
             return;
         }
 
-        std::vector<TelemetryType> displays;
+        std::vector<DisplayItem> displays;
         JsonArray d = jsonBuffer["displays"];
         for (const auto& member : d) {
-            displays.push_back(TelemetryTypefromString(member));
+            //displays.push_back(TelemetryTypefromString(member));
         }
 
         model.layout().update({displays});

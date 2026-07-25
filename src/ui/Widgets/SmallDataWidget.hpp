@@ -19,7 +19,7 @@ class SmallDataWidget : public Widget {
             Disp::print(" ");
             Disp::printFloat(_data, 0);
             Disp::setTextSize(1);
-            Disp::setCursor(x+49, y);
+            Disp::setCursor(_x+49, _y);
             Disp::print(_units);
         }
         

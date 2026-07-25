@@ -22,8 +22,8 @@ public:
         }
 
     void invalidate() override {
-        int x_safe = max(x-2,0);
-        int y_safe = max(y-2,0);
+        int x_safe = max(_x-2,0);
+        int y_safe = max(_y-2,0);
         Disp::markDirty(x_safe, y_safe, width()+4, height()+4);
     }
 
@@ -48,10 +48,10 @@ public:
 
     void render() override;
     void render(int x, int y) override {
-        bool _invalidate = (x != this->x) || (y != this->y);
+        bool _invalidate = (x != this->_x) || (y != this->_y);
         if(_invalidate) invalidate();
-        this->x = x;
-        this->y = y;
+        this->_x = x;
+        this->_y = y;
         if(_invalidate) invalidate();
         render();
     }

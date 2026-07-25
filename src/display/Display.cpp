@@ -145,6 +145,10 @@ namespace Disp {
         canvas.drawBitmap(x,y,bitmap,w,h,color);
     }
 
+    void drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint16_t color) {
+        canvas.drawLine(x0, y0, x1, y1, color);
+    }
+
     int16_t getCursorX() {
         return canvas.getCursorX();
     }

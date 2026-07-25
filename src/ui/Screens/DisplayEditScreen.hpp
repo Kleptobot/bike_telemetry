@@ -1,102 +1,185 @@
 #pragma once
+
 #include "UI/Screens/UIScreen.hpp"
 #include "UI/Widgets/DisplayEditWidget.hpp"
 #include "UI/Widgets/SelectableTextIcon.hpp"
+#include "UI/Widgets/GridOverlayWidget.hpp"
+#include "UI/Widgets/CursorWidget.hpp"
+
+struct EditMode_ {
+    uint16_t mass;
+    uint16_t wheelCircumference;
+};
+
+enum class WidgetEditMode {
+    NONE = 0,
+    FOCUS,
+    SELECT,
+    CHANGE_TYPE,
+    MOVE,
+    RESIZE
+};
+
+enum class WidgetSubMode { CHANGE_TYPE, MOVE, RESIZE, DELETE, DONE };
+
+inline WidgetSubMode& operator++(WidgetSubMode& w) {
+    switch(w){
+        case WidgetSubMode::CHANGE_TYPE : w = WidgetSubMode::MOVE; break;
+        case WidgetSubMode::MOVE : w = WidgetSubMode::RESIZE; break;
+        case WidgetSubMode::RESIZE : w = WidgetSubMode::DELETE; break;
+        case WidgetSubMode::DELETE : w = WidgetSubMode::DONE; break;
+        case WidgetSubMode::DONE : w = WidgetSubMode::CHANGE_TYPE; break;
+        default: w = WidgetSubMode::CHANGE_TYPE;
+    }
+    return w;
+};
+
+inline WidgetSubMode& operator--(WidgetSubMode& w) {
+    switch(w){
+        case WidgetSubMode::CHANGE_TYPE : w = WidgetSubMode::DONE; break;
+        case WidgetSubMode::MOVE : w = WidgetSubMode::CHANGE_TYPE; break;
+        case WidgetSubMode::RESIZE : w = WidgetSubMode::MOVE; break;
+        case WidgetSubMode::DELETE : w = WidgetSubMode::RESIZE; break;
+        case WidgetSubMode::DONE : w = WidgetSubMode::DELETE; break;
+        default: w = WidgetSubMode::CHANGE_TYPE;
+    }
+    return w;
+};
 
 class DisplayEditScreen : public UIScreen {
-    public:
-        DisplayEditScreen (DataModel& model) : 
-            UIScreen(model),
-            numDisplaysLabel{5,5,"Num displays: "},
-            numDisplays{160,5,""},
-            saveWidget{5,80,"Save",epd_bitmap_save} {
-                //register the save press event callback to send a change screen and app save event
-                saveWidget.setOnPress([this] () {
-                    std::vector<TelemetryType> types;
-                    for ( const auto& disp : dispEdits) {
-                        types.push_back(disp.type());
-                    }
-                    this->model.layout().update( {types} );
-                    emitAppEvent({AppEventType::SaveLayout,0});
-                    emitUIEvent(UIEventType::ChangeScreen, ScreenID::SettingsMenu);
-                });
+public:
+    DisplayEditScreen (DataModel& model) : 
+        UIScreen(model),
+        gridWidthLabel{5,5,"Cols: "},
+        gridWidth{gridWidthLabel.width() + 10,5,String(_cols)},
+
+        gridHeightLabel{120,5,"Rows: "},
+        gridHeight{gridHeightLabel.getX()+gridHeightLabel.width() + 5,5,String(_rows)},
+
+        grid(32,3,2),
+        saveWidget{5,288,"Save",epd_bitmap_save} {
+            //register the save press event callback to send a change screen and app save event
+            saveWidget.setOnPress([this] () {
+                std::vector<DisplayItem> layout;
+                for (auto c : _displays)
+                    layout.push_back(c);
+                this->model.layout().update( {layout, _rows, _cols} );
+                emitAppEvent({AppEventType::SaveLayout,0});
+                emitUIEvent(UIEventType::ChangeScreen, ScreenID::SettingsMenu);
+            });
+    }
+
+    void onEnter() override {
+        auto& l = model.layout().get();
+        _rows = constrain(l.rows, 2, 5);
+        _cols = constrain(l.cols, 2, 5);
+        for (auto p : l.displays)
+            _displays.push_back(p);
+    }
+
+    void update(float dt) override {
+        grid.setCols(_cols);
+        grid.setRows(_rows);
+
+        gridHeight.setText(String(_rows));
+        gridWidth.setText(String(_cols));
+
+        for (auto disp : _displays) {
+            disp.setSize(grid.rowPitch(), grid.colPitch());
+            disp.setPos(grid.rowPitch(), grid.colPitch());
         }
 
-        void onEnter() override {
-            auto& l = model.layout().get();
-            dispEdits.clear();
-            for ( uint i = 0; i<l.displays.size(); i++) {
-                dispEdits.push_back({5,26+int(i)*21,l.displays[i]});
-            }
-            numDisplays.setText(String(dispEdits.size()));
+        gridWidth.setFocused(focusField == FocusField::Cols);
+        gridHeight.setFocused(focusField == FocusField::Rows);
+        grid.setCursorVisible(focusField == FocusField::Grid);
+        saveWidget.setFocused(focusField == FocusField::Save);
+    }
+
+    void handleInput(physIO input) override;
+
+    void render() override {
+        gridWidthLabel.render();
+        gridWidth.render();
+        gridHeightLabel.render();
+        gridHeight.render();
+        grid.render();
+
+        for (auto disp : _displays) {
+            disp.widget.render();
         }
 
-        void update(float dt) override {
-            for ( uint i = 0; i<dispEdits.size(); i++) {
-                dispEdits[i].update(dt);
-                dispEdits[i].setFocused( _index == (i+1) );
-            }
-            numDisplays.setFocused(_index == 0);
-            numDisplays.setText(String(dispEdits.size()));
-            saveWidget.setFocused(_index == dispEdits.size()+1);
-        }
-
-        void handleInput(physIO input) override {
-            if (!anySelected()) {
-                if (input.Up.press) _index = (_index + dispEdits.size() + 1) % (dispEdits.size()+2);
-                else if (input.Down.press) _index = (_index + 1) % (dispEdits.size()+2);
-            }
-            
-            if (_index == 0) {
-                if (input.Select.press) numDisplays.setSelected(!numDisplays.isSelected());
-                if (numDisplays.isSelected()) {
-                    if (input.Up.press){
-                        if (dispEdits.size()>7) return;
-                        int d = dispEdits.size();
-                        dispEdits.push_back({5,26+d*21});
-                        dispEdits.back().invalidate();
-                        saveWidget.invalidate();
-                    }
-                    if (input.Down.press) {
-                        if (dispEdits.size()<1) return;
-                        saveWidget.invalidate();
-                        dispEdits.back().invalidate();
-                        dispEdits.pop_back();
-                    }
-                }
-            }
-            else if (_index == (dispEdits.size()+1)) saveWidget.handleInput(input);
-            else {
-                if (dispEdits.size()>0) {
-                dispEdits[_index-1].handleInput(input);
-                }
-            }
-        }
-
-        void render() override {
-            numDisplaysLabel.render();
-            numDisplays.render();
-            for ( auto& disp : dispEdits) {
-                disp.render();
-            }
-            saveWidget.render(5,26+dispEdits.size()*21);
-        }
+        saveWidget.render();
+    }
     
-    private:
-        
-        SelectableTextWidget numDisplaysLabel;
-        SelectableTextWidget numDisplays;
-        std::vector<DisplayEditWidget> dispEdits;
-        SelectableTextIconWidget saveWidget;
+private:
+    struct DisplayWidget : DisplayItem {
+        DisplayEditWidget   widget;
 
-        uint _index = 0;
-        bool anySelected() {
-            bool dispSelected = false;
-            for (auto& disp : dispEdits) {
-                dispSelected |= disp.isSelected();
-            }
-            return  dispSelected ||
-                    numDisplays.isSelected() ||
-                    saveWidget.isSelected();
+        DisplayWidget () : widget(0,0){}
+        DisplayWidget (DisplayItem d) : widget(0,0) {
+            type = d.type;
+            x0 = d.x0;
+            y0 = d.y0;
+            x1 = d.x1;
+            y1 = d.y1;
         }
+
+        void setSize(int colPitch, int rowPitch) {
+            widget.setSize((x1-x0) * colPitch, (y1-y0) * rowPitch);
+        }
+
+        void setPos(int colPitch, int rowPitch) {
+            widget.setPosition(x0 * colPitch, y0 * rowPitch);
+        }
+    };
+
+    SelectableTextWidget gridWidthLabel;
+    SelectableTextWidget gridWidth;
+    SelectableTextWidget gridHeightLabel;
+    SelectableTextWidget gridHeight;
+
+    GridOverlayWidget grid;
+
+    SelectableTextIconWidget saveWidget;
+
+    enum class FocusField { Cols, Rows, Grid, Save };
+    FocusField focusField = FocusField::Cols;
+
+    uint8_t _rows, _cols;
+    std::vector<DisplayWidget> _displays;
+
+    WidgetEditMode mode = WidgetEditMode::NONE;
+    WidgetSubMode subMode = WidgetSubMode::CHANGE_TYPE;
+
+    const uint8_t MAX_ROWS = 5;
+    const uint8_t MIN_ROWS = 2;
+    const uint8_t MAX_COLS = 5;
+    const uint8_t MIN_COLS = 2;
+
+    int selectedIdx = -1;
+
+    bool anySelected() {
+        return  gridWidth.isSelected() ||
+                gridHeight.isSelected() ||
+                grid.isSelected() ||
+                saveWidget.isSelected();
+    }
+
+    bool isEdgeClear(const DisplayItem& target, Edge edge);
+
+    bool edgeAtBoundary(const DisplayItem& target, Edge edge);
+
+    bool upClear(const DisplayItem& target);
+    bool downClear(const DisplayItem& target);
+    bool leftClear(const DisplayItem& target);
+    bool rightClear(const DisplayItem& target);
+
+    void moveFocusUp();
+    void moveFocusDown();
+    void moveFocusLeft();
+    void moveFocusRight();
+
+    void selectItemAtCursor();
+    void createItemAtCursor();
+    void deleteSelected();
 };

@@ -62,20 +62,20 @@ void MapWidget::render() {
     if (!visible || !_dirty) return;
 
     // Clear widget area.
-    Disp::fillRect(x, y, _width, _height, ST77XX_BLACK);
+    Disp::fillRect(_x, _y, _width, _height, ST77XX_BLACK);
 
     if (_tilesCached) {
         renderFromCache();
     } else {
         // No tiles loaded yet — show placeholder.
-        Disp::drawText(x + 4, y + 4, String("No map data"), ST77XX_WHITE);
+        Disp::drawText(_x + 4, _y + 4, String("No map data"), ST77XX_WHITE);
     }
 
     // Track overlay is drawn regardless of whether tiles are available,
     // so the breadcrumb trail shows even in the fallback state.
     renderTrack();
 
-    Disp::markDirty(x, y, _width, _height);
+    Disp::markDirty(_x, _y, _width, _height);
     _dirty = false;
 }
 
@@ -227,7 +227,7 @@ void MapWidget::renderFromCache() {
         const uint16_t* src = tilePixels + row * MAP_W;
 
         // Destination row in the full-screen canvas.
-        uint16_t* dst = canvasBuf + (y + row) * SCREEN_WIDTH + x;
+        uint16_t* dst = canvasBuf + (_y + row) * SCREEN_WIDTH + _x;
 
         memcpy(dst, src, MAP_W * sizeof(uint16_t));
     }
@@ -245,7 +245,7 @@ void MapWidget::renderTrack() {
     if (track.empty()) {
         if (!_tilesCached) {
             // Nothing to show at all — display a message.
-            Disp::drawText(x + 4, y + 20, String("No GPS"), ST77XX_WHITE);
+            Disp::drawText(_x + 4, _y + 20, String("No GPS"), ST77XX_WHITE);
         }
         return;
     }
@@ -257,7 +257,7 @@ void MapWidget::renderTrack() {
         project(p.lat, p.lon, sx, sy);
 
         // Clip to widget bounds before drawing.
-        bool inBounds = (sx >= x && sx < x + _width && sy >= y && sy < y + _height);
+        bool inBounds = (sx >= _x && sx < _x + _width && sy >= _y && sy < _y + _height);
 
         if (!first && inBounds) {
             canvas.drawLine(px, py, sx, sy, ST77XX_GREEN);
@@ -286,8 +286,8 @@ void MapWidget::project(double lat, double lon, int& outX, int& outY) const {
     double dxMeters = (lon - _centerLon) * metersPerDegLon;
     double dyMeters = (lat - _centerLat) * metersPerDegLat;
 
-    double cx = x + (_width  / 2.0);
-    double cy = y + (_height / 2.0);
+    double cx = _x + (_width  / 2.0);
+    double cy = _y + (_height / 2.0);
 
     outX = (int)(cx + (dxMeters / _metersPerPixel));
     outY = (int)(cy - (dyMeters / _metersPerPixel));

@@ -5,14 +5,6 @@
 #include <RTClib.h>
 #include "TimeDataProvider.hpp"
 
-enum class AppState {
-    BOOT,
-    IDLE,
-    CONFIG,
-    LOGGING,
-    PAUSED
-};
-
 enum class CaloricProfile {
     Male = 0,
     Female,
@@ -57,7 +49,6 @@ inline CaloricProfile fromString(String s) {
 }
 
 struct BioData {
-    AppState state;
     timeData birthday = DateTime(1993,5,21);
     uint16_t mass = 75;
     CaloricProfile caloricProfile = CaloricProfile::Other;

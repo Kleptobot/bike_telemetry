@@ -19,7 +19,7 @@ public:
         text = t; 
         int16_t x1,y1;
         uint16_t w,h;
-        Disp::getTextBounds(text, x, y, &x1, &y1, &w, &h);
+        Disp::getTextBounds(text, _x, _y, &x1, &y1, &w, &h);
         _width = w;
         _height = h;
         invalidate();
@@ -30,16 +30,16 @@ public:
         _text_size = size;
         int16_t x1,y1;
         uint16_t w,h;
-        Disp::getTextBounds(text, x, y, &x1, &y1, &w, &h);
+        Disp::getTextBounds(text, _x, _y, &x1, &y1, &w, &h);
         _width = w;
         _height = h;
         invalidate();
     }
         
     void invalidate() override {
-        Disp::markDirty(x-2, y-2, width()+4, height()+4);
+        Disp::markDirty(_x-2, _y-2, width()+4, height()+4);
         if (ENABLE_INVALIDATE_DEBUG) {
-            Serial.println("[Widget] Invalidated area: (" + String(x) + "," + String(y) + "," + String(width()) + "," + String(height()) + ")");
+            Serial.println("[Widget] Invalidated area: (" + String(_x) + "," + String(_y) + "," + String(width()) + "," + String(height()) + ")");
         }
     }
 

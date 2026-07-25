@@ -95,7 +95,7 @@ void TimeWidget::editField(EditField field, int val) {
 
 void TimeWidget::render() {
     if (!visible){
-        Disp::fillRect(x,y,_width,_height,ST77XX_BLACK);
+        Disp::fillRect(_x, _y,_width,_height,ST77XX_BLACK);
         return;
     }
 

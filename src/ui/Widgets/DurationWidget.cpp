@@ -18,7 +18,7 @@ void DurationWidget::update(float dt) {
 
 void DurationWidget::render() {
     if (!visible) {
-        Disp::fillRect(x,y,_width,_height,ST77XX_BLACK);
+        Disp::fillRect(_x,_y,_width,_height,ST77XX_BLACK);
         return;
     }
 

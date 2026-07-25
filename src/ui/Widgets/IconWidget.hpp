@@ -11,10 +11,10 @@ class IconWidget : public Widget {
 
         void render() override {
             if (!visible) {
-                Disp::fillRect(x,y,_width,_height,ST77XX_BLACK);
+                Disp::fillRect(_x,_y,_width,_height,ST77XX_BLACK);
                 return;
             } 
-            Disp::drawBitmap(x,y,_icon,_width,_height,ST77XX_WHITE);
+            Disp::drawBitmap(_x,_y,_icon,_width,_height,ST77XX_WHITE);
         }
 
         void setIcon(const uint8_t* icon) {

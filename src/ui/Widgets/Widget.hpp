@@ -9,7 +9,7 @@
 class Widget {
 public:
     Widget(int x = 0, int y = 0, int w = 0, int h = 0)
-        : x(x), y(y), _width(w), _height(h) {}
+        : _x(x), _y(y), _width(w), _height(h) {}
 
     virtual ~Widget() = default;
 
@@ -21,18 +21,18 @@ public:
 
     // Positioning
     void setPosition(int nx, int ny) { 
-       if((x != nx) || (y != ny)) invalidate();
-        x = nx; 
-        y = ny; 
+       if((_x != nx) || (_y != ny)) invalidate();
+        _x = nx; 
+        _y = ny; 
     }
-    void move(int dx, int dy) { x += dx; y += dy; }
-    int getX() const { return x; }
-    int getY() const { return y; }
+    void move(int dx, int dy) { _x += dx; _y += dy; }
+    int getX() const { return _x; }
+    int getY() const { return _y; }
 
     virtual void invalidate() {
-        Disp::markDirty(x, y, width(), height());
+        Disp::markDirty(_x, _y, width(), height());
         if (ENABLE_INVALIDATE_DEBUG) {
-            Serial.println("[Widget] Invalidated area: (" + String(x) + "," + String(y) + "," + String(width()) + "," + String(height()) + ")");
+            Serial.println("[Widget] Invalidated area: (" + String(_x) + "," + String(_y) + "," + String(width()) + "," + String(height()) + ")");
         }
     }
 
@@ -74,14 +74,13 @@ public:
         return true;
     }
 
-
     virtual bool isSelected() const { return selected; }
 
     virtual int width() const { return _width; }
     virtual int height() const { return _height; }
 
 protected:
-    int x, y;
+    int _x, _y;
     int _width, _height;
     bool visible = true;
     bool focused = false;

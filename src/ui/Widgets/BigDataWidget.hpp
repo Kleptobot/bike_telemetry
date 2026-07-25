@@ -20,16 +20,16 @@ class BigDataWidget : public Widget {
 
         void render() override {
             if (!visible) {
-                Disp::fillRect(x,y,_width,_height,ST77XX_BLACK);
+                Disp::fillRect(_x,_y,_width,_height,ST77XX_BLACK);
                 return;
             }
             if (_type == TelemetryType::Undefined) {
-                Disp::fillRect(x,y,_width,_height,ST77XX_BLACK);
+                Disp::fillRect(_x,_y,_width,_height,ST77XX_BLACK);
                 return;
             }
             Disp::setTextColor(_color);
             Disp::setTextSize(_size);
-            Disp::setCursor(x, y);
+            Disp::setCursor(_x, _y);
             if(_type == TelemetryType::Location) {
                 if(!_locationValue.valid) {
                     Disp::print("No GPS");
@@ -38,7 +38,7 @@ class BigDataWidget : public Widget {
                 Disp::setTextSize(_size/2);
                 Disp::print("Lat:");
                 Disp::print(formatLocationValue(_locationValue.latitude));
-                Disp::setCursor(x, y + 8*(_size/2));
+                Disp::setCursor(_x, _y + 8*(_size/2));
                 Disp::print("Lng:");
                 Disp::print(formatLocationValue(_locationValue.longitude));
                 return;
@@ -57,7 +57,7 @@ class BigDataWidget : public Widget {
                 // Switch to 1/3rd size alligned with top of integer part for decimal
                 int smallSize = max<uint8_t>(1, _size / 3);
                 int decX = Disp::getCursorX();
-                int decY = y; // top-aligned, same Y as the integer part
+                int decY = _y; // top-aligned, same Y as the integer part
                 Disp::setTextSize(smallSize);
                 Disp::setCursor(decX, decY);
                 Disp::print('.');
@@ -66,7 +66,7 @@ class BigDataWidget : public Widget {
                 // Place label after decimal, back to full size
                 int labelX = Disp::getCursorX();
                 Disp::setTextSize(smallSize);
-                Disp::setCursor(labelX, y);
+                Disp::setCursor(labelX, _y);
                 Disp::print(labelForType(_type));
                 String debugOutput = "For type: " + String(toString(_type)) +" Value: " + String(_value);
                 if (ENABLE_INVALIDATE_DEBUG) {
@@ -109,7 +109,7 @@ class BigDataWidget : public Widget {
                     //get the zone thresholds from the model and set color accordingly
                     DataModel& model = App::instance().getModel();
                     int hr = static_cast<int>(_value);
-                    auto appData = model.app().get();
+                    auto appData = model.bio().get();
                     if (hr < appData.zone1Start) _color = ST77XX_BLUE;
                     else if (hr < appData.zone2Start) _color = ST77XX_GREEN;
                     else if (hr < appData.zone3Start) _color = ST77XX_YELLOW;

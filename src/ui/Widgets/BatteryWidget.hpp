@@ -10,12 +10,12 @@ class BatteryWidget : public Widget {
 
         void render() override {
             if (!visible) {
-                Disp::fillRect(x,y,_width,_height,ST77XX_BLACK);
+                Disp::fillRect(_x,_y,_width,_height,ST77XX_BLACK);
                 return;
             }
             Disp::setTextSize(1);
-            Disp::drawBitmap(x, y, epd_bitmap_battery, 32, 16, ST77XX_WHITE);
-            Disp::setCursor(x+7, y+5);
+            Disp::drawBitmap(_x, _y, epd_bitmap_battery, 32, 16, ST77XX_WHITE);
+            Disp::setCursor(_x+7, _y+5);
             Disp::print(_batt);
         }
 

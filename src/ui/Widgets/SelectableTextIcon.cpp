@@ -4,27 +4,27 @@
 void SelectableTextIconWidget::render() {
     if (!visible) return;
 
-    Disp::setCursor(x, y);
+    Disp::setCursor(_x, _y);
     Disp::setTextSize(_text_size);
 
     int16_t x1, y1;
     uint16_t w, h;
-    Disp::getTextBounds(text, x + _icon_height, y, &x1, &y1, &w, &h);
+    Disp::getTextBounds(text, _x + _icon_height, _y, &x1, &y1, &w, &h);
     h = max(_icon_height,h);
 
     if (selected) {
-        Disp::fillRect(x - 2, y - 2, w+_icon_height + 4, h + 4, ST77XX_WHITE);
+        Disp::fillRect(_x - 2, _y - 2, w+_icon_height + 4, h + 4, ST77XX_WHITE);
         Disp::setTextColor(ST77XX_BLACK);
     } else if (focused) {
-        Disp::drawRect(x - 2, y - 2, w + _icon_height + 4, h + 4, ST77XX_WHITE);
+        Disp::drawRect(_x - 2, _y - 2, w + _icon_height + 4, h + 4, ST77XX_WHITE);
         Disp::setTextColor(ST77XX_WHITE);
     } else {
-        Disp::drawRect(x - 2, y - 2, w + _icon_height + 4, h + 4, ST77XX_BLACK);
+        Disp::drawRect(_x - 2, _y - 2, w + _icon_height + 4, h + 4, ST77XX_BLACK);
         Disp::setTextColor(ST77XX_WHITE);
     }
     
-    Disp::drawBitmap(x, y, bitmap, _icon_height, _icon_height, ST77XX_WHITE);
-    Disp::setCursor(x + _icon_height, y);
+    Disp::drawBitmap(_x, _y, bitmap, _icon_height, _icon_height, ST77XX_WHITE);
+    Disp::setCursor(_x + _icon_height, _y);
     Disp::print(text);
 }
 

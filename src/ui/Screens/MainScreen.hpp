@@ -9,125 +9,125 @@
 #include "UI/GFX.h"
 
 class MainScreen : public UIScreen {
-    public:
-        MainScreen (DataModel& model) : 
-            UIScreen(model),
-            batt(202,5),
-            gpsIcon(5,5,16,16,epd_bitmap_antenna),
+public:
+    MainScreen (DataModel& model) : 
+        UIScreen(model),
+        batt(202,5),
+        gpsIcon(5,5,16,16,epd_bitmap_antenna),
 
-            settingsIcon    (88,300,16,16,epd_bitmap_gear),
-            playIcon        (112,300,16,16,epd_bitmap_play),
-            stopIcon        (136,300,16,16,epd_bitmap_stop),
-            powerIcon       (136,300,16,16,epd_bitmap_power),
+        settingsIcon    (88,300,16,16,epd_bitmap_gear),
+        playIcon        (112,300,16,16,epd_bitmap_play),
+        stopIcon        (136,300,16,16,epd_bitmap_stop),
+        powerIcon       (136,300,16,16,epd_bitmap_power),
 
-            timeWidget(30,5,model.time().get()),
-            lapTime(5,280, model.logger().get().lapElapsed) {}
+        timeWidget(30,5,model.time().get()),
+        lapTime(5,280, model.logger().get().lapElapsed) {}
 
-        void onEnter() override {
-            auto& l = model.layout().get();
-            
-            int size = constrain( 256/(8*l.displays.size()),1,8);
+    void onEnter() override {
+        auto& l = model.layout().get();
+        
+        int size = constrain( 256/(8*l.displays.size()),1,8);
 
-            dataDisplays.clear();
-            for ( uint i = 0; i<l.displays.size(); i++) {
-                dataDisplays.push_back({5,30+int(i)*8*size,size,l.displays[i]});
-            }
+        dataDisplays.clear();
+        for ( uint i = 0; i<l.displays.size(); i++) {
+            //dataDisplays.push_back({5,30+int(i)*8*size,size,l.displays[i]});
         }
-
-void update(float dt) override {
-    //update numeric displays
-    const auto& t = model.telemetry().get();
-    //display if gps has a vlaid location
-    gpsIcon.setVisible(t.validLocation);
-
-    if (version != model.telemetry().version()) {
-        for (auto& disp:dataDisplays) {
-            disp.update(t);
-        }
-        version = model.telemetry().version();
     }
 
-    //display the current time
-    timeWidget.update(dt);
-    batt.setBat(t.BattPercentage);
-    
-    //get the current lap time
-    lapTime.update(dt);
+    void update(float dt) override {
+        //update numeric displays
+        const auto& t = model.telemetry().get();
+        //display if gps has a vlaid location
+        gpsIcon.setVisible(t.validLocation);
 
-    //show hide icons based on app state
-    const auto& appState = model.app().get().state;
-    lapTime.setVisible(appState == AppState::LOGGING);
-    
-    stopIcon.setVisible(appState == AppState::LOGGING);
-    settingsIcon.setVisible(appState != AppState::LOGGING);
-    powerIcon.setVisible(appState != AppState::LOGGING);
+        if (version != model.telemetry().version()) {
+            for (auto& disp:dataDisplays) {
+                disp.update(t);
+            }
+            version = model.telemetry().version();
+        }
 
-    if (appState != AppState::LOGGING && appState_prev == AppState::LOGGING) {
-        playIcon.setIcon(epd_bitmap_play);
-    }else if (appState == AppState::LOGGING && appState_prev != AppState::LOGGING) {
-        playIcon.setIcon(epd_bitmap_loop);
+        //display the current time
+        timeWidget.update(dt);
+        batt.setBat(t.BattPercentage);
+        
+        //get the current lap time
+        lapTime.update(dt);
+
+        //show hide icons based on app state
+        const auto& appState = model.app();
+        lapTime.setVisible(appState == AppState::LOGGING);
+        
+        stopIcon.setVisible(appState == AppState::LOGGING);
+        settingsIcon.setVisible(appState != AppState::LOGGING);
+        powerIcon.setVisible(appState != AppState::LOGGING);
+
+        if (appState != AppState::LOGGING && appState_prev == AppState::LOGGING) {
+            playIcon.setIcon(epd_bitmap_play);
+        }else if (appState == AppState::LOGGING && appState_prev != AppState::LOGGING) {
+            playIcon.setIcon(epd_bitmap_loop);
+        }
+        appState_prev = appState;
     }
-    appState_prev = appState;
-}
 
-        void handleInput(physIO input) override {
-            switch (model.app().get().state) {
-                case AppState::LOGGING:
-                    if (input.Select.press) {
-                        emitAppEvent({AppEventType::StopLogging,0});
-                    } else if (input.Select.held) {
-                        emitAppEvent({AppEventType::PauseLogging,0});
-                    }
-                    break;
+    void handleInput(physIO input) override {
+        switch (model.app()) {
+            case AppState::LOGGING:
+                if (input.Select.press) {
+                    emitAppEvent({AppEventType::StopLogging,0});
+                } else if (input.Select.held) {
+                    emitAppEvent({AppEventType::PauseLogging,0});
+                }
+                break;
 
-                case AppState::IDLE:
-                    if (input.Select.press) {
-                        emitAppEvent({AppEventType::StartLogging,0});
-                    } else if (input.Left.press) {
-                        emitUIEvent(UIEventType::ChangeScreen, ScreenID::SettingsMenu);
-                    } else if (input.Right.held) {
-                        emitAppEvent({AppEventType::Sleep,0});
-                    }
-                    break;
+            case AppState::IDLE:
+                if (input.Select.press) {
+                    emitAppEvent({AppEventType::StartLogging,0});
+                } else if (input.Left.press) {
+                    emitUIEvent(UIEventType::ChangeScreen, ScreenID::SettingsMenu);
+                } else if (input.Right.held) {
+                    emitAppEvent({AppEventType::Sleep,0});
+                }
+                break;
 
-                default:
-                    if (input.Left.press) {
-                        emitUIEvent(UIEventType::ChangeScreen, ScreenID::SettingsMenu);
-                    } else if (input.Right.held) {
-                        emitAppEvent({AppEventType::Sleep,0});
-                    }
-            }
+            default:
+                if (input.Left.press) {
+                    emitUIEvent(UIEventType::ChangeScreen, ScreenID::SettingsMenu);
+                } else if (input.Right.held) {
+                    emitAppEvent({AppEventType::Sleep,0});
+                }
+        }
+    }
+
+    void render() override {
+        batt.render();
+
+        for (auto& disp : dataDisplays) {
+            disp.render();
         }
 
-        void render() override {
-            batt.render();
+        gpsIcon.render();
+        timeWidget.render();
+        lapTime.render();
 
-            for (auto& disp : dataDisplays) {
-                disp.render();
-            }
-
-            gpsIcon.render();
-            timeWidget.render();
-            lapTime.render();
-
-            settingsIcon.render();
-            playIcon.render();
-            stopIcon.render();
-            powerIcon.render();
-        }
+        settingsIcon.render();
+        playIcon.render();
+        stopIcon.render();
+        powerIcon.render();
+    }
     
-    private:
-        BatteryWidget batt;
-        IconWidget gpsIcon;
-        IconWidget settingsIcon;
-        IconWidget playIcon;
-        IconWidget stopIcon;
-        IconWidget powerIcon;
-        TimeWidget timeWidget;
-        DurationWidget lapTime;
+private:
+    BatteryWidget batt;
+    IconWidget gpsIcon;
+    IconWidget settingsIcon;
+    IconWidget playIcon;
+    IconWidget stopIcon;
+    IconWidget powerIcon;
+    TimeWidget timeWidget;
+    DurationWidget lapTime;
 
-        std::vector<BigDataWidget> dataDisplays;
+    std::vector<BigDataWidget> dataDisplays;
 
-        uint32_t version = 0;
-        AppState appState_prev = AppState::IDLE;
+    uint32_t version = 0;
+    AppState appState_prev = AppState::IDLE;
 };

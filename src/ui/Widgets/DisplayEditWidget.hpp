@@ -5,10 +5,10 @@
 #include "DataModel/DataModel.hpp"
 #include "UI/GFX.h"
 
-class DisplayEditWidget : public SelectableTextWidget {
+class DisplayEditWidget : public Widget {
     public:
         DisplayEditWidget(int x, int y, TelemetryType type=TelemetryType::Speed)
-            : SelectableTextWidget(x, y, "Speed"),
+            : Widget(x, y),
             _type(type) {}
 
         
@@ -21,7 +21,7 @@ class DisplayEditWidget : public SelectableTextWidget {
     }
 
     void update(float dt) override {
-        setText(toString(_type));
+        //setText(toString(_type));
     }
 
     void setType(TelemetryType type) { _type = type; }
