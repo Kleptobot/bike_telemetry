@@ -6,11 +6,6 @@
 #include "UI/Widgets/GridOverlayWidget.hpp"
 #include "UI/Widgets/CursorWidget.hpp"
 
-struct EditMode_ {
-    uint16_t mass;
-    uint16_t wheelCircumference;
-};
-
 enum class WidgetEditMode {
     NONE = 0,
     FOCUS,
@@ -18,32 +13,6 @@ enum class WidgetEditMode {
     CHANGE_TYPE,
     MOVE,
     RESIZE
-};
-
-enum class WidgetSubMode { CHANGE_TYPE, MOVE, RESIZE, DELETE, DONE };
-
-inline WidgetSubMode& operator++(WidgetSubMode& w) {
-    switch(w){
-        case WidgetSubMode::CHANGE_TYPE : w = WidgetSubMode::MOVE; break;
-        case WidgetSubMode::MOVE : w = WidgetSubMode::RESIZE; break;
-        case WidgetSubMode::RESIZE : w = WidgetSubMode::DELETE; break;
-        case WidgetSubMode::DELETE : w = WidgetSubMode::DONE; break;
-        case WidgetSubMode::DONE : w = WidgetSubMode::CHANGE_TYPE; break;
-        default: w = WidgetSubMode::CHANGE_TYPE;
-    }
-    return w;
-};
-
-inline WidgetSubMode& operator--(WidgetSubMode& w) {
-    switch(w){
-        case WidgetSubMode::CHANGE_TYPE : w = WidgetSubMode::DONE; break;
-        case WidgetSubMode::MOVE : w = WidgetSubMode::CHANGE_TYPE; break;
-        case WidgetSubMode::RESIZE : w = WidgetSubMode::MOVE; break;
-        case WidgetSubMode::DELETE : w = WidgetSubMode::RESIZE; break;
-        case WidgetSubMode::DONE : w = WidgetSubMode::DELETE; break;
-        default: w = WidgetSubMode::CHANGE_TYPE;
-    }
-    return w;
 };
 
 class DisplayEditScreen : public UIScreen {

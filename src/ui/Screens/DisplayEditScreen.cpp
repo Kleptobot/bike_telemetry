@@ -48,8 +48,10 @@ void DisplayEditScreen::handleInput(physIO input) {
                 if (selectedIdx < 0) {
                     createItemAtCursor();          // empty cell — spawn a new 1x1 DisplayItem here
                     mode = WidgetEditMode::CHANGE_TYPE;  // new widget needs a type before anything else is meaningful
+                    _displays[selectedIdx].widget.setMode(WidgetSubMode::CHANGE_TYPE);
                 } else {
                     mode = WidgetEditMode::SELECT;
+                    _displays[selectedIdx].widget.setMode(subMode);
                 }
             }
             break;
@@ -72,6 +74,7 @@ void DisplayEditScreen::handleInput(physIO input) {
                     case WidgetSubMode::RESIZE:      mode = WidgetEditMode::RESIZE; break;
                 }
             }
+            _displays[selectedIdx].widget.setMode(subMode); 
             break;
 
         case WidgetEditMode::CHANGE_TYPE:
@@ -230,6 +233,8 @@ void DisplayEditScreen::createItemAtCursor() {
     item.y1 = grid.cursorY() + 1;
 
     item.setType(TelemetryType::Speed);   // whatever your "unset" sentinel is
+    item.widget.setMode(WidgetSubMode::CHANGE_TYPE);
+
     _displays.push_back(item);
     selectedIdx = (int)_displays.size() - 1;
 }

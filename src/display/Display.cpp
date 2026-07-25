@@ -149,6 +149,10 @@ namespace Disp {
         canvas.drawLine(x0, y0, x1, y1, color);
     }
 
+    void fillTriangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t color) {
+        canvas.fillTriangle(x0, y0, x1, y1, x2, y2, color);
+    }
+
     int16_t getCursorX() {
         return canvas.getCursorX();
     }
