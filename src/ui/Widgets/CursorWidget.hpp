@@ -9,7 +9,7 @@ public:
     _cx(cx),
     _cy(cy)
     {
-        setSize(h,w);
+        setSize(w, h);
     }
 
     void handleInput(physIO input) override {
@@ -20,8 +20,8 @@ public:
         if ( (cx != _cx) || (cy != _cy)) invalidate();
         _cx = cx;
         _cy = cy;
-        _x = _width - _hx;
-        _y = _height - _hy;
+        _x = _cx - _hx;
+        _y = _cy - _hy;
     }
 
     void setSize(int w, int h) {

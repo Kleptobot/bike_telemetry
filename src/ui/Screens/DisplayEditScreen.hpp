@@ -84,6 +84,8 @@ public:
         gridHeight.setText(String(_rows));
         gridWidth.setText(String(_cols));
 
+        grid.update();
+
         for (auto disp : _displays) {
             disp.setSize(grid.rowPitch(), grid.colPitch());
             disp.setPos(grid.rowPitch(), grid.colPitch());
@@ -131,6 +133,8 @@ private:
         void setPos(int colPitch, int rowPitch) {
             widget.setPosition(x0 * colPitch, y0 * rowPitch);
         }
+        
+        void setType(TelemetryType t) { DisplayItem::type = t; widget.setType(t); }
     };
 
     SelectableTextWidget gridWidthLabel;

@@ -76,12 +76,8 @@ void DisplayEditScreen::handleInput(physIO input) {
 
         case WidgetEditMode::CHANGE_TYPE:
             if (selectedIdx >= 0) {
-                if (input.Up.press) {
-                    ++_displays[selectedIdx].type;
-                }
-                if (input.Down.press) {
-                    --_displays[selectedIdx].type;
-                }
+                if (input.Up.press) _displays[selectedIdx].setType(++_displays[selectedIdx].type);
+                if (input.Down.press) _displays[selectedIdx].setType(--_displays[selectedIdx].type);
             }
             if (input.Select.press) {
                 mode = WidgetEditMode::SELECT;
@@ -135,10 +131,8 @@ void DisplayEditScreen::handleInput(physIO input) {
 }
 
 bool DisplayEditScreen::isEdgeClear(const DisplayItem& target, Edge edge) {
-    for (auto disp : _displays) {
-        if (target.isNeighbour(disp) == edge) {
-            return false; // The edge is blocked by 'box'
-        }
+    for (const auto& disp : _displays) {
+        if (target.isNeighbour(disp) == edge) return false; // The edge is blocked by 'box'
     }
     return true; // No displays found on this edge
 }
@@ -220,7 +214,7 @@ void DisplayEditScreen::moveFocusRight() {
 void DisplayEditScreen::selectItemAtCursor() {
     selectedIdx = -1;
     for (size_t i = 0; i < _displays.size(); i++) {
-        if (_displays[i].topLeft(grid.cursorCX(), grid.cursorCY())) {   // whatever your DisplayItem's cell-containment check is
+        if (_displays[i].topLeft(grid.cursorX(), grid.cursorY())) {   // whatever your DisplayItem's cell-containment check is
             selectedIdx = (int)i;
             return;
         }
