@@ -46,10 +46,6 @@ struct DisplayItem {
         return Edge::None;
     }
 
-    bool contains(uint8_t x, uint8_t y) {
-        return (x0 <= x && x <= x1) && (y0 <= y && y <= y1);
-    }
-
     bool topLeft(uint8_t x, uint8_t y) {
         return (x0 == x) && (y0 == y);
     }

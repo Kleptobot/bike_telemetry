@@ -86,9 +86,9 @@ public:
 
         grid.update();
 
-        for (auto disp : _displays) {
-            disp.setSize(grid.rowPitch(), grid.colPitch());
-            disp.setPos(grid.rowPitch(), grid.colPitch());
+        for (auto& disp : _displays) {
+            disp.setSize(grid.colPitch(), grid.rowPitch());
+            disp.setPos(grid.colPitch(), grid.rowPitch());
         }
 
         gridWidth.setFocused(focusField == FocusField::Cols);
@@ -106,7 +106,7 @@ public:
         gridHeight.render();
         grid.render();
 
-        for (auto disp : _displays) {
+        for (auto& disp : _displays) {
             disp.widget.render();
         }
 
@@ -119,7 +119,7 @@ private:
 
         DisplayWidget () : widget(0,0){}
         DisplayWidget (DisplayItem d) : widget(0,0) {
-            type = d.type;
+            setType(d.type);
             x0 = d.x0;
             y0 = d.y0;
             x1 = d.x1;
@@ -133,9 +133,10 @@ private:
         void setPos(int colPitch, int rowPitch) {
             widget.setPosition(x0 * colPitch, y0 * rowPitch);
         }
-        
+
         void setType(TelemetryType t) { DisplayItem::type = t; widget.setType(t); }
     };
+    uint8_t _rows = 2, _cols = 2;
 
     SelectableTextWidget gridWidthLabel;
     SelectableTextWidget gridWidth;
@@ -149,7 +150,6 @@ private:
     enum class FocusField { Cols, Rows, Grid, Save };
     FocusField focusField = FocusField::Cols;
 
-    uint8_t _rows, _cols;
     std::vector<DisplayWidget> _displays;
 
     WidgetEditMode mode = WidgetEditMode::NONE;

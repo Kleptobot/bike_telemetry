@@ -229,7 +229,7 @@ void DisplayEditScreen::createItemAtCursor() {
     item.y0 = grid.cursorY();
     item.y1 = grid.cursorY() + 1;
 
-    item.type = TelemetryType::Speed;   // whatever your "unset" sentinel is
+    item.setType(TelemetryType::Speed);   // whatever your "unset" sentinel is
     _displays.push_back(item);
     selectedIdx = (int)_displays.size() - 1;
 }
