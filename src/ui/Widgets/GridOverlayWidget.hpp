@@ -38,6 +38,9 @@ public:
 
         hx = _colPitch/2;
         hy = _rowPitch/2;
+
+        cursor.setSize(_colPitch, _rowPitch);
+        setCursorPos();
     }
 
     void setRows(int rows) { 
@@ -118,6 +121,6 @@ private:
     int hx, hy;
     
     void setCursorPos() {
-        cursor.setPosition(_cursorX*_colPitch+hx, _cursorY*_rowPitch+hy);
+        cursor.setPosition(_x + _cursorX*_colPitch+hx, _y + _cursorY*_rowPitch+hy);
     }
 };

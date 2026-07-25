@@ -57,7 +57,7 @@ public:
 
         for (auto& disp : _displays) {
             disp.setSize(grid.colPitch(), grid.rowPitch());
-            disp.setPos(grid.colPitch(), grid.rowPitch());
+            disp.setPos(grid.getX(), grid.getY(), grid.colPitch(), grid.rowPitch());
         }
 
         gridWidth.setFocused(focusField == FocusField::Cols);
@@ -99,8 +99,8 @@ private:
             widget.setSize((x1-x0) * colPitch, (y1-y0) * rowPitch);
         }
 
-        void setPos(int colPitch, int rowPitch) {
-            widget.setPosition(x0 * colPitch, y0 * rowPitch);
+        void setPos(int x, int y, int colPitch, int rowPitch) {
+            widget.setPosition(x + x0 * colPitch, y + y0 * rowPitch);
         }
 
         void setType(TelemetryType t) { DisplayItem::type = t; widget.setType(t); }

@@ -19,13 +19,12 @@ public:
     virtual void update(float dt) {};
     virtual void handleInput(physIO input) {} // optional override
 
-    // Positioning
-    void setPosition(int nx, int ny) { 
-       if((_x != nx) || (_y != ny)) invalidate();
-        _x = nx; 
-        _y = ny; 
+    void move(int dx, int dy) { 
+        invalidate();
+        _x += dx;
+        _y += dy;
+        invalidate();
     }
-    void move(int dx, int dy) { _x += dx; _y += dy; }
     int getX() const { return _x; }
     int getY() const { return _y; }
 
@@ -34,10 +33,25 @@ public:
         if (ENABLE_INVALIDATE_DEBUG) {
             Serial.println("[Widget] Invalidated area: (" + String(_x) + "," + String(_y) + "," + String(width()) + "," + String(height()) + ")");
         }
+    }   
+
+    void setPosition(int x, int y) {
+        if (x != _x || y != _y) {
+            invalidate();          // mark OLD rect dirty (erase where it was)
+            _x = x;
+            _y = y;
+            invalidate();          // mark NEW rect dirty (draw where it is now)
+        }
     }
 
-    // Sizing
-    void setSize(int w, int h) { _width = w; _height = h; }
+    void setSize(int w, int h) {
+        if (w != _width || h != _height) {
+            invalidate();          // old footprint
+            _width = w;
+            _height = h;
+            invalidate();          // new footprint
+        }
+    }
 
     // Visibility
     void setVisible(bool newVis) {

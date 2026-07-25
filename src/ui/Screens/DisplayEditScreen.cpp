@@ -74,7 +74,9 @@ void DisplayEditScreen::handleInput(physIO input) {
                     case WidgetSubMode::RESIZE:      mode = WidgetEditMode::RESIZE; break;
                 }
             }
-            _displays[selectedIdx].widget.setMode(subMode); 
+            if (selectedIdx >= 0) {
+                _displays[selectedIdx].widget.setMode(subMode);
+            }
             break;
 
         case WidgetEditMode::CHANGE_TYPE:

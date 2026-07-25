@@ -35,11 +35,10 @@ public:
 
     void render() {
         if (!visible) {
-            Disp::drawRect(_x , _y , _x + _width, _y + _height , ST77XX_BLACK);
+            Disp::drawRect(_x, _y, _width, _height, ST77XX_BLACK);
             return;
         }
-
-        Disp::drawRect(_x , _y , _x + _width, _y + _height , ST77XX_WHITE);
+        Disp::drawRect(_x, _y, _width, _height, ST77XX_WHITE);
     }
 
     const int& CX() const { return _cx; }

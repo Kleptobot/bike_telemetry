@@ -16,6 +16,14 @@ public:
     }
 
     void render() override {
+        if (!visible) {
+            Disp::fillRect(_x, _y, _width, _height, ST77XX_BLACK);
+            return;
+        }
+
+        Disp::fillRect(_x, _y, _width, _height, ST77XX_BLACK);      // clear own area first
+        Disp::drawRect(_x, _y, _width, _height, ST77XX_WHITE);      // body border
+
         switch (_mode) {
             case WidgetSubMode::CHANGE_TYPE:
                 printTextCentered(toString(_type));
