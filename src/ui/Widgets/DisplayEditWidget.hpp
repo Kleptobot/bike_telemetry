@@ -21,24 +21,23 @@ public:
             return;
         }
 
-        Disp::fillRect(_x, _y, _width, _height, ST77XX_BLACK);      // clear own area first
-        Disp::drawRect(_x, _y, _width, _height, ST77XX_WHITE);      // body border
+        uint16_t colour = ST77XX_WHITE;
+        if ( _inMode || _menu) colour = ST77XX_GREEN;
+
+        Disp::fillRect(_x, _y, _width, _height, ST77XX_BLACK);  // clear own area first
+        Disp::drawRect(_x, _y, _width, _height, colour);        // body border
 
         switch (_mode) {
             case WidgetSubMode::CHANGE_TYPE:
                 printTextCentered(toString(_type));
-                drawUpArrow();
-                drawDownArrow();
                 break;
             
             case WidgetSubMode::MOVE:
                 printTextCentered("Move");
-                drawArrows();
                 break;
 
             case WidgetSubMode::RESIZE:
                 printTextCentered("Resize");
-                drawArrows();
                 break;
 
             case WidgetSubMode::DONE:
@@ -49,6 +48,8 @@ public:
                 printTextCentered("Delete?");
                 break;
         }
+        if (_menu) drawMenuArrows();
+        if (_inMode) drawModeArrows();
     }
 
     void setMode(WidgetSubMode m) {
@@ -107,16 +108,48 @@ public:
         Disp::fillTriangle(_x + _width, _y + _height/2, _x + _width - 8, _y + _height/2 - 8, _x + _width - 8, _y + _height/2 + 8, ST77XX_WHITE);
     }
 
-    void drawArrows() {
-        drawUpArrow();
-        drawDownArrow();
+    void drawModeArrows() {
+        switch (_mode) {
+            case WidgetSubMode::CHANGE_TYPE:
+                drawUpArrow();
+                drawDownArrow();
+                break;
+            
+            case WidgetSubMode::MOVE:
+            case WidgetSubMode::RESIZE:
+                drawUpArrow();
+                drawDownArrow();
+                drawLeftArrow();
+                drawRightArrow();
+                break;
+        }
+    }
+
+    void drawMenuArrows() {
         drawLeftArrow();
         drawRightArrow();
+    }
+
+    void setMenu(bool menu) { 
+        if (_menu != menu) {
+            invalidate();
+            _menu = menu; 
+            invalidate();
+        }
+    }
+
+    void setInMode(bool inMode) { 
+        if (_inMode != inMode)
+        invalidate();
+        _inMode = inMode;
+        invalidate();
     }
 
 private:
     TelemetryType _type;
     WidgetSubMode _mode = WidgetSubMode::CHANGE_TYPE;
+    bool _menu = false;
+    bool _inMode = false;
 
     uint8_t MAX_TEXT_SIZE = 8;
 };

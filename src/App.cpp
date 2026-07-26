@@ -455,8 +455,9 @@ void App::saveLayout() {
     auto& l = model.layout().get();
 
     JsonArray d = doc["displays"].to<JsonArray>();
+    doc["rows"] = l.rows;
+    doc["cols"] = l.cols;
 
-    //for (auto member : l.displays) {
     for (int j = 0; j < l.displays.size(); j++) {
         d[j]["x0"] = l.displays[j].x0;
         d[j]["y0"] = l.displays[j].y0;
@@ -493,10 +494,19 @@ void App::loadLayout() {
         std::vector<DisplayItem> displays;
         JsonArray d = jsonBuffer["displays"];
         for (const auto& member : d) {
-            //displays.push_back(TelemetryTypefromString(member));
+            DisplayItem disp;
+            disp.type = TelemetryTypefromString(member["type"]);
+            disp.x0 = member["x0"];
+            disp.y0 = member["y0"];
+            disp.x1 = member["x1"];
+            disp.y1 = member["y1"];
+            displays.push_back(disp);
         }
 
-        model.layout().update({displays});
+        uint8_t rows = jsonBuffer["rows"];
+        uint8_t cols = jsonBuffer["cols"];
+
+        model.layout().update({displays, rows, cols});
         dataFile.close();
     }
 }

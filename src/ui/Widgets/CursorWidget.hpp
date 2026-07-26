@@ -38,7 +38,7 @@ public:
             Disp::drawRect(_x, _y, _width, _height, ST77XX_BLACK);
             return;
         }
-        Disp::drawRect(_x, _y, _width, _height, ST77XX_WHITE);
+        Disp::drawRect(_x, _y, _width, _height, ST77XX_ORANGE);
     }
 
     const int& CX() const { return _cx; }

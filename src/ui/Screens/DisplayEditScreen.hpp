@@ -58,12 +58,25 @@ public:
         for (auto& disp : _displays) {
             disp.setSize(grid.colPitch(), grid.rowPitch());
             disp.setPos(grid.getX(), grid.getY(), grid.colPitch(), grid.rowPitch());
+            disp.widget.setInMode(false);
+            disp.widget.setMenu(false);
         }
 
         gridWidth.setFocused(focusField == FocusField::Cols);
         gridHeight.setFocused(focusField == FocusField::Rows);
         grid.setCursorVisible(focusField == FocusField::Grid);
         saveWidget.setFocused(focusField == FocusField::Save);
+
+        switch (mode) {
+            case WidgetEditMode::CHANGE_TYPE:
+            case WidgetEditMode::MOVE:
+            case WidgetEditMode::RESIZE:
+                if (selectedIdx >= 0) _displays[selectedIdx].widget.setInMode(true);
+                break;
+            case WidgetEditMode::SELECT:
+                if (selectedIdx >= 0) _displays[selectedIdx].widget.setMenu(true);
+                break;
+        }
     }
 
     void handleInput(physIO input) override;
@@ -104,6 +117,10 @@ private:
         }
 
         void setType(TelemetryType t) { DisplayItem::type = t; widget.setType(t); }
+
+        bool contains(int x, int y) {
+            return (x0 <= x && x <= x1) && (y0 <= y && y <= y1);
+        }
     };
     uint8_t _rows = 2, _cols = 2;
 

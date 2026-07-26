@@ -219,7 +219,7 @@ void DisplayEditScreen::moveFocusRight() {
 void DisplayEditScreen::selectItemAtCursor() {
     selectedIdx = -1;
     for (size_t i = 0; i < _displays.size(); i++) {
-        if (_displays[i].topLeft(grid.cursorX(), grid.cursorY())) {   // whatever your DisplayItem's cell-containment check is
+        if (_displays[i].contains(grid.cursorX(), grid.cursorY())) {   // whatever your DisplayItem's cell-containment check is
             selectedIdx = (int)i;
             return;
         }
