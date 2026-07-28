@@ -25,12 +25,22 @@ public:
 
     void onEnter() override {
         auto& l = model.layout().get();
-        
-        int size = constrain( 256/(8*l.displays.size()),1,8);
 
         dataDisplays.clear();
-        for ( uint i = 0; i<l.displays.size(); i++) {
-            //dataDisplays.push_back({5,30+int(i)*8*size,size,l.displays[i]});
+        _rows = l.rows;
+        _cols = l.cols;
+
+        int x = 0, y =32;
+        int _colPitch = (240-1)/_cols;
+        int _rowPitch = (240-1)/_rows;
+
+        for ( const auto& disp : l.displays) {
+            int x0 = disp.x0*_colPitch;
+            int y0 = disp.y0*_rowPitch;
+            int w = (disp.x1 - disp.x0) * _colPitch;
+            int h = (disp.y1 - disp.y0) * _rowPitch;
+
+            dataDisplays.push_back({x + x0, y+y0, w, h, disp.type});
         }
     }
 
@@ -127,6 +137,9 @@ private:
     DurationWidget lapTime;
 
     std::vector<BigDataWidget> dataDisplays;
+
+    uint8_t _rows = 2;
+    uint8_t _cols = 2;
 
     uint32_t version = 0;
     AppState appState_prev = AppState::IDLE;

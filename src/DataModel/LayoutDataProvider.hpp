@@ -61,19 +61,27 @@ struct DisplayItem {
 
         // 4. Is 'other' touching our TOP edge?
         if (other.y0 == y1 && (other.x0 < x1 && other.x1 > x0)) {
-            return Edge::Top;
+            return Edge::Bottom;
         }
 
         // 5. Is 'other' touching our BOTTOM edge?
         if (other.y1 == y0 && (other.x0 < x1 && other.x1 > x0)) {
-            return Edge::Bottom;
+            return Edge::Top;
         }
 
         return Edge::None;
     }
 
-    bool topLeft(uint8_t x, uint8_t y) {
-        return (x0 == x) && (y0 == y);
+    bool intersects(const DisplayItem& other) const {
+        return !(x1 <= other.x0 ||
+                x0 >= other.x1 ||
+                y1 <= other.y0 ||
+                y0 >= other.y1);
+    }
+
+    bool isValidGeometry() const {
+        return x0 < x1 &&
+            y0 < y1;
     }
 };
 

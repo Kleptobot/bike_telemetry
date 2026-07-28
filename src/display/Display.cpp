@@ -65,7 +65,7 @@ namespace Disp {
         dirtyRects.clear();
     }
 
-    void flush() {
+    void flush() {        
         for (size_t i = 0; i < dirtyRects.size(); i++) {
             auto& r = dirtyRects[i];
 

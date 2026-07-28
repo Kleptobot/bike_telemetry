@@ -44,38 +44,53 @@ void DisplayEditScreen::handleInput(physIO input) {
             if (input.Right.press) grid.cursorRight();
 
             if (input.Select.press) {
-                selectItemAtCursor();   // sets selectedIdx (or selected ptr)
+                selectItemAtCursor();
                 if (selectedIdx < 0) {
-                    createItemAtCursor();          // empty cell — spawn a new 1x1 DisplayItem here
-                    mode = WidgetEditMode::CHANGE_TYPE;  // new widget needs a type before anything else is meaningful
+                    createItemAtCursor();
+                    mode = WidgetEditMode::CHANGE_TYPE;
                     _displays[selectedIdx].widget.setMode(WidgetSubMode::CHANGE_TYPE);
+                    _displays[selectedIdx].widget.setInMode(true);
                 } else {
                     mode = WidgetEditMode::SELECT;
+                    subMode = WidgetSubMode::CHANGE_TYPE;   // reset stale subMode, see #1
                     _displays[selectedIdx].widget.setMode(subMode);
+                    _displays[selectedIdx].widget.setMenu(true);
                 }
             }
             break;
         
         case WidgetEditMode::SELECT:
-            if (input.Left.press)  --subMode;
-            if (input.Right.press) ++subMode;
+            if (input.Left.press)  { --subMode; _displays[selectedIdx].widget.setMode(subMode); }
+            if (input.Right.press) { ++subMode; _displays[selectedIdx].widget.setMode(subMode); }
             if (input.Select.press) {
                 switch (subMode) {
                     case WidgetSubMode::DONE:
+                        _displays[selectedIdx].widget.setMenu(false);
                         selectedIdx = -1;
+                        subMode = WidgetSubMode::CHANGE_TYPE;
                         mode = WidgetEditMode::FOCUS;
                         break;
                     case WidgetSubMode::DELETE:
-                        deleteSelected();
-                        mode = WidgetEditMode::FOCUS;   // deletion implies exit — nothing left to act on
+                        deleteSelected();   // widget instance is erased outright, no flag to clear
+                        subMode = WidgetSubMode::CHANGE_TYPE;
+                        mode = WidgetEditMode::FOCUS;
                         break;
-                    case WidgetSubMode::CHANGE_TYPE: mode = WidgetEditMode::CHANGE_TYPE; break;
-                    case WidgetSubMode::MOVE:        mode = WidgetEditMode::MOVE; break;
-                    case WidgetSubMode::RESIZE:      mode = WidgetEditMode::RESIZE; break;
+                    case WidgetSubMode::CHANGE_TYPE:
+                        _displays[selectedIdx].widget.setMenu(false);
+                        _displays[selectedIdx].widget.setInMode(true);
+                        mode = WidgetEditMode::CHANGE_TYPE;
+                        break;
+                    case WidgetSubMode::MOVE:
+                        _displays[selectedIdx].widget.setMenu(false);
+                        _displays[selectedIdx].widget.setInMode(true);
+                        mode = WidgetEditMode::MOVE;
+                        break;
+                    case WidgetSubMode::RESIZE:
+                        _displays[selectedIdx].widget.setMenu(false);
+                        _displays[selectedIdx].widget.setInMode(true);
+                        mode = WidgetEditMode::RESIZE;
+                        break;
                 }
-            }
-            if (selectedIdx >= 0) {
-                _displays[selectedIdx].widget.setMode(subMode);
             }
             break;
 
@@ -85,6 +100,8 @@ void DisplayEditScreen::handleInput(physIO input) {
                 if (input.Down.press) _displays[selectedIdx].setType(--_displays[selectedIdx].type);
             }
             if (input.Select.press) {
+                _displays[selectedIdx].widget.setInMode(false);
+                _displays[selectedIdx].widget.setMenu(true);
                 mode = WidgetEditMode::SELECT;
             }
             break;
@@ -191,6 +208,8 @@ void DisplayEditScreen::moveFocusUp() {
         case FocusField::Grid: focusField = FocusField::Cols; break;
         case FocusField::Save: focusField = FocusField::Grid; break;
     }
+    gridWidth.invalidate();
+    gridHeight.invalidate();
 }
 
 void DisplayEditScreen::moveFocusDown() {
@@ -200,6 +219,8 @@ void DisplayEditScreen::moveFocusDown() {
         case FocusField::Grid: focusField = FocusField::Save; break;
         case FocusField::Save: focusField = FocusField::Cols; break;
     }
+    gridWidth.invalidate();
+    gridHeight.invalidate();
 }
 
 void DisplayEditScreen::moveFocusLeft() {
@@ -207,6 +228,8 @@ void DisplayEditScreen::moveFocusLeft() {
         case FocusField::Cols: focusField = FocusField::Rows; break;
         case FocusField::Rows: focusField = FocusField::Cols; break;
     }
+    gridWidth.invalidate();
+    gridHeight.invalidate();
 }
 
 void DisplayEditScreen::moveFocusRight() {
@@ -214,6 +237,8 @@ void DisplayEditScreen::moveFocusRight() {
         case FocusField::Cols: focusField = FocusField::Rows; break;
         case FocusField::Rows: focusField = FocusField::Cols; break;
     }
+    gridWidth.invalidate();
+    gridHeight.invalidate();
 }
 
 void DisplayEditScreen::selectItemAtCursor() {
@@ -221,6 +246,8 @@ void DisplayEditScreen::selectItemAtCursor() {
     for (size_t i = 0; i < _displays.size(); i++) {
         if (_displays[i].contains(grid.cursorX(), grid.cursorY())) {   // whatever your DisplayItem's cell-containment check is
             selectedIdx = (int)i;
+            Serial.print("Selected item at ");
+            Serial.println(selectedIdx);
             return;
         }
     }
@@ -244,5 +271,24 @@ void DisplayEditScreen::createItemAtCursor() {
 void DisplayEditScreen::deleteSelected() {
     if (selectedIdx < 0) return;
     _displays.erase(_displays.begin() + selectedIdx);
+    grid.invalidate();
     selectedIdx = -1;
+}
+
+bool DisplayEditScreen::validateLayout()
+{
+    for (size_t i = 0; i < _displays.size(); ++i)
+    {
+        // Check bounds first
+        if (!_displays[i].insideGrid(_rows, _cols))
+            return false;
+
+        for (size_t j = i + 1; j < _displays.size(); ++j)
+        {
+            if (_displays[i].intersects(_displays[j]))
+                return false;
+        }
+    }
+
+    return true;
 }
