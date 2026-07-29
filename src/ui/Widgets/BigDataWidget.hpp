@@ -95,6 +95,13 @@ public:
         Disp::setCursor(decX, unitY);
         Disp::print(unitStr);
 
+        if (_drawRightEdge) {
+            Disp::drawLine(_x + _width - 1, _y, _x + _width - 1, _y + _height - 1, EDGE_LINE_COLOR);
+        }
+        if (_drawBottomEdge) {
+            Disp::drawLine(_x, _y + _height - 1, _x + _width - 1, _y + _height - 1, EDGE_LINE_COLOR);
+        }
+
         if (ENABLE_INVALIDATE_DEBUG) {
             String debugOutput = "For type: " + String(toString(_type)) + " Value: " + String(_value);
             Serial.println("[BigDataWidget] " + debugOutput);
@@ -142,6 +149,11 @@ public:
     
     void setUnits(String units) { _units = units; }
 
+    void setEdges(bool drawRight, bool drawBottom) {
+        _drawRightEdge = drawRight;
+        _drawBottomEdge = drawBottom;
+    }
+
 private:
     static constexpr uint8_t MAX_BIG_TEXT_SIZE = 10;
     static constexpr uint8_t UNIT_GAP_PX = 2;
@@ -155,7 +167,10 @@ private:
     uint16_t intW = 0, intH = 0, decW = 0, decH = 0, unitW = 0, unitH = 0;
     uint8_t bestSize;
     String unitStr, intStr, decStr;
-    
+
+    bool _drawRightEdge = false;
+    bool _drawBottomEdge = false;
+    static constexpr uint16_t EDGE_LINE_COLOR = 0x4208;   // dim grey
     
     String formatLocationValue(double value) const {
         uint16_t maxLen = 9;

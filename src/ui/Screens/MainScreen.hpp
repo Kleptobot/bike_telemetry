@@ -30,17 +30,32 @@ public:
         _rows = l.rows;
         _cols = l.cols;
 
-        int x = 0, y =32;
-        int _colPitch = (240-1)/_cols;
-        int _rowPitch = (240-1)/_rows;
+        int x = 0, y = 32;
+        int _colPitch = (240)/_cols;
+        int _rowPitch = (240)/_rows;
 
-        for ( const auto& disp : l.displays) {
-            int x0 = disp.x0*_colPitch;
-            int y0 = disp.y0*_rowPitch;
-            int w = (disp.x1 - disp.x0) * _colPitch;
-            int h = (disp.y1 - disp.y0) * _rowPitch;
+        for (size_t i = 0; i < l.displays.size(); i++) {
+            const auto& d = l.displays[i];
 
-            dataDisplays.push_back({x + x0, y+y0, w, h, disp.type});
+            bool drawRight = false, drawBottom = false;
+            for (size_t j = 0; j < l.displays.size(); j++) {
+                if (i == j) continue;
+                const auto& o = l.displays[j];
+
+                // does another widget touch my right edge?
+                if (o.x0 == d.x1 && (o.y0 < d.y1 && o.y1 > d.y0)) drawRight = true;
+
+                // does another widget touch my bottom edge?
+                if (o.y0 == d.y1 && (o.x0 < d.x1 && o.x1 > d.x0)) drawBottom = true;
+            }
+
+            int x0 = d.x0 * _colPitch;
+            int y0 = d.y0 * _rowPitch;
+            int w  = (d.x1 - d.x0) * _colPitch;
+            int h  = (d.y1 - d.y0) * _rowPitch;
+
+            dataDisplays.push_back({x + x0, y + y0, w, h, d.type});
+            dataDisplays.back().setEdges(drawRight, drawBottom);
         }
     }
 

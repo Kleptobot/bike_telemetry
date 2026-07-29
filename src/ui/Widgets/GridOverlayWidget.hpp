@@ -33,8 +33,8 @@ public:
     }
 
     void update() {
-        _colPitch = (_width-1)/_cols;
-        _rowPitch = (_height-1)/_rows;
+        _colPitch = (_width)/_cols;
+        _rowPitch = (_height)/_rows;
 
         hx = _colPitch/2;
         hy = _rowPitch/2;

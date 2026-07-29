@@ -7,9 +7,9 @@
 
 class DisplayEditWidget : public Widget {
 public:
-    DisplayEditWidget(int x, int y, TelemetryType type=TelemetryType::Speed)
-        : Widget(x, y),
-        _type(type) {}
+    DisplayEditWidget(int x, int y, TelemetryType type=TelemetryType::Undefined)
+        : Widget(x, y)
+        { setType(type); }
 
     void render() override {
         //Serial.printf("render idx? menu=%d inMode=%d x=%d y=%d\n", _menu, _inMode, _x, _y);
@@ -35,6 +35,7 @@ public:
         printTextCentered();
 
         if (_menu) drawMenuArrows();
+        if (!_menu && _menuLast) invalidate();
         _menuLast = _menu;
         if (_inMode) drawModeArrows();
         _inModeLast = _inMode;
@@ -119,7 +120,7 @@ public:
     }
 
 private:
-    TelemetryType _type;
+    TelemetryType _type = TelemetryType::Undefined;
     WidgetSubMode _mode = WidgetSubMode::CHANGE_TYPE;
     bool _menu = false, _menuLast = false;;
     bool _inMode = false, _inModeLast = false;

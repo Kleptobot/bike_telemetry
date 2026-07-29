@@ -73,15 +73,19 @@ struct DisplayItem {
     }
 
     bool intersects(const DisplayItem& other) const {
-        return !(x1 <= other.x0 ||
-                x0 >= other.x1 ||
-                y1 <= other.y0 ||
-                y0 >= other.y1);
+        return (x0<other.x1) && (x1>other.x0) && (y0<other.y1) && (y1>other.y0);
     }
 
     bool isValidGeometry() const {
         return x0 < x1 &&
             y0 < y1;
+    }
+
+    bool insideGrid(uint8_t cols, uint8_t rows) const {
+        return x0 < cols &&
+            y0 < rows &&
+            x1 <= cols &&
+            y1 <= rows;
     }
 };
 

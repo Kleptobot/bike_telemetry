@@ -1,5 +1,12 @@
 #include "DisplayEditScreen.hpp"
 
+void DisplayEditScreen::returnToSelectMenu() {
+    if (selectedIdx >= 0) {
+        _displays[selectedIdx].widget.setInMode(false);
+        _displays[selectedIdx].widget.setMenu(true);
+    }
+    mode = WidgetEditMode::SELECT;
+}
 
 void DisplayEditScreen::handleInput(physIO input) {
 
@@ -100,9 +107,7 @@ void DisplayEditScreen::handleInput(physIO input) {
                 if (input.Down.press) _displays[selectedIdx].setType(--_displays[selectedIdx].type);
             }
             if (input.Select.press) {
-                _displays[selectedIdx].widget.setInMode(false);
-                _displays[selectedIdx].widget.setMenu(true);
-                mode = WidgetEditMode::SELECT;
+                returnToSelectMenu();
             }
             break;
 
@@ -126,7 +131,7 @@ void DisplayEditScreen::handleInput(physIO input) {
                 }
             }
             if (input.Select.press) {
-                mode = WidgetEditMode::SELECT;
+                returnToSelectMenu();
             }
             break;
 
@@ -146,7 +151,7 @@ void DisplayEditScreen::handleInput(physIO input) {
                 }
             }
             if (input.Select.press) {
-                mode = WidgetEditMode::SELECT;
+                returnToSelectMenu();
             }
             break;
     }

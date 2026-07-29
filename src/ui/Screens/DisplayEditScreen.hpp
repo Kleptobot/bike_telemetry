@@ -29,24 +29,34 @@ public:
         saveWidget{5,288,"Save",epd_bitmap_save} {
             //register the save press event callback to send a change screen and app save event
             saveWidget.setOnPress([this] () {
-                std::vector<DisplayItem> layout;
-                for (auto c : _displays)
-                    layout.push_back(c);
-                this->model.layout().update( {layout, _rows, _cols} );
-                emitAppEvent({AppEventType::SaveLayout,0});
+                if (validateLayout()) {
+                    std::vector<DisplayItem> layout;
+                    for (auto c : _displays)
+                        layout.push_back(c);
+                    this->model.layout().update( {layout, _rows, _cols} );
+                    
+                    emitAppEvent({AppEventType::SaveLayout,0});
+                }
                 emitUIEvent(UIEventType::ChangeScreen, ScreenID::SettingsMenu);
             });
     }
 
     void onEnter() override {
-        auto& l = model.layout().get();
+        const auto& l = model.layout().get();
         _rows = constrain(l.rows, 2, 5);
         _cols = constrain(l.cols, 2, 5);
         _displays.clear();
-        for (auto p : l.displays)
-            _displays.push_back(p);
-        if(!validateLayout()) _displays.clear();
-        Serial.print("loaded "); Serial.print(l.displays.size()); Serial.println(" displays");
+        
+        for (const auto& disp : l.displays) {
+            bool noIntersections = true;
+            for (const auto& other : _displays ) {
+                noIntersections &= !disp.intersects(other);
+            }
+            if (noIntersections && disp.isValidGeometry() && disp.insideGrid(_cols, _rows)) {
+                _displays.push_back(disp);
+            }
+        }
+        Serial.print("loaded "); Serial.print(_displays.size()); Serial.print(" display(s) out of "); Serial.println(l.displays.size());
     }
 
     void update(float dt) override {
@@ -111,13 +121,6 @@ private:
         bool contains(int x, int y) {
             return (x0 <= x && x < x1) && (y0 <= y && y < y1);
         }
-
-        bool insideGrid(uint8_t cols, uint8_t rows) const {
-            return x0 < cols &&
-                y0 < rows &&
-                x1 <= cols &&
-                y1 <= rows;
-        }
     };
     uint8_t _rows = 2, _cols = 2;
 
@@ -171,4 +174,5 @@ private:
     void deleteSelected();
 
     bool validateLayout();
+    void returnToSelectMenu();
 };
