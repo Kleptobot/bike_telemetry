@@ -15,7 +15,7 @@ void DisplayEditScreen::handleInput(physIO input) {
             if (gridHeight.isSelected()) {
                 if (input.Up.press && _rows < MAX_ROWS) _rows++;
                 if (input.Down.press && _rows > MIN_ROWS) _rows--;
-                if (input.Select.press) gridHeight.setSelected(false);   // confirm, drop back to browsing
+                if (input.Select.press) gridHeight.setSelected(false);
                 break;
             }
             if (gridWidth.isSelected()) {
@@ -25,7 +25,6 @@ void DisplayEditScreen::handleInput(physIO input) {
                 break;
             }
 
-            // not currently adjusting a field — browsing the 4 top-level targets
             if (input.Up.press) moveFocusUp();
             if (input.Down.press) moveFocusDown();
             if (input.Left.press) moveFocusLeft();
@@ -36,22 +35,23 @@ void DisplayEditScreen::handleInput(physIO input) {
                     case FocusField::Cols: gridWidth.setSelected(true); break;
                     case FocusField::Grid: mode = WidgetEditMode::FOCUS; grid.setSelected(true); break;
                     case FocusField::Save: saveWidget.handleInput(input); break;
+                    case FocusField::Back: backWidget.handleInput(input); break;
                 }
             }
             break;
 
         case WidgetEditMode::FOCUS:
             if (input.Up.press) {
-                if (!grid.cursorUp()) { mode = WidgetEditMode::NONE; focusField = FocusField::Cols;}
+                if (!cursorUp()) { mode = WidgetEditMode::NONE; focusField = FocusField::Cols; }
             }
             if (input.Down.press) {
-                if(!grid.cursorDown()) {mode = WidgetEditMode::NONE; focusField = FocusField::Save;}
+                if (!cursorDown()) { mode = WidgetEditMode::NONE; focusField = FocusField::Back; }
             }
-            if (input.Left.press) grid.cursorLeft();
-            if (input.Right.press) grid.cursorRight();
+            if (input.Left.press) cursorLeft();
+            if (input.Right.press) cursorRight();
 
             if (input.Select.press) {
-                selectItemAtCursor();
+                selectedIdx = itemAtCursor();
                 if (selectedIdx < 0) {
                     createItemAtCursor();
                     mode = WidgetEditMode::CHANGE_TYPE;
@@ -59,7 +59,9 @@ void DisplayEditScreen::handleInput(physIO input) {
                     _displays[selectedIdx].widget.setInMode(true);
                 } else {
                     mode = WidgetEditMode::SELECT;
-                    subMode = WidgetSubMode::CHANGE_TYPE;   // reset stale subMode, see #1
+                    subMode = WidgetSubMode::CHANGE_TYPE;
+                    cursor.setVisible(false);
+                    _displays[selectedIdx].widget.invalidate();
                     _displays[selectedIdx].widget.setMode(subMode);
                     _displays[selectedIdx].widget.setMenu(true);
                 }
@@ -76,11 +78,13 @@ void DisplayEditScreen::handleInput(physIO input) {
                         selectedIdx = -1;
                         subMode = WidgetSubMode::CHANGE_TYPE;
                         mode = WidgetEditMode::FOCUS;
+                        cursor.setVisible(true);
                         break;
                     case WidgetSubMode::DELETE:
-                        deleteSelected();   // widget instance is erased outright, no flag to clear
+                        deleteSelected();
                         subMode = WidgetSubMode::CHANGE_TYPE;
                         mode = WidgetEditMode::FOCUS;
+                        cursor.setVisible(true);
                         break;
                     case WidgetSubMode::CHANGE_TYPE:
                         _displays[selectedIdx].widget.setMenu(false);
@@ -106,112 +110,88 @@ void DisplayEditScreen::handleInput(physIO input) {
                 if (input.Up.press) _displays[selectedIdx].setType(++_displays[selectedIdx].type);
                 if (input.Down.press) _displays[selectedIdx].setType(--_displays[selectedIdx].type);
             }
-            if (input.Select.press) {
-                returnToSelectMenu();
-            }
+            if (input.Select.press) returnToSelectMenu();
             break;
 
         case WidgetEditMode::MOVE:
             if (selectedIdx >= 0) {
                 if (input.Up.press && upClear(_displays[selectedIdx])) {
-                    _displays[selectedIdx].y0 -= 1;  //move both y coords up by the pitch amount
+                    _displays[selectedIdx].y0 -= 1;
                     _displays[selectedIdx].y1 -= 1;
                 }
                 if (input.Down.press && downClear(_displays[selectedIdx])) {
-                    _displays[selectedIdx].y0 += 1;  //move both y coords down by the pitch amount
+                    _displays[selectedIdx].y0 += 1;
                     _displays[selectedIdx].y1 += 1;
                 }
                 if (input.Left.press && leftClear(_displays[selectedIdx])) {
-                    _displays[selectedIdx].x0 -= 1;  //move both x coords left by the pitch amount
+                    _displays[selectedIdx].x0 -= 1;
                     _displays[selectedIdx].x1 -= 1;
                 }
                 if (input.Right.press && rightClear(_displays[selectedIdx])) {
-                    _displays[selectedIdx].x0 += 1;  //move both x coords right by the pitch amount
+                    _displays[selectedIdx].x0 += 1;
                     _displays[selectedIdx].x1 += 1;
                 }
             }
-            if (input.Select.press) {
-                returnToSelectMenu();
-            }
+            if (input.Select.press) returnToSelectMenu();
             break;
 
         case WidgetEditMode::RESIZE:
             if (selectedIdx >= 0) {
                 if (input.Up.press && upClear(_displays[selectedIdx])) {
-                    _displays[selectedIdx].y0 -= 1;  //move only y0 up by the pitch amount
+                    _displays[selectedIdx].y0 -= 1;
                 }
                 if (input.Down.press && downClear(_displays[selectedIdx])) {
-                    _displays[selectedIdx].y1 += 1;  //move only y1 down by the pitch amount
+                    _displays[selectedIdx].y1 += 1;
                 }
                 if (input.Left.press && leftClear(_displays[selectedIdx])) {
-                    _displays[selectedIdx].x0 -= 1;  //move only x0 left by the pitch amount
+                    _displays[selectedIdx].x0 -= 1;
                 }
                 if (input.Right.press && rightClear(_displays[selectedIdx])) {
-                    _displays[selectedIdx].x1 += 1;  //move only x1 right by the pitch amount
+                    _displays[selectedIdx].x1 += 1;
                 }
             }
-            if (input.Select.press) {
-                returnToSelectMenu();
-            }
+            if (input.Select.press) returnToSelectMenu();
             break;
     }
 }
 
 bool DisplayEditScreen::isEdgeClear(const DisplayItem& target, Edge edge) {
     for (const auto& disp : _displays) {
-        if (target.isNeighbour(disp) == edge) return false; // The edge is blocked by 'box'
+        if (target.isNeighbour(disp) == edge) return false;
     }
-    return true; // No displays found on this edge
+    return true;
 }
 
 bool DisplayEditScreen::edgeAtBoundary(const DisplayItem& target, Edge edge) {
     switch (edge) {
-        case Edge::Left:
-            if (target.x0 == 0) return true;
-            break;
-        
-        case Edge::Right:
-            if (target.x1 == _cols) return true;
-            break;
-        
-        case Edge::Top:
-            if (target.y0 == 0) return true;
-            break;
-        
-        case Edge::Bottom:
-            if (target.y1 == _rows) return true;
-            break;
-
-        default:
-            return false;
-            break;
+        case Edge::Left:   if (target.x0 == 0) return true; break;
+        case Edge::Right:  if (target.x1 == _cols) return true; break;
+        case Edge::Top:    if (target.y0 == 0) return true; break;
+        case Edge::Bottom: if (target.y1 == _rows) return true; break;
+        default: return false;
     }
     return false;
 }
 
-
 bool DisplayEditScreen::upClear(const DisplayItem& target) {
     return isEdgeClear(target, Edge::Top) && !edgeAtBoundary(target,Edge::Top);
 }
-
 bool DisplayEditScreen::downClear(const DisplayItem& target) {
     return isEdgeClear(target, Edge::Bottom) && !edgeAtBoundary(target,Edge::Bottom);
 }
-
 bool DisplayEditScreen::leftClear(const DisplayItem& target) {
     return isEdgeClear(target, Edge::Left) && !edgeAtBoundary(target,Edge::Left);
 }
-
 bool DisplayEditScreen::rightClear(const DisplayItem& target) {
     return isEdgeClear(target, Edge::Right) && !edgeAtBoundary(target,Edge::Right);
 }
 
 void DisplayEditScreen::moveFocusUp() {
     switch (focusField) {
-        case FocusField::Cols: focusField = FocusField::Save; break;
-        case FocusField::Rows: focusField = FocusField::Save; break;
+        case FocusField::Cols: focusField = FocusField::Back; break;
+        case FocusField::Rows: focusField = FocusField::Back; break;
         case FocusField::Grid: focusField = FocusField::Cols; break;
-        case FocusField::Save: focusField = FocusField::Grid; break;
+        case FocusField::Back: focusField = FocusField::Grid; break;
     }
     gridWidth.invalidate();
     gridHeight.invalidate();
@@ -221,8 +201,8 @@ void DisplayEditScreen::moveFocusDown() {
     switch (focusField) {
         case FocusField::Cols: focusField = FocusField::Grid; break;
         case FocusField::Rows: focusField = FocusField::Grid; break;
-        case FocusField::Grid: focusField = FocusField::Save; break;
-        case FocusField::Save: focusField = FocusField::Cols; break;
+        case FocusField::Grid: focusField = FocusField::Back; break;
+        case FocusField::Back: focusField = FocusField::Cols; break;
     }
     gridWidth.invalidate();
     gridHeight.invalidate();
@@ -232,6 +212,8 @@ void DisplayEditScreen::moveFocusLeft() {
     switch (focusField) {
         case FocusField::Cols: focusField = FocusField::Rows; break;
         case FocusField::Rows: focusField = FocusField::Cols; break;
+        case FocusField::Back: focusField = FocusField::Save; break;
+        case FocusField::Save: focusField = FocusField::Back; break;
     }
     gridWidth.invalidate();
     gridHeight.invalidate();
@@ -241,32 +223,77 @@ void DisplayEditScreen::moveFocusRight() {
     switch (focusField) {
         case FocusField::Cols: focusField = FocusField::Rows; break;
         case FocusField::Rows: focusField = FocusField::Cols; break;
+        case FocusField::Back: focusField = FocusField::Save; break;
+        case FocusField::Save: focusField = FocusField::Back; break;
     }
     gridWidth.invalidate();
     gridHeight.invalidate();
 }
 
-void DisplayEditScreen::selectItemAtCursor() {
-    selectedIdx = -1;
+// ---- cursor movement, now living directly against _displays ----
+
+void DisplayEditScreen::updateCursorPixelPos() {
+    cursor.setSize(grid.colPitch(), grid.rowPitch());
+    cursor.setPosition(
+        grid.getX() + _cursorX * grid.colPitch() + grid.colPitch() / 2,
+        grid.getY() + _cursorY * grid.rowPitch() + grid.rowPitch() / 2
+    );
+}
+
+bool DisplayEditScreen::cursorUp() {
+    int idx = itemAt(_cursorX, _cursorY);
+    int nextY = (idx >= 0) ? (int)_displays[idx].y0 - 1 : (int)_cursorY - 1;
+    if (nextY < 0) return false;
+    _cursorY = (uint8_t)nextY;
+    updateCursorPixelPos();
+    return true;
+}
+
+bool DisplayEditScreen::cursorDown() {
+    int idx = itemAt(_cursorX, _cursorY);
+    int nextY = (idx >= 0) ? (int)_displays[idx].y1 : (int)_cursorY + 1;
+    if (nextY > _rows - 1) return false;
+    _cursorY = (uint8_t)nextY;
+    updateCursorPixelPos();
+    return true;
+}
+
+void DisplayEditScreen::cursorLeft() {
+    int idx = itemAt(_cursorX, _cursorY);
+    int nextX = (idx >= 0) ? (int)_displays[idx].x0 - 1 : (int)_cursorX - 1;
+    if (nextX < 0) return;
+    _cursorX = (uint8_t)nextX;
+    updateCursorPixelPos();
+}
+
+void DisplayEditScreen::cursorRight() {
+    int idx = itemAt(_cursorX, _cursorY);
+    int nextX = (idx >= 0) ? (int)_displays[idx].x1 : (int)_cursorX + 1;
+    if (nextX > _cols - 1) return;
+    _cursorX = (uint8_t)nextX;
+    updateCursorPixelPos();
+}
+
+int DisplayEditScreen::itemAt(uint8_t x, uint8_t y) {
     for (size_t i = 0; i < _displays.size(); i++) {
-        if (_displays[i].contains(grid.cursorX(), grid.cursorY())) {   // whatever your DisplayItem's cell-containment check is
-            selectedIdx = (int)i;
-            Serial.print("Selected item at ");
-            Serial.println(selectedIdx);
-            return;
-        }
+        if (_displays[i].contains(x, y)) return (int)i;
     }
+    return -1;
+}
+
+int DisplayEditScreen::itemAtCursor() {
+    return itemAt(_cursorX, _cursorY);
 }
 
 void DisplayEditScreen::createItemAtCursor() {
     DisplayWidget item;
     
-    item.x0 = grid.cursorX();
-    item.x1 = grid.cursorX() + 1;
-    item.y0 = grid.cursorY();
-    item.y1 = grid.cursorY() + 1;
+    item.x0 = _cursorX;
+    item.x1 = _cursorX + 1;
+    item.y0 = _cursorY;
+    item.y1 = _cursorY + 1;
 
-    item.setType(TelemetryType::Speed);   // whatever your "unset" sentinel is
+    item.setType(TelemetryType::Speed);
     item.widget.setMode(WidgetSubMode::CHANGE_TYPE);
 
     _displays.push_back(item);
@@ -284,7 +311,6 @@ bool DisplayEditScreen::validateLayout()
 {
     for (size_t i = 0; i < _displays.size(); ++i)
     {
-        // Check bounds first
         if (!_displays[i].insideGrid(_rows, _cols))
             return false;
 
@@ -294,6 +320,5 @@ bool DisplayEditScreen::validateLayout()
                 return false;
         }
     }
-
     return true;
 }

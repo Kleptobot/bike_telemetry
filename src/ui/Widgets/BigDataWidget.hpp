@@ -80,18 +80,19 @@ public:
         uint8_t decSize = decimalSizeFor(bestSize);
 
         // Integer part: top-left anchored at widget origin
+        int intY = _y + (_height - intH) / 2;
         Disp::setTextSize(bestSize);
-        Disp::setCursor(_x, _y);
+        Disp::setCursor(_x, intY);
         Disp::print(intStr);
 
         // Decimal part: same top (_y) as the integer part, immediately to its right
         int decX = _x + intW;
         Disp::setTextSize(decSize);
-        Disp::setCursor(decX, _y);
+        Disp::setCursor(decX, intY);
         Disp::print(decStr);
 
         // Units: directly below the decimal part, same x, small gap
-        int unitY = _y + decH + UNIT_GAP_PX;
+        int unitY = intY + decH + UNIT_GAP_PX;
         Disp::setCursor(decX, unitY);
         Disp::print(unitStr);
 

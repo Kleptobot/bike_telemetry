@@ -17,27 +17,31 @@ public:
     }
 
     void setPosition(int cx, int cy) {
-        if ( (cx != _cx) || (cy != _cy)) invalidate();
-        _cx = cx;
-        _cy = cy;
-        _x = _cx - _hx;
-        _y = _cy - _hy;
+        if (cx != _cx || cy != _cy) {
+            invalidate();          // old rect
+            _cx = cx;
+            _cy = cy;
+            _x = _cx - _hx;
+            _y = _cy - _hy;
+            invalidate();          // new rect
+        }
     }
 
     void setSize(int w, int h) {
-        if ( (w != _width) || (h != _height)) invalidate();
-        _width = w;
-        _height = h;
-        _hx = _width/2;
-        _hy = _height/2;
-        setPosition(_cx, _cy);
+        if (w != _width || h != _height) {
+            invalidate();          // old rect
+            _width = w;
+            _height = h;
+            _hx = _width/2;
+            _hy = _height/2;
+            _x = _cx - _hx;
+            _y = _cy - _hy;
+            invalidate();          // new rect
+        }
     }
 
     void render() {
-        if (!visible) {
-            Disp::drawRect(_x, _y, _width, _height, ST77XX_BLACK);
-            return;
-        }
+        if (!visible) return;
         Disp::drawRect(_x, _y, _width, _height, ST77XX_ORANGE);
     }
 

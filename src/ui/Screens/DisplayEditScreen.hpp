@@ -26,15 +26,18 @@ public:
         gridHeight{gridHeightLabel.getX()+gridHeightLabel.width() + 5,5,String(_rows)},
 
         grid(32,3,2),
-        saveWidget{5,288,"Save",epd_bitmap_save} {
-            //register the save press event callback to send a change screen and app save event
+        cursor(0,0,32,32),
+        backWidget{5,288,"Back",epd_bitmap_save},
+        saveWidget{90,288,"Save",epd_bitmap_save} {
+            backWidget.setOnPress([this] () {
+                emitUIEvent(UIEventType::ChangeScreen, ScreenID::SettingsMenu);
+            });
             saveWidget.setOnPress([this] () {
                 if (validateLayout()) {
                     std::vector<DisplayItem> layout;
                     for (auto c : _displays)
                         layout.push_back(c);
                     this->model.layout().update( {layout, _rows, _cols} );
-                    
                     emitAppEvent({AppEventType::SaveLayout,0});
                 }
                 emitUIEvent(UIEventType::ChangeScreen, ScreenID::SettingsMenu);
@@ -56,7 +59,6 @@ public:
                 _displays.push_back(disp);
             }
         }
-        Serial.print("loaded "); Serial.print(_displays.size()); Serial.print(" display(s) out of "); Serial.println(l.displays.size());
     }
 
     void update(float dt) override {
@@ -68,6 +70,10 @@ public:
 
         grid.update();
 
+        _cursorX = constrain(_cursorX, 0, _cols - 1);
+        _cursorY = constrain(_cursorY, 0, _rows - 1);
+        updateCursorPixelPos();
+
         for (auto& disp : _displays) {
             disp.setSize(grid.colPitch(), grid.rowPitch());
             disp.setPos(grid.getX(), grid.getY(), grid.colPitch(), grid.rowPitch());
@@ -75,7 +81,8 @@ public:
 
         gridWidth.setFocused(focusField == FocusField::Cols);
         gridHeight.setFocused(focusField == FocusField::Rows);
-        grid.setCursorVisible(focusField == FocusField::Grid);
+        cursor.setVisible(focusField == FocusField::Grid && mode == WidgetEditMode::FOCUS);
+        backWidget.setFocused(focusField == FocusField::Back);
         saveWidget.setFocused(focusField == FocusField::Save);
     }
 
@@ -92,6 +99,9 @@ public:
             disp.widget.render();
         }
 
+        cursor.render();
+
+        backWidget.render();
         saveWidget.render();
     }
     
@@ -102,10 +112,7 @@ private:
         DisplayWidget () : widget(0,0){}
         DisplayWidget (DisplayItem d) : widget(0,0) {
             setType(d.type);
-            x0 = d.x0;
-            y0 = d.y0;
-            x1 = d.x1;
-            y1 = d.y1;
+            x0 = d.x0; y0 = d.y0; x1 = d.x1; y1 = d.y1;
         }
 
         void setSize(int colPitch, int rowPitch) {
@@ -130,10 +137,13 @@ private:
     SelectableTextWidget gridHeight;
 
     GridOverlayWidget grid;
+    CursorWidget cursor;
+    uint8_t _cursorX = 0, _cursorY = 0;
 
+    SelectableTextIconWidget backWidget;
     SelectableTextIconWidget saveWidget;
 
-    enum class FocusField { Cols, Rows, Grid, Save };
+    enum class FocusField { Cols, Rows, Grid, Back, Save };
     FocusField focusField = FocusField::Cols;
 
     std::vector<DisplayWidget> _displays;
@@ -156,9 +166,7 @@ private:
     }
 
     bool isEdgeClear(const DisplayItem& target, Edge edge);
-
     bool edgeAtBoundary(const DisplayItem& target, Edge edge);
-
     bool upClear(const DisplayItem& target);
     bool downClear(const DisplayItem& target);
     bool leftClear(const DisplayItem& target);
@@ -169,7 +177,15 @@ private:
     void moveFocusLeft();
     void moveFocusRight();
 
-    void selectItemAtCursor();
+    // cursor movement — skips over a widget's full footprint in one step
+    bool cursorUp();
+    bool cursorDown();
+    void cursorLeft();
+    void cursorRight();
+    void updateCursorPixelPos();
+
+    int itemAt(uint8_t x, uint8_t y);
+    int itemAtCursor();
     void createItemAtCursor();
     void deleteSelected();
 
