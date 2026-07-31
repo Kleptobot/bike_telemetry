@@ -64,6 +64,7 @@ class HAL {
 
     TinyGPSLocation getGPSLocation() const { return _LC76G.gps().location; }
     TinyGPSTime getGPSTime() const { return _LC76G.gps().time; }
+    TinyGPSDate getGPSDate() const { return _LC76G.gps().date; }
     DateTime getRTCtime() const { return sensorSystem.now(); }
     imu_data getIMUData() const { return sensorSystem.imu(); }
     dps_data getDPSData() const { return sensorSystem.dps(); }

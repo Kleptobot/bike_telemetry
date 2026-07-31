@@ -238,8 +238,6 @@ void App::updateTelemetry() {
         grade = altVelocity.value*3.6f*100.0f/speed;
     }
 
-    float gearRatio = HAL::inst().getCadence()/wheelRPM.value;
-
     model.telemetry().update({  HAL::inst().getIMUData(),
                                 HAL::inst().getDPSData(),
                                 HAL::inst().getBatteryPercentage(),
@@ -257,12 +255,33 @@ void App::updateTelemetry() {
 
     //when gps time goes valid, check if the RTC time needs to be re-synced
     int UTCoffset = model.time().get().offset();
-    if (gpsLoc.isValid() && !_gpsNowValid) {
-        //load gpsTime into _gpsNow DateTime object, adding in the saved UTC offset
-        _gpsNow = {rtcNow.year(), rtcNow.month(), rtcNow.day(), (uint8_t)((int)gpsNow.hour()+UTCoffset*60), gpsNow.minute(), gpsNow.second()};
-        TimeSpan ts = _gpsNow - rtcNow;
-        if (ts.totalseconds() > 30 || ts.totalseconds() < -30)
-            HAL::inst().setTime(_gpsNow);
+    if (gpsLoc.isValid() && !_gpsNowValid && gpsNow.isValid()) {
+        // GPS reports UTC, and the RTC stores UTC, so no offset conversion
+        // belongs here at all.
+        //
+        // The previous expression was
+        //     (uint8_t)((int)gpsNow.hour() + UTCoffset*60)
+        // which is wrong twice over. timeData::_offset is in MINUTES (see
+        // TimeDataProvider.hpp, and TimeEditScreen which steps it by 30), so
+        // multiplying by 60 scales it by 3600x; and the result was then
+        // truncated to uint8_t. For UTC+10 that is hour + 36000 -> 172. Any
+        // non-zero offset produced an hour above 23, i.e. an invalid DateTime,
+        // and the +/-30s check below then all but guaranteed it was written to
+        // the RTC. Only UTC+0 ever synced correctly.
+        //
+        // Building the date from the GPS date as well as the GPS time also
+        // fixes a second problem: pairing the GPS hour with the RTC's date
+        // broke across midnight, and across any interval where the RTC date
+        // was already wrong -- which is exactly when a resync is needed.
+        TinyGPSDate gpsDate = HAL::inst().getGPSDate();
+        if (gpsDate.isValid()) {
+            _gpsNow = DateTime(gpsDate.year(), gpsDate.month(), gpsDate.day(),
+                               gpsNow.hour(), gpsNow.minute(), gpsNow.second());
+
+            TimeSpan ts = _gpsNow - rtcNow;
+            if (ts.totalseconds() > 30 || ts.totalseconds() < -30)
+                HAL::inst().setTime(_gpsNow);
+        }
     }
     _gpsNowValid = gpsLoc.isValid();
     
@@ -371,6 +390,10 @@ void App::saveBiometrics() {
         _storage->remove("/biometrics.txt");
 
     File32 dataFile = _storage->openFile("/biometrics.txt", FILE_WRITE);
+    if (!dataFile) {
+        Serial.println("[App] failed to open /biometrics.txt for writing");
+        return;
+    }
 
     serializeJson(doc, dataFile);
     dataFile.close();
@@ -378,10 +401,14 @@ void App::saveBiometrics() {
 
 void App::loadBiometrics() {
     
-    if (_storage->exists("biometrics.txt")) {
+    if (_storage->exists("/biometrics.txt")) {
         Serial.println("Found biometrics.txt");
         // Open file for reading
         File32 dataFile = _storage->openFile("/biometrics.txt", FILE_READ);
+        if (!dataFile) {
+            Serial.println("[App] failed to open /biometrics.txt for reading");
+            return;
+        }
         // Allocate the memory pool on the stack.
         JsonDocument jsonBuffer;
         // Parse the root object
@@ -389,7 +416,9 @@ void App::loadBiometrics() {
         DeserializationError error = deserializeJson(jsonBuffer, dataFile);
 
         if (error) {
-            Serial.print("deserializeJson() failed: ");
+            Serial.print("[App] deserializeJson() failed for /biometrics.txt: ");
+            Serial.println(error.c_str());
+            dataFile.close();
             return;
         }
 
@@ -422,6 +451,10 @@ void App::saveBikeStats() {
         _storage->remove("/bikeStats.txt");
 
     File32 dataFile = _storage->openFile("/bikeStats.txt", FILE_WRITE);
+    if (!dataFile) {
+        Serial.println("[App] failed to open /bikeStats.txt for writing");
+        return;
+    }
 
     serializeJson(doc, dataFile);
     dataFile.close();
@@ -429,10 +462,14 @@ void App::saveBikeStats() {
 
 void App::loadBikeStats() {
     
-    if (_storage->exists("bikeStats.txt")) {
+    if (_storage->exists("/bikeStats.txt")) {
         Serial.println("Found bikeStats.txt");
         // Open file for reading
         File32 dataFile = _storage->openFile("/bikeStats.txt", FILE_READ);
+        if (!dataFile) {
+            Serial.println("[App] failed to open /bikeStats.txt for reading");
+            return;
+        }
         // Allocate the memory pool on the stack.
         JsonDocument jsonBuffer;
         // Parse the root object
@@ -440,7 +477,9 @@ void App::loadBikeStats() {
         DeserializationError error = deserializeJson(jsonBuffer, dataFile);
 
         if (error) {
-            Serial.print("deserializeJson() failed: ");
+            Serial.print("[App] deserializeJson() failed for /bikeStats.txt: ");
+            Serial.println(error.c_str());
+            dataFile.close();
             return;
         }
 
@@ -462,7 +501,7 @@ void App::saveLayout() {
     doc["rows"] = l.rows;
     doc["cols"] = l.cols;
 
-    for (int j = 0; j < l.displays.size(); j++) {
+    for (size_t j = 0; j < l.displays.size(); j++) {
         d[j]["x0"] = l.displays[j].x0;
         d[j]["y0"] = l.displays[j].y0;
         d[j]["x1"] = l.displays[j].x1;
@@ -474,16 +513,24 @@ void App::saveLayout() {
         _storage->remove("/layout.txt");
 
     File32 dataFile = _storage->openFile("/layout.txt", FILE_WRITE);
+    if (!dataFile) {
+        Serial.println("[App] failed to open /layout.txt for writing");
+        return;
+    }
 
     serializeJson(doc, dataFile);
     dataFile.close();
 }
 
 void App::loadLayout() {
-    if (_storage->exists("layout.txt")) {
+    if (_storage->exists("/layout.txt")) {
         Serial.println("Found layout.txt");
         // Open file for reading
         File32 dataFile = _storage->openFile("/layout.txt", FILE_READ);
+        if (!dataFile) {
+            Serial.println("[App] failed to open /layout.txt for reading");
+            return;
+        }
         // Allocate the memory pool on the stack.
         JsonDocument jsonBuffer;
         // Parse the root object
@@ -491,7 +538,9 @@ void App::loadLayout() {
         DeserializationError error = deserializeJson(jsonBuffer, dataFile);
 
         if (error) {
-            Serial.print("deserializeJson() failed: ");
+            Serial.print("[App] deserializeJson() failed for /layout.txt: ");
+            Serial.println(error.c_str());
+            dataFile.close();
             return;
         }
 
@@ -507,8 +556,14 @@ void App::loadLayout() {
             displays.push_back(disp);
         }
 
-        uint8_t rows = jsonBuffer["rows"];
-        uint8_t cols = jsonBuffer["cols"];
+        // Clamp on load rather than making every consumer defend itself.
+        // ArduinoJson yields 0 for a missing or unparseable key, and
+        // MainScreen::onEnter divides by both of these to compute its grid
+        // pitch -- so a truncated layout.txt was a divide by zero on the
+        // main screen. DisplayEditScreen already clamped to 2..5; this makes
+        // the guarantee hold at the point the data enters the model.
+        uint8_t rows = constrain((int)(jsonBuffer["rows"] | 0), LAYOUT_MIN_ROWS, LAYOUT_MAX_ROWS);
+        uint8_t cols = constrain((int)(jsonBuffer["cols"] | 0), LAYOUT_MIN_COLS, LAYOUT_MAX_COLS);
 
         model.layout().update({displays, rows, cols});
         dataFile.close();
@@ -525,6 +580,10 @@ void App::saveTime() {
         _storage->remove("/time.txt");
 
     File32 dataFile = _storage->openFile("/time.txt", FILE_WRITE);
+    if (!dataFile) {
+        Serial.println("[App] failed to open /time.txt for writing");
+        return;
+    }
 
     serializeJson(doc, dataFile);
     dataFile.close();
@@ -532,10 +591,14 @@ void App::saveTime() {
 }
 
 void App::loadTime() {
-    if (_storage->exists("time.txt")) {
+    if (_storage->exists("/time.txt")) {
         Serial.println("Found time.txt");
         // Open file for reading
         File32 dataFile = _storage->openFile("/time.txt", FILE_READ);
+        if (!dataFile) {
+            Serial.println("[App] failed to open /time.txt for reading");
+            return;
+        }
         // Allocate the memory pool on the stack.
         JsonDocument jsonBuffer;
         // Parse the root object
@@ -543,7 +606,9 @@ void App::loadTime() {
         DeserializationError error = deserializeJson(jsonBuffer, dataFile);
 
         if (error) {
-            Serial.print("deserializeJson() failed: ");
+            Serial.print("[App] deserializeJson() failed for /time.txt: ");
+            Serial.println(error.c_str());
+            dataFile.close();
             return;
         }
         int UTCOffset = jsonBuffer["UTCOffset"];
