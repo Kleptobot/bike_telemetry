@@ -28,24 +28,38 @@ GPS is driven by generating **real NMEA sentences** (with correct checksums) and
 feeding them through the real `TinyGPSPlus`, so fix acquisition, speed and
 altitude age all exercise the production code path.
 
-## Build
+## Quick start
 
-Needs a host g++ and one `pio run` beforehand to populate `.pio/libdeps`.
+One prerequisite: run `pio run` once in the repo root so `.pio/libdeps` exists
+(the simulator links the same library sources the firmware does).
+
+From Git Bash:
 
 ```
 cd sim
-mingw32-make            # SDL window if SDL2 is available
-mingw32-make headless   # force the no-SDL build
+./run.sh --headless --frames 30 --out out      # build + run, writes 30 frames
+python tools/ppm2png.py out --scale 2          # frames -> viewable PNGs
 ```
 
-SDL2 is optional. Without it the simulator still runs and writes frames.
+`run.sh` builds if needed and finds the MinGW-w64 compiler automatically, so
+nothing has to be added to PATH. The Makefile does the same, if you prefer:
+
+```
+mingw32-make            # SDL window if SDL2 is available
+mingw32-make headless   # force the no-SDL build
+mingw32-make run
+```
 
 ## Run
 
 ```
-./build/obike-sim                              # interactive window
-./build/obike-sim --headless --frames 200 --out out
+./run.sh                                       # interactive window (needs SDL2)
+./run.sh --headless --frames 200 --out out     # frame dump, no dependencies
 ```
+
+Frames are RGB565 PPM. `tools/ppm2png.py` converts them using only the Python
+standard library; pass `--gif out/ride.gif` for an animation (that part needs
+Pillow).
 
 | Flag | Meaning |
 |---|---|

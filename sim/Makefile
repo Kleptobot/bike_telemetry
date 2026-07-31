@@ -10,6 +10,18 @@
 # vendoring a second copy, so the simulator cannot drift from the device
 # build. Run `pio run` once first to populate that directory.
 
+# Locate a host compiler. If g++ is not on PATH, fall back to the MinGW-w64
+# that `winget install BrechtSanders.WinLibs.POSIX.UCRT` drops into LOCALAPPDATA,
+# so the build works without the user having to edit their PATH.
+# $(LOCALAPPDATA) arrives with backslashes, which the shell strips as escapes.
+LOCALAPPDATA_FWD := $(subst \,/,$(LOCALAPPDATA))
+WINLIBS := $(LOCALAPPDATA_FWD)/Microsoft/WinGet/Packages/BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe/mingw64/bin
+ifeq ($(shell command -v g++ 2>/dev/null),)
+  ifneq ($(wildcard $(WINLIBS)/g++.exe),)
+    CXX := $(WINLIBS)/g++.exe
+    export PATH := $(WINLIBS):$(PATH)
+  endif
+endif
 CXX      ?= g++
 ROOT     := ..
 LIBDEPS  := $(ROOT)/.pio/libdeps/seeed-xiao-afruitnrf52-nrf52840-sense
