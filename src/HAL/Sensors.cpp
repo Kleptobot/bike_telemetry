@@ -110,7 +110,23 @@ bool SensorSystem::update(bool i2cBusy) {
         float vBat = adcVoltage * (1510.0 / 510.0);
 
         digitalWrite(VBAT_ENABLE, HIGH);
-        _nBattPercentage = (int)constrain(vBat / 0.036f, 0.0f, 100.0f);
+
+        // Map the cell's usable range, not 0 V to 3.6 V.
+        //
+        // The previous formula was `vBat / 0.036f`, a linear ramp from zero
+        // volts reaching 100% at 3.6 V. For the LiPo this board actually uses
+        // that reads 100% all the way from 4.2 V down to 3.6 V -- roughly a
+        // quarter of the remaining charge -- and still reports 83% at 3.0 V,
+        // by which point the cell is empty. The gauge never left the top of
+        // its range, so it carried no information.
+        //
+        // A straight line over 3.30 V - 4.20 V is still an approximation of a
+        // LiPo discharge curve, which is flat in the middle and steep at both
+        // ends, but it is monotonic across the range that matters and reaches
+        // 0% at a sensible cutoff.
+        _nBattPercentage = (int)constrain((vBat - BAT_EMPTY_V) * 100.0f
+                                              / (BAT_FULL_V - BAT_EMPTY_V),
+                                          0.0f, 100.0f);
         lastBATTime = millis();
     }
     return update; 
