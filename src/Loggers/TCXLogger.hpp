@@ -44,7 +44,12 @@ class TCXLogger : public ILogger {
     bool finaliseLogging();
 
     const timeDuration elapsed_Total() const {return _currentTime-_startTime;};
-    const timeDuration elapsed_Lap() const {return _currentTime-laps.back().startTime;};
+    // Guarded for the same reason as FITLogger: laps.back() on an empty
+    // vector is undefined behaviour.
+    const timeDuration elapsed_Lap() const {
+        if (laps.empty()) return timeDuration(0);
+        return _currentTime-laps.back().startTime;
+    };
 
 };
 

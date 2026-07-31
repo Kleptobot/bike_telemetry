@@ -34,7 +34,13 @@ public:
     bool finaliseLogging() override;
  
     const timeDuration elapsed_Total() const override { return _currentTime - _startTime; }
-    const timeDuration elapsed_Lap() const override { return _currentTime - laps.back().startTime; }
+    // laps.back() on an empty vector is undefined behaviour. It is empty
+    // whenever startLogging bailed out (e.g. the file would not open), and
+    // App::update calls this every iteration while in AppState::LOGGING.
+    const timeDuration elapsed_Lap() const override {
+        if (laps.empty()) return timeDuration(0);
+        return _currentTime - laps.back().startTime;
+    }
  
     std::vector<Lap> laps; // kept public to match original's `laps.back()` usage
  
@@ -48,6 +54,7 @@ private:
                                     // used to derive this lap's totalDistance on rollover
  
     bool _definitionsWritten = false;
+    bool _open = false;   // did the .fit file actually open?
     void writeDefinitionsOnce();
  
     // local message type IDs (0-15 max per FIT spec; we use a handful)

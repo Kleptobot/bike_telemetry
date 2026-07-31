@@ -89,7 +89,13 @@ void FitWriter::writeS32(int32_t v)  { rawWrite(reinterpret_cast<uint8_t*>(&v), 
 
 void FitWriter::writeString(const char* s, uint8_t fieldSize) {
     uint8_t buf[64] = {0}; // FIT strings are short; 64 is generous headroom
-    uint8_t len = fieldSize > 64 ? 64 : fieldSize;
+    uint8_t len = fieldSize > sizeof(buf) ? sizeof(buf) : fieldSize;
+    if (len == 0) return;
+
+    // len - 1 with len == 0 promoted to int -1 and converted to size_t, so
+    // strncpy was handed SIZE_MAX. Guarded above; the field is also always
+    // NUL-terminated because buf is zero-initialised and at most len-1 bytes
+    // are copied into it.
     strncpy(reinterpret_cast<char*>(buf), s, len - 1);
     rawWrite(buf, len);
 }

@@ -97,7 +97,14 @@ void FITLogger::startLogging(const timeData& currentTime) {
 
     // TODO: match your existing filename scheme (date/time-based, etc.)
     String path = "/activity_" + String(static_cast<unsigned long>(currentTime.unixtime())) + ".fit";
-    _writer.open(path);
+    _open = _writer.open(path);
+    if (!_open) {
+        // Every write below is a no-op on a closed File32, so without this the
+        // whole ride was silently discarded and finaliseLogging() would then
+        // seek and patch a header that was never written.
+        Serial.print("[FITLogger] failed to open "); Serial.println(path);
+        return;
+    }
 
     writeDefinitionsOnce();
 
@@ -212,6 +219,8 @@ void FITLogger::writeActivityMessage(uint32_t endTimeFit) {
 }
 
 bool FITLogger::finaliseLogging() {
+    if (!_open) return false;   // nothing was ever written
+
     uint32_t endFit = toFitTimestamp(_currentTime.unixtime());
 
     if (!laps.empty()) {
@@ -223,5 +232,6 @@ bool FITLogger::finaliseLogging() {
     writeActivityMessage(endFit);
 
     _writer.close();
+    _open = false;
     return true;
 }
