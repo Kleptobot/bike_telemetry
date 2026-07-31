@@ -15,7 +15,13 @@ void hrm::hrm_notify_callback(BLEClientCharacteristic* chr, uint8_t* data, uint1
 }
 
 void hrm::hrm_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len) {
+  // Heart Rate Measurement: uint8 flags, then either a uint8 or a uint16 BPM
+  // depending on flag bit 0. Both forms were previously read without checking
+  // len, so a 1-byte notification read past the end of the buffer.
+  if (len < 2) return;
+
   if ( data[0] & bit(0) ) {
+    if (len < 3) return;
     memcpy(&u16_bpm, data+1, 2);
   } else {
     u16_bpm = data[1];
@@ -96,11 +102,18 @@ void hrm::discover(uint16_t conn_handle) {
     // Body sensor location value is 8 bit
     const char* body_str[] = { "Other", "Chest", "Wrist", "Finger", "Hand", "Ear Lobe", "Foot" };
 
-    // Read 8-bit hrm_loc value from peripheral
+    // Read 8-bit hrm_loc value from peripheral. The value is controlled by the
+    // remote device and the spec reserves everything above 6, so it must be
+    // range checked before indexing -- an out-of-range value previously read
+    // an arbitrary pointer out of flash and printed through it.
     uint8_t loc_value = hrm_loc.read8();
-    
+
     Serial.print("Body Location Sensor: ");
-    Serial.println(body_str[loc_value]);
+    if (loc_value < (sizeof(body_str) / sizeof(body_str[0]))) {
+      Serial.println(body_str[loc_value]);
+    } else {
+      Serial.print("reserved ("); Serial.print(loc_value); Serial.println(")");
+    }
   }else
   {
     Serial.println("Found NONE");

@@ -120,7 +120,13 @@ void csc::csc_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len) 
   uint32_t u32_WheelCount;
   uint16_t u16_SpeedEvt, u16_CrankCount, u16_CrankEvt;
 
+  // The payload comes from the remote sensor, so every field must be bounds
+  // checked against len before it is read. A short or malformed notification
+  // previously read past the end of the buffer.
+  if (len < 1) return;
+
   if ((data[0] & 0x01) ==1) {
+    if (len < offset + 6u) return;      // uint32 revolutions + uint16 event time
     memcpy(&u32_WheelCount, data+offset, 4);
     offset += 4;
     memcpy(&u16_SpeedEvt, data+offset, 2);
@@ -167,6 +173,7 @@ void csc::csc_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len) 
     }
   }
   if ((data[0] & 0x02) == 2) {
+    if (len < offset + 4u) return;      // uint16 revolutions + uint16 event time
     memcpy(&u16_CrankCount, data+offset, 2);
     offset += 2;
     memcpy(&u16_CrankEvt, data+offset, 2);
