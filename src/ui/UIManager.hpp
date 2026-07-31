@@ -35,10 +35,22 @@ public:
     }
 
     void showScreen(ScreenID id) {
+        // find(), not operator[]: operator[] default-constructs a null
+        // unique_ptr for a missing key, which was then dereferenced. ScreenID
+        // has more enumerators than there are registered screens -- ScreenID::
+        // None in particular is the default argument of emitUIEvent -- so any
+        // ChangeScreen event without an explicit target hard-faulted here.
+        auto it = screens.find(id);
+        if (it == screens.end() || !it->second) {
+            Serial.print("[UIManager] no screen registered for id ");
+            Serial.println(static_cast<int>(id));
+            return;   // leave the current screen active
+        }
+
         if (activeScreen)
             activeScreen->onExit();
 
-        activeScreen = screens[id].get();
+        activeScreen = it->second.get();
         Disp::clear();
         Disp::markDirty(0,0,240,320);
         activeScreen->onEnter();
