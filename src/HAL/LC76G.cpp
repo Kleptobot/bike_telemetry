@@ -387,12 +387,29 @@ void LC76G::sendCommand(CmdId cmdId, ResponseCallback cb = nullptr, void* userCt
     //call this command's build function
     length = COMMANDS[index].build(buffer,sizeof(buffer),COMMANDS[index].cmd,payload);
 
+    // snprintf returns the length it *would* have written, so a truncated
+    // build reports more than the buffer holds. Checksumming that length
+    // would read past the end of `buffer`.
+    if (length < 0 || (size_t)length >= sizeof(buffer)) {
+        if (ENABLE_GPS_DEBUG) {
+            Serial.println("[LC76G] command body too long, dropped");
+        }
+        return;
+    }
+
     // Compute checksum over the command body only (no '$', '*', or CRLF)
     uint8_t checksum = calculate_xor_checksum(reinterpret_cast<const uint8_t*>(buffer), length);
 
-    // Format full NMEA sentence
-    char buffer2[64];  // allow for body + framing
-    length = sprintf(buffer2, "$%s*%02X\r\n", buffer, checksum);
+    // Format full NMEA sentence. Sized for the largest body plus the six
+    // framing characters ('$', '*', two hex digits, CR, LF) and a NUL.
+    char buffer2[sizeof(buffer) + 8];
+    length = snprintf(buffer2, sizeof(buffer2), "$%s*%02X\r\n", buffer, checksum);
+    if (length < 0 || (size_t)length >= sizeof(buffer2)) {
+        if (ENABLE_GPS_DEBUG) {
+            Serial.println("[LC76G] framed sentence too long, dropped");
+        }
+        return;
+    }
 
     queueCommand(reinterpret_cast<const uint8_t*>(buffer2), length);
 
