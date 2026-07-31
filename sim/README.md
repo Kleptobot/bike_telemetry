@@ -37,9 +37,13 @@ One prerequisite: run `pio run` in the repo root once, so `.pio/libdeps` exists
 
 ```
 cd sim
-run.bat --headless --frames 30 --out out
+.
+un.bat --headless --frames 30 --out out
 python tools\ppm2png.py out --scale 2
 ```
+
+Note the leading `.\` — PowerShell does not run programs from the current
+directory without it. In cmd.exe plain `run.bat` is fine.
 
 **Git Bash / Linux / macOS:**
 
@@ -83,8 +87,21 @@ If the launcher reports no compiler:
 winget install BrechtSanders.WinLibs.POSIX.UCRT
 ```
 
-SDL2 is optional. Without it the build falls back to headless automatically,
-and the simulator still runs and writes frames.
+## SDL2 (optional, for the interactive window)
+
+```
+tools\get-sdl2.bat          # Windows
+tools/get-sdl2.sh           # Git Bash / Linux / macOS
+```
+
+Downloads the SDL2 MinGW SDK into `third_party/` and drops the 32-bit half,
+leaving about 60 MB. **`third_party/` is gitignored** — it is a platform
+specific binary SDK, and the repo links third-party sources rather than
+vendoring them, the same way `Adafruit_GFX` comes from `.pio/libdeps`.
+
+Without SDL2 the build falls back to headless automatically and still runs and
+writes frames; only the window and keyboard input are missing. `SDL2.dll` is
+copied next to the binary at build time, so nothing needs to be on PATH.
 
 | Flag | Meaning |
 |---|---|

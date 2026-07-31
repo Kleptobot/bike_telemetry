@@ -25,6 +25,8 @@ public:
         }
     }
 
+    using Widget::update;   // see BigDataWidget: avoids hiding update(float)
+
     void update() {
         _colPitch = _width / _cols;
         _rowPitch = _height / _rows;

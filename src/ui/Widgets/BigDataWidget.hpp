@@ -111,6 +111,11 @@ public:
 
     void setColor(uint16_t color) { _color = color; }
 
+    // Without this, update(const Telemetry&) HIDES the virtual
+    // Widget::update(float) rather than overloading it, so a call through a
+    // Widget* would silently reach the base no-op. -Woverloaded-virtual.
+    using Widget::update;
+
     void update(const Telemetry& t) {
         if (_type == TelemetryType::Undefined) return;
         auto newVal = GetTelemetryValue(t, _type);

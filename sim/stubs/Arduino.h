@@ -208,9 +208,13 @@ private:
     static std::string fromInt(long v, int base) {
         char b[64];
         if (base == HEX) snprintf(b, sizeof(b), "%lX", (unsigned long)v);
-        else if (base == BIN) { std::string r; unsigned long u = (unsigned long)v;
-                                if (!u) r = "0"; while (u) { r.insert(r.begin(), char('0' + (u & 1))); u >>= 1; }
-                                return r; }
+        else if (base == BIN) {
+            std::string r;
+            unsigned long u = (unsigned long)v;
+            if (!u) return "0";
+            while (u) { r.insert(r.begin(), char('0' + (u & 1))); u >>= 1; }
+            return r;
+        }
         else snprintf(b, sizeof(b), "%ld", v);
         return b;
     }

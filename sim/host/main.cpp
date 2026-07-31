@@ -149,7 +149,8 @@ static int runSdl(int scale) {
 
 int main(int argc, char** argv) {
     bool headless = false;
-    int frames = 200, stepMs = 20, scale = 2;
+    int frames = 200, stepMs = 20;
+    [[maybe_unused]] int scale = 2;   // SDL frontend only
     const char* outDir = nullptr;
 
     for (int i = 1; i < argc; ++i) {

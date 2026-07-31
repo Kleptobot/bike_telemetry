@@ -77,17 +77,10 @@ struct BioData {
         , zone4Start(z4)
         , zone5Start(z5) {}
 
-    BioData& operator=(const BioData& other) {
-        birthday = other.birthday;
-        mass = other.mass;
-        caloricProfile = other.caloricProfile;
-        zone1Start = other.zone1Start;
-        zone2Start = other.zone2Start;
-        zone3Start = other.zone3Start;
-        zone4Start = other.zone4Start;
-        zone5Start = other.zone5Start;
-        return *this;
-    }
+    // See timeData: a hand-written operator= identical to the implicit one,
+    // which deprecated the implicit copy constructor.
+    BioData(const BioData&) = default;
+    BioData& operator=(const BioData&) = default;
 };
 
 class BioDataProvider {

@@ -244,20 +244,13 @@ public:
         from_local(y,mo,d,h,mi,s);
     }
 
-    timeData& operator=(const timeData& _new) {
-        if (this == &_new) {
-            return *this;
-        }
-        _year = _new._year;
-        _month = _new._month;
-        _day = _new._day;
-        _hour = _new._hour;
-        _minute = _new._minute;
-        _second = _new._second;
-        _offset = _new._offset;
-
-        return *this;
-    }
+    // Defaulted. This was a hand-written field-by-field copy identical to the
+    // implicit one, but declaring it suppressed the implicit copy CONSTRUCTOR
+    // under the rule of three -- which C++11 deprecates and GCC flags as
+    // -Wdeprecated-copy (36 instances across the build). Defaulting both
+    // restores the pair.
+    timeData(const timeData&) = default;
+    timeData& operator=(const timeData&) = default;
 
     // --- Arithmetic operators ---
     // Adds an elapsed duration to this instant. Operates on UTC fields

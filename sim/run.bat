@@ -37,6 +37,13 @@ if not exist "..\.pio\libdeps" (
     exit /b 1
 )
 
+dir /b /s "third_party\libSDL2.dll.a" >nul 2>&1
+if errorlevel 1 (
+    echo   [note] SDL2 not found -- building headless only.
+    echo          For the interactive window run: tools\get-sdl2.bat
+    echo.
+)
+
 "%MINGW%\mingw32-make.exe" all
 if errorlevel 1 (
     echo.

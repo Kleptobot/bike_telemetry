@@ -96,11 +96,11 @@ public:
     size_t size() const { return _widgets.size(); }
 
     void invalidate() {
-        int w=0,h=0;
+        // The per-item width/height accumulators here were computed and never
+        // used; the dirty rect below is the scrollbar strip, which does not
+        // depend on them.
         int end = std::min(_scrollOffset + _visibleCount, (int)_widgets.size());
         for (int i = _scrollOffset; i<end; i++){
-            h += (_widgets[i].get()->height() + margin);
-            if (_widgets[i].get()->width() > w) w = _widgets[i].get()->width();
             _widgets[i].get()->invalidate();
         }
         Disp::markDirty(SCREEN_WIDTH - 4,_y,4,totalHeight);

@@ -37,14 +37,26 @@ CXXFLAGS := -std=gnu++17 -DARDUINO=10800 -g -O1 -Wall -Wextra -Wno-unused-parame
 LDFLAGS  :=
 
 # --- SDL detection --------------------------------------------------------
-# sdl2-config is not always present on Windows; fall back to a plain -lSDL2
-# probe and drop to headless if that also fails.
-SDL_CFLAGS := $(shell sdl2-config --cflags 2>/dev/null)
-SDL_LIBS   := $(shell sdl2-config --libs 2>/dev/null)
-ifeq ($(strip $(SDL_LIBS)),)
-  HAVE_SDL := $(shell echo "int main(){return 0;}" | $(CXX) -x c++ - -lSDL2main -lSDL2 -o /dev/null 2>/dev/null && echo yes)
-  ifeq ($(HAVE_SDL),yes)
-    SDL_LIBS := -lSDL2main -lSDL2
+# Preference order:
+#   1. a local SDL2 unpacked under third_party/ (see tools/get-sdl2.sh)
+#   2. sdl2-config on PATH
+#   3. a bare -lSDL2 probe
+# If none work the build silently drops to headless, which still runs.
+SDL_LOCAL := $(firstword $(wildcard third_party/SDL2-*/x86_64-w64-mingw32))
+ifneq ($(SDL_LOCAL),)
+  SDL_CFLAGS := -I$(SDL_LOCAL)/include -I$(SDL_LOCAL)/include/SDL2 -Dmain=SDL_main
+  # Deliberately NOT -mwindows: that hides the console, and the firmware's
+  # Serial output is half the point of running the simulator.
+  SDL_LIBS   := -L$(SDL_LOCAL)/lib -lmingw32 -lSDL2main -lSDL2
+  SDL_DLL    := $(SDL_LOCAL)/bin/SDL2.dll
+else
+  SDL_CFLAGS := $(shell sdl2-config --cflags 2>/dev/null)
+  SDL_LIBS   := $(shell sdl2-config --libs 2>/dev/null)
+  ifeq ($(strip $(SDL_LIBS)),)
+    HAVE_SDL := $(shell echo "int main(){return 0;}" | $(CXX) -x c++ - -lSDL2main -lSDL2 -o /dev/null 2>/dev/null && echo yes)
+    ifeq ($(HAVE_SDL),yes)
+      SDL_LIBS := -lmingw32 -lSDL2main -lSDL2
+    endif
   endif
 endif
 ifneq ($(strip $(SDL_LIBS)),)
@@ -114,6 +126,9 @@ all: $(BIN)
 $(BIN): $(SRCS)
 	@mkdir -p $(BUILD)
 	$(CXX) $(CXXFLAGS) $(SRCS) $(LIB_SRCS) -o $(BIN) $(LDFLAGS)
+ifneq ($(SDL_DLL),)
+	@cp -f "$(SDL_DLL)" $(BUILD)/ 2>/dev/null || true
+endif
 	@echo "built $(BIN)"
 
 headless:
