@@ -5,8 +5,12 @@
 #include "TelemetryDataProvider.hpp"
 
 struct BikeData {
-    uint16_t mass;
-    uint16_t wheelCircumference;
+    uint16_t mass = 10;                    // kg
+    // Millimetres. Defaulted to a 700x25c wheel rather than left at zero:
+    // BikeData is value-initialised, and a zero circumference makes
+    // App::updateTelemetry compute a speed of exactly 0 from a live wheel
+    // sensor, with no indication why.
+    uint16_t wheelCircumference = 2105;
 };
 
 class BikeDataProvider {

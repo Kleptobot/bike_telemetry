@@ -7,8 +7,15 @@ void AltitudeFusion::altitudeIMUUpdate(float accZ) {
 
     if (dt <= 0.0f || dt > 0.1f) dt = 0.01f; // Basic safety check
 
-    // Subtract gravity AND our learned vibration bias
-    float linear_acc_z = accZ - 9.80665f - acc_bias_z;
+    // accZ arrives in g -- LSM6DS3::readFloatAccelZ() returns multiples of
+    // standard gravity, not m/s^2 -- so it has to be converted before gravity
+    // is subtracted. Previously this computed accZ - 9.80665, which at rest is
+    // 1.0 - 9.81 = -8.81 m/s^2 of fictitious downward acceleration fed straight
+    // into the velocity integrator. The barometer correction absorbed most of
+    // it into acc_bias_z over time, which is why altitude still looked
+    // reasonable, but est_vel_z -- and therefore rise(), and the grade tile
+    // that divides by it -- was not trustworthy.
+    float linear_acc_z = (accZ * STANDARD_GRAVITY) - STANDARD_GRAVITY - acc_bias_z;
 
     // Kinematic integration step
     est_alt += est_vel_z * dt;

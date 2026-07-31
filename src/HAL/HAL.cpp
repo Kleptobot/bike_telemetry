@@ -82,6 +82,18 @@ void HAL::update() {
     } else {
         f32_alt = _LC76G.gps().altitude.meters();
     }
+
+    // Ambient temperature. This was never assigned anywhere, so getTemperature()
+    // returned a constant 0.0 (HAL is a function-local static, so zero-init
+    // rather than garbage -- which is why it looked plausible on screen).
+    // The DPS368 reading is the better source; fall back to the RTC's own
+    // sensor when the barometer has not produced a valid sample.
+    const dps_data& dps = sensorSystem.dps();
+    if (dps.dpsValid) {
+        f32_temp = dps.f32_DSP_Temp;
+    } else {
+        f32_temp = dps.f32_RTC_Temp;
+    }
     
     wheelRPM = csc::getSpeed();
     gpsKmh = {0, false};

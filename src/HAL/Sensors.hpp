@@ -11,7 +11,17 @@
 #define LSM6DS3_ADDR 0x6A //I2C device address 0x6A
 #define BAT_HIGH_CHARGE 22  // HIGH for 50mA, LOW for 100mA
 #define BAT_CHARGE_STATE 23 // LOW for charging, HIGH not charging
+
+// Volts per ADC least-significant bit, at the default 10-bit resolution and
+// 3.6 V reference. (The name says MV/LBS; it is neither millivolts nor LBS.
+// Left as-is to avoid churn -- see the cleanup PR.)
 #define VBAT_MV_PER_LBS (0.003395996F)
+
+// Usable terminal-voltage range of the LiPo cell, used to scale the reported
+// battery percentage. 3.30 V is a conservative empty point that leaves margin
+// above the protection cutoff.
+#define BAT_FULL_V  (4.20F)
+#define BAT_EMPTY_V (3.30F)
 
 #define DS3231 true
 

@@ -221,7 +221,11 @@ void App::updateTelemetry() {
     float speed = 0;
     float circumference = model.bike().get().wheelCircumference;
 
-    if (wheelRPM.live) {
+    // Treat a zero circumference as "no wheel data" rather than computing a
+    // speed of zero from it. Without this, an unconfigured circumference
+    // silently suppressed the GPS fallback: wheelRPM.live is true whenever a
+    // CSC sensor is connected, so the first branch was taken and produced 0.
+    if (wheelRPM.live && circumference > 0) {
         speed = wheelRPM.value * circumference * 0.00006;
     } else if (gpsSpeed.live) {
         speed = gpsSpeed.value;
