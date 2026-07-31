@@ -39,13 +39,24 @@ void LC76G::processSentence(Sentence s) {
 
     for (auto it = _responses.begin(); it != _responses.end(); ++it) {
         uint16_t index = getCommand(it->commandId);
+        if (index == INVALID_COMMAND) continue;   // no table entry, nothing to match against
+
         if(COMMANDS[index].response) {  // <- check that response is valid before comparing it
             if (std::strncmp(s.data, COMMANDS[index].response, std::strlen(COMMANDS[index].response)) == 0) {
-                //decode the response
-                uint8_t buffer[5];
-                int numArgs;
-                if(COMMANDS[index].decode(s, numArgs, buffer)) {
-                    // Fire callback
+                // Decode the response. Both decode and callback are optional:
+                // several table entries pair a non-null `response` with a null
+                // `decode` (SAVE_TO_NVRAM, GET_NMEA_RATE), and sendCommand is
+                // called with a null callback in a few places. Calling either
+                // unconditionally branches to address 0.
+                uint8_t buffer[5] = {0};
+                int numArgs = 0;
+
+                bool decoded = true;
+                if (COMMANDS[index].decode) {
+                    decoded = COMMANDS[index].decode(s, numArgs, buffer);
+                }
+
+                if (decoded && it->callback) {
                     it->callback(numArgs, buffer, it->userContext);
                 }
 
@@ -359,6 +370,13 @@ void LC76G::sendCommand(CmdId cmdId, ResponseCallback cb = nullptr, void* userCt
     int length = 0;
 
     uint16_t index = getCommand(cmdId);
+    if (index == INVALID_COMMAND) {
+        if (ENABLE_GPS_DEBUG) {
+            Serial.print("[LC76G] unknown command id: ");
+            Serial.println((int)cmdId);
+        }
+        return;
+    }
 
     //call this command's build function
     length = COMMANDS[index].build(buffer,sizeof(buffer),COMMANDS[index].cmd,payload);

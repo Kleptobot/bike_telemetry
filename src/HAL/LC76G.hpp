@@ -297,11 +297,17 @@ class LC76G
     void pollResponseTimeouts();
     void processSentence(Sentence s);
 
-    uint16_t getCommand(CmdId cmdId) {
+    // Returned by getCommand() when a CmdId has no table entry. Callers must
+    // check for it: returning 0 on a miss would silently resolve to
+    // COMMANDS[0], which is PAIR_LOW_POWER_ENTRY_RTC_MODE -- i.e. an unknown
+    // command would put the receiver to sleep.
+    static const uint16_t INVALID_COMMAND = 0xFFFF;
+
+    uint16_t getCommand(CmdId cmdId) const {
         for (uint16_t i =0; i< std::size(COMMANDS); ++i) {
             if ( COMMANDS[i].cmdId == cmdId) return i;
         }
-        return 0;
+        return INVALID_COMMAND;
     }
 };
 
