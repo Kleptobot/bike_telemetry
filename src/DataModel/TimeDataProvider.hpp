@@ -94,15 +94,29 @@ private:
         _year = y; _month = mo; _day = d; _hour = h; _minute = min; _second = s;
     }
  
-    // Days elapsed from a fixed epoch (year 0, day 1 of month 1) to the given
-    // date. Used to compute a single linear "total seconds since epoch" value
-    // for operator- / operator+, so calendar differences reduce to plain
-    // integer math without duplicating leap-year handling.
+    // Days elapsed from a fixed epoch to the given date, used to reduce
+    // calendar differences to plain integer arithmetic in operator+/-.
+    //
+    // This was previously two loops -- one over the months of the year, one
+    // over every year from 0 -- which for 2026 is ~2,032 iterations per call,
+    // each doing a leap-year test (three modulo operations). operator-(timeData)
+    // calls it twice, and App::update evaluates both elapsed_Total() and
+    // elapsed_Lap() on every iteration while logging, so this ran roughly
+    // 8,100 times per main loop on a 64 MHz M4 purely to subtract two
+    // timestamps.
+    //
+    // Replaced with Howard Hinnant's days_from_civil, which is O(1). It shifts
+    // the year so that March is month 1, putting the leap day at the end of
+    // the cycle, then counts whole 400-year eras. The result is days relative
+    // to 1970-01-01; the absolute origin does not matter here because every
+    // use is a difference, and unixtime() subtracts EPOCH_DAYS anyway.
     static long days_since_epoch_s(int y, int mo, int d) {
-        long days = d - 1;
-        for (int m = 1; m < mo; ++m) days += get_days_in_month_s(m, y);
-        for (int yr = 0; yr < y; ++yr) days += is_leap_year_s(yr) ? 366 : 365;
-        return days;
+        y -= mo <= 2;
+        const long era = (y >= 0 ? y : y - 399) / 400;
+        const unsigned yoe = static_cast<unsigned>(y - era * 400);            // [0, 399]
+        const unsigned doy = (153 * (mo + (mo > 2 ? -3 : 9)) + 2) / 5 + d - 1; // [0, 365]
+        const unsigned doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;           // [0, 146096]
+        return era * 146097L + static_cast<long>(doe) - 719468L;
     }
  
     long utc_total_seconds() const {

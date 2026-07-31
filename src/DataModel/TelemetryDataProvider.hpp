@@ -81,29 +81,14 @@ struct Telemetry {
         , grade(grade_)
     {}
 
-    Telemetry& operator=(const Telemetry& _new) {
-        if (this == &_new) {
-            return *this;
-        }
-
-        imu            = _new.imu;
-        dps            = _new.dps;
-        BattPercentage = _new.BattPercentage;
-        speed          = _new.speed;
-        cadence        = _new.cadence;
-        temperature    = _new.temperature;
-        altitude       = _new.altitude;
-        heartrate      = _new.heartrate;
-        power          = _new.power;
-        validLocation  = _new.validLocation;
-        longitude      = _new.longitude;
-        latitude       = _new.latitude;
-        distance       = _new.distance;
-        totalDistance  += _new.totalDistance;
-        grade          = _new.grade;
-
-        return *this;
-    }
+    // Copy assignment is a plain copy. It previously did
+    //     totalDistance += _new.totalDistance;
+    // which hid a distance accumulator inside operator=, so assigning one
+    // Telemetry to another was not idempotent: `a = b; a = b;` produced a
+    // different result from `a = b`. It happened to give the right answer
+    // because exactly one call site ever assigned a Telemetry. Accumulation
+    // now lives in TelemetryDataProvider::update, where it is visible.
+    Telemetry& operator=(const Telemetry&) = default;
 };
 
 inline TelemetryType& operator++(TelemetryType& t) {
@@ -192,8 +177,16 @@ public:
     uint32_t version() const { return _version; }
 
     void update(const Telemetry& newData) {
+        // Carry the running total across, then add this tick's increment.
+        // Telemetry's constructor seeds totalDistance from the per-tick
+        // distance, so newData.totalDistance is the increment, not a total.
+        // This accumulation used to be hidden inside Telemetry::operator=.
+        const float carried = _data.totalDistance;
+
         _data = newData;
+        _data.totalDistance = carried + newData.totalDistance;
         ++_version;
+
         // append gps point if valid
         if (_data.validLocation) {
             appendPoint(_data.latitude, _data.longitude, millis());
@@ -208,19 +201,35 @@ public:
 
 private:
     void appendPoint(double lat, double lon, uint32_t ts) {
-        if (_recent.empty() || _recent.back().lat != lat || _recent.back().lon != lon) {
-            _recent.emplace_back(lat, lon, ts);
-            if (_recent.size() > _maxPoints) {
-                // simple pop-front
-                _recent.erase(_recent.begin());
-            }
+        // Decimate by time. This used to append on every update() where the
+        // position differed at all -- i.e. at main-loop rate -- so the 600
+        // point buffer covered a few seconds of riding rather than the
+        // breadcrumb trail it is meant to be. GPS fixes arrive at 1 Hz, so
+        // anything faster is duplicating the same fix.
+        if (!_recent.empty() && (ts - _lastPointMs) < _minPointIntervalMs) return;
+
+        if (!_recent.empty() && _recent.back().lat == lat && _recent.back().lon == lon) return;
+
+        _recent.emplace_back(lat, lon, ts);
+        _lastPointMs = ts;
+
+        // erase(begin()) is O(n), but with the decimation above it runs at
+        // most once per second over 600 elements. A ring buffer would avoid
+        // the memmove, but consumers rely on _recent being in chronological
+        // order -- MapWidget draws the polyline by iterating it and takes
+        // back() as the current position -- so it is not worth the ordering
+        // hazard for a 14 KB move at 1 Hz.
+        if (_recent.size() > _maxPoints) {
+            _recent.erase(_recent.begin());
         }
     }
-    
+
     Telemetry _data{};
     uint32_t _version = 0;
     std::vector<GPSPoint> _recent;
-    const size_t _maxPoints = 600;
+    uint32_t _lastPointMs = 0;
+    static const size_t _maxPoints = 600;
+    static const uint32_t _minPointIntervalMs = 1000;   // GPS fixes arrive at 1 Hz
 };
 
 #endif
