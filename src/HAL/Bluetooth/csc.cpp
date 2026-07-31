@@ -200,29 +200,36 @@ void csc::csc_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len) 
 }
 
 data_record csc::getSpeed() {
+  // Average over the devices that actually contribute, not over every CSC
+  // device present. Dividing by _cscDevices.size() halved the reading when
+  // one of two sensors reported cadence only.
   data_record speed = {0, false};
+  uint16_t contributors = 0;
   for (csc* dev : _cscDevices) {
     if(dev->b_speed_present) {
       speed.value += dev->f32_wheel_rpm;
       speed.live = true;
+      contributors++;
     }
   }
-  if (_cscDevices.size() > 0) {
-    speed.value /= _cscDevices.size();
+  if (contributors > 0) {
+    speed.value /= contributors;
   }
   return speed;
 }
 
 data_record csc::getCadence() {
   data_record cadence = {0, false};
+  uint16_t contributors = 0;
   for (csc* dev : _cscDevices) {
     if(dev->b_cadence_present) {
       cadence.value += dev->f32_cadence;
       cadence.live = true;
+      contributors++;
     }
   }
-  if (_cscDevices.size() > 0) {
-    cadence.value /= _cscDevices.size();
+  if (contributors > 0) {
+    cadence.value /= contributors;
   }
   return cadence;
 }

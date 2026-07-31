@@ -27,6 +27,8 @@ void hrm::hrm_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len) 
     u16_bpm = data[1];
   }
   
+  _hasData = true;
+
   if (ENABLE_BLUETOOTH_DEBUG) {
     Serial.print("Received HRM Measurement: ");
     Serial.print(u16_bpm);
@@ -150,13 +152,20 @@ void hrm::discover(uint16_t conn_handle) {
 }
 
 data_record hrm::getHRM() {
+  // Only average devices that have actually reported. Previously `live` was
+  // set for any device in the list, including one created at boot from
+  // devices.txt that had never connected.
   data_record heartrates = {0, false};
+  uint16_t contributors = 0;
   for (hrm* dev : _hrmDevices) {
-    heartrates.value += dev->f32_bpm;
-    heartrates.live = true;
+    if (dev->hasData()) {
+      heartrates.value += dev->f32_bpm;
+      heartrates.live = true;
+      contributors++;
+    }
   }
-  if (_hrmDevices.size() > 0) {
-    heartrates.value /= _hrmDevices.size();
+  if (contributors > 0) {
+    heartrates.value /= contributors;
   }
   return heartrates;
 }

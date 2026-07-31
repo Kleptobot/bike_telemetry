@@ -165,69 +165,84 @@ void cps::cps_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len) 
 }
 
 data_record cps::getPower() {
+  // Only report devices that have actually delivered a measurement. Without
+  // the hasData() guard this reported f32_power for a device created at boot
+  // from devices.txt but not yet connected.
   data_record power = {0, false};
+  uint16_t contributors = 0;
   for (cps* dev : _cpsDevices) {
-    power.value += dev->f32_power;
-    power.live = true;
+    if (dev->hasData()) {
+      power.value += dev->f32_power;
+      power.live = true;
+      contributors++;
+    }
   }
-  if (_cpsDevices.size() > 0) {
-    power.value /= _cpsDevices.size();
+  if (contributors > 0) {
+    power.value /= contributors;
   }
   return power;
 }
 
 data_record cps::getCadence() {
   data_record cadences = {0, false};
+  uint16_t contributors = 0;
   for (cps* dev : _cpsDevices) {
     if(dev->_CadencePresent) {
       cadences.value += dev->f32_cadence;
       cadences.live = true;
+      contributors++;
     }
   }
-  if (_cpsDevices.size() > 0) {
-    cadences.value /= _cpsDevices.size();
+  if (contributors > 0) {
+    cadences.value /= contributors;
   }
   return cadences;
 }
 
 data_record cps::getTorque() {
   data_record torque_values = {0, false};
+  uint16_t contributors = 0;
   for (cps* dev : _cpsDevices) {
     if(dev->_TorquePresent) {
       torque_values.value += dev->f32_torque;
       torque_values.live = true;
+      contributors++;
     }
   }
-  if (_cpsDevices.size() > 0) {
-    torque_values.value /= _cpsDevices.size();
+  if (contributors > 0) {
+    torque_values.value /= contributors;
   }
   return torque_values;
 }
 
 data_record cps::getPedalBalance() {
   data_record pedal_balance_values = {0, false};
+  uint16_t contributors = 0;
   for (cps* dev : _cpsDevices) {
     if(dev->_BalancePresent) {
       pedal_balance_values.value += dev->f32_pedal_balance;
       pedal_balance_values.live = true;
+      contributors++;
     }
   }
-  if (_cpsDevices.size() > 0) {
-    pedal_balance_values.value /= _cpsDevices.size();
+  if (contributors > 0) {
+    pedal_balance_values.value /= contributors;
   }
   return pedal_balance_values;
 }
 
 data_record cps::getForceMagnitude() {
   data_record force_magnitude_values = {0, false};
+  uint16_t contributors = 0;
   for (cps* dev : _cpsDevices) {
     if(dev->_ForceMagPresent) {
       force_magnitude_values.value += dev->f32_force_magnitude;
       force_magnitude_values.live = true;
+      contributors++;
     }
   }
-  if (_cpsDevices.size() > 0) {
-    force_magnitude_values.value /= _cpsDevices.size();
+  if (contributors > 0) {
+    force_magnitude_values.value /= contributors;
   }
   return force_magnitude_values;
 }
