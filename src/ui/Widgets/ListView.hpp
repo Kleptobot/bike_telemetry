@@ -20,7 +20,7 @@ public:
 
     void removeItem(size_t index) {
         if (index < _widgets.size()) {
-            totalHeight += (_widgets[index]->height() + margin);
+            totalHeight -= (_widgets[index]->height() + margin);   // was +=
             _widgets.erase(_widgets.begin() + index);
             if (_selectedIndex >= _widgets.size())
                 _selectedIndex = _widgets.empty() ? 0 : _widgets.size() - 1;
@@ -72,6 +72,10 @@ public:
             _widgets[i]->render(_x, y);
             y += _widgets[i]->height() + margin;
         }
+
+        // Nothing to scroll, and dividing by an empty container below would be
+        // an integer division by zero plus a NaN from the float ratio.
+        if (_widgets.empty()) return;
 
         float ratio = _visibleCount /  float(_widgets.size());
         barHeight = int(totalHeight / _widgets.size()) * ratio;

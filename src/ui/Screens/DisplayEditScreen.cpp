@@ -192,6 +192,7 @@ void DisplayEditScreen::moveFocusUp() {
         case FocusField::Rows: focusField = FocusField::Back; break;
         case FocusField::Grid: focusField = FocusField::Cols; break;
         case FocusField::Back: focusField = FocusField::Grid; break;
+        case FocusField::Save: focusField = FocusField::Grid; break;
     }
     gridWidth.invalidate();
     gridHeight.invalidate();
@@ -203,6 +204,7 @@ void DisplayEditScreen::moveFocusDown() {
         case FocusField::Rows: focusField = FocusField::Grid; break;
         case FocusField::Grid: focusField = FocusField::Back; break;
         case FocusField::Back: focusField = FocusField::Cols; break;
+        case FocusField::Save: focusField = FocusField::Cols; break;
     }
     gridWidth.invalidate();
     gridHeight.invalidate();
@@ -214,6 +216,7 @@ void DisplayEditScreen::moveFocusLeft() {
         case FocusField::Rows: focusField = FocusField::Cols; break;
         case FocusField::Back: focusField = FocusField::Save; break;
         case FocusField::Save: focusField = FocusField::Back; break;
+        case FocusField::Grid: break;   // handled by cursor movement in FOCUS mode
     }
     gridWidth.invalidate();
     gridHeight.invalidate();
@@ -225,6 +228,7 @@ void DisplayEditScreen::moveFocusRight() {
         case FocusField::Rows: focusField = FocusField::Cols; break;
         case FocusField::Back: focusField = FocusField::Save; break;
         case FocusField::Save: focusField = FocusField::Back; break;
+        case FocusField::Grid: break;   // handled by cursor movement in FOCUS mode
     }
     gridWidth.invalidate();
     gridHeight.invalidate();
@@ -311,7 +315,13 @@ bool DisplayEditScreen::validateLayout()
 {
     for (size_t i = 0; i < _displays.size(); ++i)
     {
-        if (!_displays[i].insideGrid(_rows, _cols))
+        // insideGrid(cols, rows) -- the argument order is (cols, rows), and
+        // this call had them reversed while onEnter() had them right. On a
+        // non-square grid that validated against transposed bounds, so it
+        // both accepted out-of-grid layouts and rejected valid ones. An
+        // accepted bad layout is then persisted to layout.txt and reloaded
+        // at boot.
+        if (!_displays[i].insideGrid(_cols, _rows))
             return false;
 
         for (size_t j = i + 1; j < _displays.size(); ++j)
