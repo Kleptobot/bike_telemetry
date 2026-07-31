@@ -164,7 +164,11 @@ inline std::variant<float, location_data> GetTelemetryValue(const Telemetry& t, 
         case TelemetryType::HeartRate:    return t.heartrate;
         case TelemetryType::Power:        return t.power;
         case TelemetryType::Distance:     return t.distance;
-        case TelemetryType::TotalDist:    return t.totalDistance / 1000.0;  //convert to km
+        // Explicit float, not double. std::variant's converting constructor
+        // excludes narrowing conversions (C++17 P0608), so a double argument
+        // does not select the float alternative on a conforming compiler --
+        // it built only because the ARM toolchain predates that rule.
+        case TelemetryType::TotalDist:    return t.totalDistance / 1000.0f;  //convert to km
         case TelemetryType::Location:     return (location_data){t.validLocation, t.longitude, t.latitude};
         case TelemetryType::Grade:        return t.grade;
         default: return 0.0f;

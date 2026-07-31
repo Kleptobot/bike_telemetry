@@ -6,3 +6,7 @@
 **.zip
 /tiles
 /tiles_raw
+# Simulator build artefacts
+/sim/build
+/sim/out
+/sim/sdcard
