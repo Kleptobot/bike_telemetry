@@ -12,6 +12,7 @@
 #include "cps.hpp"
 #include "HAL/BluetoothInterface.hpp"
 #include "HAL/StorageInterface.hpp"
+#include "SpscRing.hpp"
 
 /**
 * @class BluetoothSystem
@@ -94,6 +95,20 @@ class BluetoothSystem {
     static DeviceListCallback deviceListCallback;
     static IStorage* _storage;
     static uint32_t lastBatUpdate;
+
+    // --- BLE task -> main loop hand-off (see SpscRing.hpp) --------------
+    //
+    // Bluefruit dispatches scan/connect/disconnect callbacks from its own
+    // FreeRTOS task. Those callbacks used to push_back into deviceList and
+    // invoke deviceListCallback directly, while the main loop was iterating
+    // the same vector -- a reallocation mid-iteration is a use-after-free.
+    // They now only enqueue, and update() applies the changes.
+    static SpscRing<BluetoothDevice, 8> pendingDiscovered;
+    static SpscRing<MacAddress, 8> pendingDisconnected;
+    static volatile bool deviceListDirty;   // set by callbacks, cleared by update()
+
+    /** Applies queued BLE events to deviceList. Main loop only. */
+    static void drainPendingEvents();
 
 
     /**

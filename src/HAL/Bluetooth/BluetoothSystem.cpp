@@ -6,6 +6,9 @@ BluetoothSystem::DeviceListCallback BluetoothSystem::deviceListCallback;
 E_Type_BT_Mode BluetoothSystem::_mode, BluetoothSystem::_mode_prev;
 IStorage* BluetoothSystem::_storage;
 uint32_t BluetoothSystem::lastBatUpdate = millis() - 10000;
+SpscRing<BluetoothDevice, 8> BluetoothSystem::pendingDiscovered;
+SpscRing<MacAddress, 8> BluetoothSystem::pendingDisconnected;
+volatile bool BluetoothSystem::deviceListDirty = false;
 
 void BluetoothSystem::init(IStorage* storage) {
     deviceList.clear();
@@ -32,8 +35,55 @@ void BluetoothSystem::init(IStorage* storage) {
     Bluefruit.Scanner.setInterval(160, 80);  // in unit of 0.625 ms
 }
 
+void BluetoothSystem::drainPendingEvents() {
+    bool changed = false;
+
+    // Devices discovered by the scanner, queued from the BLE task.
+    BluetoothDevice found;
+    while (pendingDiscovered.pop(found)) {
+        bool known = false;
+        for (uint16_t i = 0; i < deviceList.size(); i++) {
+            if (deviceList[i].MAC == found.MAC) { known = true; break; }
+        }
+        // The duplicate check also happens in scan_discovery, but that one
+        // reads deviceList from the BLE task and can race with this function.
+        // Re-checking here is what actually guarantees uniqueness.
+        if (!known) {
+            Serial.print("New device found: "); Serial.println(found.name);
+            deviceList.push_back(found);
+            changed = true;
+        }
+    }
+
+    // Unexpected disconnects, queued from Bluefruit's disconnect callback.
+    MacAddress gone;
+    while (pendingDisconnected.pop(gone)) {
+        for (auto it = deviceList.begin(); it != deviceList.end(); it++) {
+            if ((*it).MAC == gone) {
+                (*it).connected = false;
+                Serial.println("device disconnected");
+                changed = true;
+                break;
+            }
+        }
+    }
+
+    if (deviceListDirty) {
+        deviceListDirty = false;
+        changed = true;
+    }
+
+    if (changed && deviceListCallback) {
+        deviceListCallback(deviceList);
+    }
+}
+
 void BluetoothSystem::update() {
-    
+
+    // Apply anything the BLE task queued since the last iteration, before
+    // touching deviceList below.
+    drainPendingEvents();
+
     switch (_mode) {
         case E_Type_BT_Mode::connect:
             if (_mode != _mode_prev) {
@@ -73,6 +123,7 @@ void BluetoothSystem::update() {
         (*it).connected = BT_Device::deviceWithMacDiscovered((*it).MAC);
         if ((*it).connected) {
             BT_Device* dev = BT_Device::getDeviceWithMAC((*it).MAC);
+            if (!dev) continue;   // discovered but no longer in btDevices
             (*it).batt = dev->readBatt();
             dev->update(now);
         }
@@ -90,10 +141,10 @@ void BluetoothSystem::connect_callback(uint16_t conn_handle) {
     if (device != NULL) {
         if(!device->discovered()) {
             Serial.println("Not discovered");
+            // discover() must run in this context -- it issues GATT reads --
+            // but the UI notification must not. Flag it for update() instead.
             device->discover(conn_handle);
-            if (deviceListCallback) {
-                deviceListCallback(deviceList);
-            }
+            deviceListDirty = true;
         }
     }
     if (!BT_Device::all_devices_discovered()) {
@@ -142,9 +193,9 @@ void BluetoothSystem::scan_discovery(ble_gap_evt_adv_report_t* report) {
             }
         }
     }
-    //if the new device is unique add it
+    //if the new device is unique queue it for the main loop to add
     if (!bMatch) {
-        
+
         if(Bluefruit.Scanner.checkReportForUuid(report, GATT_CSC_UUID))
             newDevice.type = E_Type_BT_Device::bt_csc;
         if(Bluefruit.Scanner.checkReportForUuid(report, UUID16_SVC_HEART_RATE))
@@ -152,12 +203,11 @@ void BluetoothSystem::scan_discovery(ble_gap_evt_adv_report_t* report) {
         if(Bluefruit.Scanner.checkReportForUuid(report, GATT_CPS_UUID))
             newDevice.type = E_Type_BT_Device::bt_cps;
 
-        Serial.print("New device found: "); Serial.println(newDevice.name);
-        deviceList.push_back(newDevice);
-        
-        if (deviceListCallback) {
-            deviceListCallback(deviceList);
-        }
+        // Runs on the SoftDevice task: enqueue only. push_back here could
+        // reallocate deviceList while update() is iterating it, and firing
+        // deviceListCallback from this context would run App/UI code --
+        // including a std::vector copy in BluetoothDataProvider -- off-thread.
+        pendingDiscovered.push(newDevice);
     }
 
     // For Softdevice v6: after received a report, scanner will be paused
@@ -209,16 +259,10 @@ void BluetoothSystem::disconnectDevice(const BluetoothDevice& device) {
 }
 
 void BluetoothSystem::onDeviceUnexpectedDisconnect(MacAddress MAC) {
-    for (auto it = deviceList.begin(); it != deviceList.end(); it++) {
-        if ((*it).MAC == MAC) {
-            (*it).connected = false;
-            break;
-        }
-    }
-    if (deviceListCallback) {
-        Serial.println("device disconnected");
-        deviceListCallback(deviceList);
-    }
+    // Invoked from BT_Device::disconnect, which runs in Bluefruit's
+    // disconnect callback -- i.e. on the BLE task. Queue it; update() marks
+    // the device disconnected and notifies the UI.
+    pendingDisconnected.push(MAC);
 }
 
 void BluetoothSystem::loadDevices() {
