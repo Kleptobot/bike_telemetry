@@ -44,6 +44,16 @@ if errorlevel 1 (
     echo.
 )
 
+REM Seed a fresh card from the sample. Never overwrites an existing sdcard/,
+REM so settings changed in the simulator survive.
+if not exist "sdcard" (
+    if exist "sample-sd" (
+        mkdir sdcard
+        copy /y "sample-sd\*" sdcard\ >nul
+        echo   [sim] seeded sdcard\ from sample-sd\
+    )
+)
+
 "%MINGW%\mingw32-make.exe" all
 if errorlevel 1 (
     echo.

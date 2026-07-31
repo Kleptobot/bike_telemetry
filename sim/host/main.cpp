@@ -76,81 +76,6 @@ static int runHeadless(int frames, int stepMs, const char* outDir) {
 }
 
 // ---------------------------------------------------------------------------
-// Input timing probe
-//
-// Counts how often the rendered frame changes while a button is held. The UI
-// only repaints when something actually changed, so frame-change count is a
-// direct proxy for "how many times did the menu move" without needing to reach
-// inside the screen objects.
-// ---------------------------------------------------------------------------
-
-static uint32_t hashPanel() {
-    const uint16_t* fb = Adafruit_ST7789::panelBuffer();
-    uint32_t h = 2166136261u;                    // FNV-1a
-    for (int i = 0; i < SCR_W * SCR_H; ++i) { h ^= fb[i]; h *= 16777619u; }
-    return h;
-}
-
-static int stepFor(uint32_t ms, uint32_t stepMs, uint32_t* changes, uint32_t* prevHash) {
-    int iterations = 0;
-    for (uint32_t t = 0; t < ms; t += stepMs) {
-        loop();
-        simAdvanceMillis(stepMs);
-        const uint32_t h = hashPanel();
-        if (h != *prevHash) { (*changes)++; *prevHash = h; }
-        iterations++;
-    }
-    return iterations;
-}
-
-static int runInputProbe(uint32_t holdMs, uint32_t stepMs) {
-    setup();
-
-    uint32_t prevHash = 0, changes = 0;
-
-    // Settle, then step Left to reach the settings list.
-    stepFor(1000, stepMs, &changes, &prevHash);
-    Sim::setButton(Sim::ButtonName::Left, true);
-    stepFor(150, stepMs, &changes, &prevHash);
-    Sim::setButton(Sim::ButtonName::Left, false);
-    stepFor(500, stepMs, &changes, &prevHash);
-
-    printf("--- probe: holding DOWN for %u ms (step %u ms) ---\n", holdMs, stepMs);
-
-    changes = 0;
-    prevHash = hashPanel();
-    Sim::setButton(Sim::ButtonName::Down, true);
-
-    // Print the raw button state the UI actually sees, for the first stretch
-    // of the hold. heldTime is what ListView::shouldRepeat gates on.
-    for (int k = 0; k < 12; ++k) {
-        loop();
-        simAdvanceMillis(stepMs);
-        const physIO in = HAL::inst().inputs();
-        printf("    t=%5u  Down.state=%d press=%d heldTime=%u\n",
-               millis(), (int)in.Down.state, (int)in.Down.press, in.Down.heldTime);
-    }
-
-    const int iters = stepFor(holdMs, stepMs, &changes, &prevHash);
-    Sim::setButton(Sim::ButtonName::Down, false);
-
-    printf("  frame changes during hold : %u\n", changes);
-    printf("  loop iterations           : %d\n", iters);
-    printf("  => ~%.1f moves/second (design: none for 400ms, then 10/s)\n",
-           changes * 1000.0 / (double)holdMs);
-
-    // A second hold, to expose state left over from the first.
-    changes = 0; prevHash = hashPanel();
-    stepFor(500, stepMs, &changes, &prevHash);
-    changes = 0; prevHash = hashPanel();
-    Sim::setButton(Sim::ButtonName::Down, true);
-    stepFor(holdMs, stepMs, &changes, &prevHash);
-    Sim::setButton(Sim::ButtonName::Down, false);
-    printf("  second hold frame changes : %u\n", changes);
-    return 0;
-}
-
-// ---------------------------------------------------------------------------
 // SDL
 // ---------------------------------------------------------------------------
 
@@ -243,7 +168,6 @@ int main(int argc, char** argv) {
         else if (a == "--out"    && i + 1 < argc) outDir = argv[++i];
         else if (a == "--scale"  && i + 1 < argc) scale = atoi(argv[++i]);
         else if (a == "--sd"     && i + 1 < argc) simSetSdRoot(argv[++i]);
-        else if (a == "--probe-input") { return runInputProbe(1500, 5); }
         else if (a == "--help") {
             printf("OBike simulator\n"
                    "  --headless          run without a window\n"

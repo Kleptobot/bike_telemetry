@@ -122,6 +122,22 @@ run is therefore fully deterministic and can be stepped in a debugger, and a
 scenario can run faster than real time. `delay()` advances the counter rather
 than sleeping.
 
+## Sample card contents
+
+`sample-sd/` holds a starting configuration, copied into `sdcard/` on first run
+(never overwriting an existing one, so anything you change in the simulator
+survives):
+
+| File | What it gives you |
+|---|---|
+| `layout.txt` | a 2x3 tile grid: full-width Speed, then Cadence/HeartRate and Power/TotalDist |
+| `bikeStats.txt` | 2105 mm wheel circumference -- without this the wheel-speed path computes exactly 0 |
+| `biometrics.txt` | mass and HR zones, so the heart-rate tile colours correctly |
+| `time.txt` | UTC offset 0 |
+
+To start clean, delete `sdcard/` and run again. To keep several
+configurations, copy them elsewhere and use `--sd DIR`.
+
 ## The SD card is a real directory
 
 `./sdcard/` backs `IStorage`, so `layout.txt`, `biometrics.txt` and
