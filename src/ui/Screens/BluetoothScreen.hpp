@@ -112,9 +112,19 @@ private:
         //scroll index must b 0 to _devices.size() to allow one more for the back button
         _selectedIndex = (_selectedIndex + delta + length) % length;
 
-        if (_selectedIndex<_scrollOffset+visibleDevices && _scrollOffset<0) {
-            _scrollOffset += delta;
-            _scrollOffset = min(_scrollOffset,_devices.size()-visibleDevices);
+        // Scroll so the selection stays visible.
+        //
+        // The previous condition was
+        //     if (_selectedIndex < _scrollOffset+visibleDevices && _scrollOffset<0)
+        // and _scrollOffset is uint32_t, so `_scrollOffset < 0` is always
+        // false and the whole body was unreachable -- devices past the fourth
+        // could never be shown. -Wtype-limits flags it. The old body would
+        // also have underflowed _devices.size()-visibleDevices whenever there
+        // were fewer devices than visible slots.
+        if (_selectedIndex < _scrollOffset) {
+            _scrollOffset = _selectedIndex;
+        } else if (_selectedIndex >= _scrollOffset + visibleDevices) {
+            _scrollOffset = _selectedIndex - visibleDevices + 1;
         }
     }
 };
