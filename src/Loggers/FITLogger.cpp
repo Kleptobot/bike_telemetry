@@ -126,7 +126,8 @@ void FITLogger::addTrackpoint(const Trackpoint& tp) {
     _writer.writeS32(toSemicircles(tp.longitude));
     _writer.writeU16(altitudeEncoded);
     _writer.writeU32(static_cast<uint32_t>(tp.distance * 100.0));      // cumulative, scale 100
-    _writer.writeU16(static_cast<uint16_t>(tp.speed * 1000.0));        // scale 1000
+    // FIT speed is m/s at scale 1000; Trackpoint::speed is km/h.
+    _writer.writeU16(static_cast<uint16_t>(kmhToMs(tp.speed) * 1000.0));
     _writer.writeU8(tp.heartRate > 0 ? static_cast<uint8_t>(tp.heartRate) : 0xFF);
     _writer.writeU8(tp.cadence > 0 ? static_cast<uint8_t>(tp.cadence) : 0xFF);
     _writer.writeU16(tp.power > 0 ? static_cast<uint16_t>(tp.power) : 0xFFFF);
@@ -135,7 +136,7 @@ void FITLogger::addTrackpoint(const Trackpoint& tp) {
 
     Lap& lap = laps.back();
     lap.parts++;
-    if (tp.speed > lap.maxSpeed) lap.maxSpeed = static_cast<float>(tp.speed);
+    if (tp.speed > lap.maxSpeed) lap.maxSpeed = static_cast<float>(tp.speed);   // km/h, converted on write
     if (tp.heartRate > 0) {
         lap.totalHRM += static_cast<float>(tp.heartRate);
         if (tp.heartRate > lap.maxHRM) lap.maxHRM = static_cast<float>(tp.heartRate);
@@ -181,7 +182,7 @@ void FITLogger::writeLapMessage(const Lap& lap, uint32_t startTimeFit, uint32_t 
     _writer.writeU32(startTimeFit);
     _writer.writeU32(elapsedSeconds * 1000); // scale 1000
     _writer.writeU32(static_cast<uint32_t>(lap.totalDistance * 100)); // scale 100
-    _writer.writeU16(static_cast<uint16_t>(lap.maxSpeed * 1000));
+    _writer.writeU16(static_cast<uint16_t>(kmhToMs(lap.maxSpeed) * 1000));   // m/s, scale 1000
     _writer.writeU8(avgHr);
     _writer.writeU8(maxHr);
     _writer.writeU8(avgCadence);
