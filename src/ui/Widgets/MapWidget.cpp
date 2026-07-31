@@ -221,15 +221,26 @@ void MapWidget::loadTilesToCache() {
 
 void MapWidget::renderFromCache() {
     uint16_t* canvasBuf = canvas.getBuffer();
+    if (!canvasBuf) return;   // GFXcanvas16's malloc can fail and is unchecked
 
-    for (int row = 0; row < MAP_H; ++row) {
-        // Source row in _tilePixels.
-        const uint16_t* src = tilePixels + row * MAP_W;
+    // Clip to the canvas. This writes straight into the framebuffer rather
+    // than going through Adafruit_GFX, so it bypasses the bounds checking in
+    // drawPixel -- nothing here was clamping _x/_y, and the widget's position
+    // is user-configurable via the display-edit screen. A widget placed with
+    // _x > 160 or _y > 240 wrote outside the 153,600-byte allocation.
+    const int startX = _x < 0 ? -_x : 0;
+    const int startY = _y < 0 ? -_y : 0;
+    const int endX   = min(MAP_W, SCREEN_WIDTH  - _x);
+    const int endY   = min(MAP_H, SCREEN_HEIGHT - _y);
 
-        // Destination row in the full-screen canvas.
-        uint16_t* dst = canvasBuf + (_y + row) * SCREEN_WIDTH + _x;
+    if (endX <= startX || endY <= startY) return;   // fully off-screen
 
-        memcpy(dst, src, MAP_W * sizeof(uint16_t));
+    const size_t rowBytes = (size_t)(endX - startX) * sizeof(uint16_t);
+
+    for (int row = startY; row < endY; ++row) {
+        const uint16_t* src = tilePixels + row * MAP_W + startX;
+        uint16_t* dst = canvasBuf + (_y + row) * SCREEN_WIDTH + (_x + startX);
+        memcpy(dst, src, rowBytes);
     }
 }
 
