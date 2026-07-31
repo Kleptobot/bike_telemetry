@@ -87,13 +87,20 @@ public:
                 drawUpArrow();
                 drawDownArrow();
                 break;
-            
+
             case WidgetSubMode::MOVE:
             case WidgetSubMode::RESIZE:
                 drawUpArrow();
                 drawDownArrow();
                 drawLeftArrow();
                 drawRightArrow();
+                break;
+
+            // Neither takes a direction, so neither draws arrows. Listed
+            // explicitly rather than left to fall through the switch, so
+            // -Wswitch stays useful if a mode is added later.
+            case WidgetSubMode::DELETE:
+            case WidgetSubMode::DONE:
                 break;
         }
     }

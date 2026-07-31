@@ -40,13 +40,13 @@ class GPSScreen : public UIScreen {
 
             //attach App events
             restGPS.setOnPress([this] () {
-                emitAppEvent({AppEventType::ResetGPS});
+                emitAppEvent({AppEventType::ResetGPS, 0});
             });
             restoreGPSDefaults.setOnPress([this] () {
-                emitAppEvent({AppEventType::RestoreDefaultsGPS});
+                emitAppEvent({AppEventType::RestoreDefaultsGPS, 0});
             });
             saveNVRAM.setOnPress([this] () {
-                emitAppEvent({AppEventType::saveGPSNVRAM});
+                emitAppEvent({AppEventType::saveGPSNVRAM, 0});
             });
 
             //register press event callback to send a change screen event

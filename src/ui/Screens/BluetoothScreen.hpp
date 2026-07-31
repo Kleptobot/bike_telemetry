@@ -33,13 +33,13 @@ public:
 
     void onEnter() override {
         refreshDevices();
-        emitAppEvent({AppEventType::DiscoverBluetooth});
+        emitAppEvent({AppEventType::DiscoverBluetooth, 0});
         _selectedIndex = 0;
         _scrollOffset = 0;
     }
 
     void onExit() override {
-        emitAppEvent({AppEventType::ScanBluetooth});
+        emitAppEvent({AppEventType::ScanBluetooth, 0});
     }
 
     void update(float dt) override {
