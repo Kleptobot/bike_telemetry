@@ -58,22 +58,40 @@ class LC76G
         return true; 
     }
 
+    // Acknowledgement of the form "$PAIR001,<cmd>,<result>*CS" -- the value we
+    // want is the third field. Skips the talker and the echoed command id.
+    // Scans into unsigned int rather than using the %hh length modifier, which
+    // newlib-nano's reduced scanf does not reliably support.
     static bool decode_1u8(Sentence response, int& numArgs, void* payload) {
         uint8_t* byte_array = (uint8_t*)payload;
-        numArgs = sscanf(response.data,"%*[^,],%c*%*X",&byte_array[0]);
-	    return numArgs==2;
+        unsigned int a = 0;
+        numArgs = sscanf(response.data,"%*[^,],%*[^,],%u",&a);
+        if (numArgs != 1) return false;
+        byte_array[0] = (uint8_t)a;
+        return true;
     }
 
+    // Query reply of the form "$PAIR063,<type>,<rate>*CS" -- two numeric fields
+    // after the talker.
     static bool decode_2u8(Sentence response, int& numArgs, void* payload) {
         uint8_t* byte_array = (uint8_t*)payload;
-        numArgs = sscanf(response.data,"%*[^,],%c,%c*%*X",&byte_array[0],&byte_array[1]);
-	    return numArgs==2;
+        unsigned int a = 0, b = 0;
+        numArgs = sscanf(response.data,"%*[^,],%u,%u",&a,&b);
+        if (numArgs != 2) return false;
+        byte_array[0] = (uint8_t)a;
+        byte_array[1] = (uint8_t)b;
+        return true;
     }
 
+    // %[^,] rather than %s: the fields are comma-separated, and %s would run
+    // past the delimiter and swallow the rest of the sentence.
     static bool decode_1char_1u8(Sentence response, int& numArgs, void* payload) {
       Payload1Ch1U8* p = (Payload1Ch1U8*)payload;
-      numArgs = sscanf(response.data, "%*[^,],%9s,%hhu*%*X", p->a, &p->b);
-	    return numArgs==2;
+      unsigned int b = 0;
+      numArgs = sscanf(response.data, "%*[^,],%9[^,],%u", p->a, &b);
+      if (numArgs != 2) return false;
+      p->b = (uint8_t)b;
+      return true;
     }
 
 
@@ -297,11 +315,17 @@ class LC76G
     void pollResponseTimeouts();
     void processSentence(Sentence s);
 
-    uint16_t getCommand(CmdId cmdId) {
+    // Returned by getCommand() when a CmdId has no table entry. Callers must
+    // check for it: returning 0 on a miss would silently resolve to
+    // COMMANDS[0], which is PAIR_LOW_POWER_ENTRY_RTC_MODE -- i.e. an unknown
+    // command would put the receiver to sleep.
+    static const uint16_t INVALID_COMMAND = 0xFFFF;
+
+    uint16_t getCommand(CmdId cmdId) const {
         for (uint16_t i =0; i< std::size(COMMANDS); ++i) {
             if ( COMMANDS[i].cmdId == cmdId) return i;
         }
-        return 0;
+        return INVALID_COMMAND;
     }
 };
 

@@ -39,13 +39,24 @@ void LC76G::processSentence(Sentence s) {
 
     for (auto it = _responses.begin(); it != _responses.end(); ++it) {
         uint16_t index = getCommand(it->commandId);
+        if (index == INVALID_COMMAND) continue;   // no table entry, nothing to match against
+
         if(COMMANDS[index].response) {  // <- check that response is valid before comparing it
             if (std::strncmp(s.data, COMMANDS[index].response, std::strlen(COMMANDS[index].response)) == 0) {
-                //decode the response
-                uint8_t buffer[5];
-                int numArgs;
-                if(COMMANDS[index].decode(s, numArgs, buffer)) {
-                    // Fire callback
+                // Decode the response. Both decode and callback are optional:
+                // several table entries pair a non-null `response` with a null
+                // `decode` (SAVE_TO_NVRAM, GET_NMEA_RATE), and sendCommand is
+                // called with a null callback in a few places. Calling either
+                // unconditionally branches to address 0.
+                uint8_t buffer[5] = {0};
+                int numArgs = 0;
+
+                bool decoded = true;
+                if (COMMANDS[index].decode) {
+                    decoded = COMMANDS[index].decode(s, numArgs, buffer);
+                }
+
+                if (decoded && it->callback) {
                     it->callback(numArgs, buffer, it->userContext);
                 }
 
@@ -128,7 +139,8 @@ LC76G::State LC76G::stateMachine() {
             if (_mode == MODE_RECEIVE) {
                 if (length == 0) {
                     _state=STATE_IDLE;
-                    return _state;
+                    break;      // break, not return: the _stateEntry bookkeeping
+                                // at the bottom of this function must still run
                 }
                 // Limit to max read size
                 _transactionLength = min(length, (uint16_t)MAX_BUFFER);
@@ -136,7 +148,7 @@ LC76G::State LC76G::stateMachine() {
                 // MODE_TRANSMIT - check buffer size
                 if (_txLength > length) {
                     _state=STATE_ERROR;
-                    return _state;
+                    break;
                 }
                 _transactionLength = _txLength;
             }
@@ -196,7 +208,12 @@ LC76G::State LC76G::stateMachine() {
         break;
     
     case STATE_PROCESS_RECEIVE:
-        _CR = false;
+        // _CR is deliberately NOT reset here. Reads are capped at MAX_BUFFER
+        // (64) bytes and NMEA sentences routinely exceed that, so a sentence
+        // whose '\r' lands at the end of one read and '\n' at the start of the
+        // next must carry the flag across. Clearing it here dropped every
+        // sentence that straddled a read boundary -- GSV worst of all. The
+        // per-character else-branch below already maintains it correctly.
         for(int i=0; i<_transactionLength;i++){
             if (_rxBuffer[i] == '$') _$found = true;             // check for '$'
             if(_$found) {
@@ -359,16 +376,40 @@ void LC76G::sendCommand(CmdId cmdId, ResponseCallback cb = nullptr, void* userCt
     int length = 0;
 
     uint16_t index = getCommand(cmdId);
+    if (index == INVALID_COMMAND) {
+        if (ENABLE_GPS_DEBUG) {
+            Serial.print("[LC76G] unknown command id: ");
+            Serial.println((int)cmdId);
+        }
+        return;
+    }
 
     //call this command's build function
     length = COMMANDS[index].build(buffer,sizeof(buffer),COMMANDS[index].cmd,payload);
 
+    // snprintf returns the length it *would* have written, so a truncated
+    // build reports more than the buffer holds. Checksumming that length
+    // would read past the end of `buffer`.
+    if (length < 0 || (size_t)length >= sizeof(buffer)) {
+        if (ENABLE_GPS_DEBUG) {
+            Serial.println("[LC76G] command body too long, dropped");
+        }
+        return;
+    }
+
     // Compute checksum over the command body only (no '$', '*', or CRLF)
     uint8_t checksum = calculate_xor_checksum(reinterpret_cast<const uint8_t*>(buffer), length);
 
-    // Format full NMEA sentence
-    char buffer2[64];  // allow for body + framing
-    length = sprintf(buffer2, "$%s*%02X\r\n", buffer, checksum);
+    // Format full NMEA sentence. Sized for the largest body plus the six
+    // framing characters ('$', '*', two hex digits, CR, LF) and a NUL.
+    char buffer2[sizeof(buffer) + 8];
+    length = snprintf(buffer2, sizeof(buffer2), "$%s*%02X\r\n", buffer, checksum);
+    if (length < 0 || (size_t)length >= sizeof(buffer2)) {
+        if (ENABLE_GPS_DEBUG) {
+            Serial.println("[LC76G] framed sentence too long, dropped");
+        }
+        return;
+    }
 
     queueCommand(reinterpret_cast<const uint8_t*>(buffer2), length);
 
