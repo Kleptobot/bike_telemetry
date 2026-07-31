@@ -65,7 +65,7 @@ void TCXLogger::writeLapHeader(uint16_t lapIndex, File32 *file) {
     // Initialize total time, distance, etc. 
     file->print("        <TotalTimeSeconds>");file->print(ts._totalSeconds);file->print("</TotalTimeSeconds>\n");
     file->print("        <DistanceMeters>");file->print(lp.totalDistance);file->print("</DistanceMeters>\n");
-    file->print("        <MaximumSpeed>");file->print(lp.maxSpeed,2);file->print("</MaximumSpeed>\n");
+    file->print("        <MaximumSpeed>");file->print(kmhToMs(lp.maxSpeed),2)   /* m/s */;file->print("</MaximumSpeed>\n");
     file->print("        <Calories>");file->print(Calories);file->print("</Calories>\n");
     file->print("        <AverageHeartRateBpm>\n");
     file->print("          <Value>");file->print(avgHRM,2);file->print("</Value>\n"); // Set to at least 1
@@ -110,7 +110,8 @@ void TCXLogger::addTrackpoint(const Trackpoint& tp) {
         file.print("                <Cadence>");file.print(tp.cadence);file.println("</Cadence>");
     }
     if (tp.speed > 0) { // Optional speed
-        file.print("                <Speed>");file.print(tp.speed);file.println("</Speed>");
+        // TPX Speed is metres per second; Trackpoint::speed is km/h.
+        file.print("                <Speed>");file.print(kmhToMs(tp.speed));file.println("</Speed>");
     }
 
     file.println("              </TPX>");

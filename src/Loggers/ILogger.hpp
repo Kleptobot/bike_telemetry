@@ -11,9 +11,16 @@ struct Trackpoint {
     double heartRate;    // Optional
     double power;        // Optional
     double cadence;      // Optional
-    double speed;        // Optional: Instantaneous speed in meters per second
+    // Instantaneous speed in KILOMETRES PER HOUR, matching Telemetry::speed,
+    // which is what App::update passes in. This previously said metres per
+    // second while receiving km/h, and FITLogger encoded it as m/s -- so every
+    // logged ride was 3.6x too fast. Loggers must convert on the way out.
+    double speed;
     double distance;     // Cumulative distance in meters
 };
+
+// FIT and TCX both want speed in m/s; the telemetry pipeline works in km/h.
+inline double kmhToMs(double kmh) { return kmh / 3.6; }
 
 struct Lap {
   timeData startTime;
