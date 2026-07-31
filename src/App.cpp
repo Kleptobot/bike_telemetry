@@ -253,12 +253,33 @@ void App::updateTelemetry() {
 
     //when gps time goes valid, check if the RTC time needs to be re-synced
     int UTCoffset = model.time().get().offset();
-    if (gpsLoc.isValid() && !_gpsNowValid) {
-        //load gpsTime into _gpsNow DateTime object, adding in the saved UTC offset
-        _gpsNow = {rtcNow.year(), rtcNow.month(), rtcNow.day(), (uint8_t)((int)gpsNow.hour()+UTCoffset*60), gpsNow.minute(), gpsNow.second()};
-        TimeSpan ts = _gpsNow - rtcNow;
-        if (ts.totalseconds() > 30 || ts.totalseconds() < -30)
-            HAL::inst().setTime(_gpsNow);
+    if (gpsLoc.isValid() && !_gpsNowValid && gpsNow.isValid()) {
+        // GPS reports UTC, and the RTC stores UTC, so no offset conversion
+        // belongs here at all.
+        //
+        // The previous expression was
+        //     (uint8_t)((int)gpsNow.hour() + UTCoffset*60)
+        // which is wrong twice over. timeData::_offset is in MINUTES (see
+        // TimeDataProvider.hpp, and TimeEditScreen which steps it by 30), so
+        // multiplying by 60 scales it by 3600x; and the result was then
+        // truncated to uint8_t. For UTC+10 that is hour + 36000 -> 172. Any
+        // non-zero offset produced an hour above 23, i.e. an invalid DateTime,
+        // and the +/-30s check below then all but guaranteed it was written to
+        // the RTC. Only UTC+0 ever synced correctly.
+        //
+        // Building the date from the GPS date as well as the GPS time also
+        // fixes a second problem: pairing the GPS hour with the RTC's date
+        // broke across midnight, and across any interval where the RTC date
+        // was already wrong -- which is exactly when a resync is needed.
+        TinyGPSDate gpsDate = HAL::inst().getGPSDate();
+        if (gpsDate.isValid()) {
+            _gpsNow = DateTime(gpsDate.year(), gpsDate.month(), gpsDate.day(),
+                               gpsNow.hour(), gpsNow.minute(), gpsNow.second());
+
+            TimeSpan ts = _gpsNow - rtcNow;
+            if (ts.totalseconds() > 30 || ts.totalseconds() < -30)
+                HAL::inst().setTime(_gpsNow);
+        }
     }
     _gpsNowValid = gpsLoc.isValid();
     
