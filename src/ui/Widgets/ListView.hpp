@@ -55,9 +55,17 @@ public:
     }
     
     bool shouldRepeat(uint32_t heldTime) {
+        // heldTime resets to 0 when the button is released, but lastHeldTime
+        // kept the value from the previous hold -- so on the next press
+        // (heldTime - lastHeldTime) underflowed the unsigned subtraction into
+        // a huge number and the repeat fired immediately instead of after the
+        // interval. Widget::shouldRepeat already guards this; this copy did
+        // not.
+        if (heldTime < lastHeldTime) lastHeldTime = 0;
+
         // Start repeating after initial delay
         if (heldTime < HOLD_REPEAT_DELAY) return false;
-        
+
         // Check if enough heldTime has passed since last repeat action
         return (heldTime - lastHeldTime) >= HOLD_REPEAT_INTERVAL;
     }
@@ -96,11 +104,11 @@ public:
     size_t size() const { return _widgets.size(); }
 
     void invalidate() {
-        int w=0,h=0;
+        // The per-item width/height accumulators here were computed and never
+        // used; the dirty rect below is the scrollbar strip, which does not
+        // depend on them.
         int end = std::min(_scrollOffset + _visibleCount, (int)_widgets.size());
         for (int i = _scrollOffset; i<end; i++){
-            h += (_widgets[i].get()->height() + margin);
-            if (_widgets[i].get()->width() > w) w = _widgets[i].get()->width();
             _widgets[i].get()->invalidate();
         }
         Disp::markDirty(SCREEN_WIDTH - 4,_y,4,totalHeight);

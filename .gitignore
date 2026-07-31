@@ -6,3 +6,13 @@
 **.zip
 /tiles
 /tiles_raw
+# Simulator build artefacts
+/sim/build
+/sim/out
+/sim/sdcard
+
+# Downloaded SDL2 SDK for the simulator (~77 MB, platform-specific).
+# Fetch with sim/tools/get-sdl2.bat or get-sdl2.sh; the build falls back to
+# headless without it. Same rationale as .pio/libdeps: the repo links
+# third-party sources, it does not vendor them.
+/sim/third_party

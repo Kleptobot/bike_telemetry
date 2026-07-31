@@ -11,7 +11,7 @@ void TCXLogger::startLogging(const timeData& currentTime) {
 
     //open the first lap file
     memset(lap_name,0,32);
-    sprintf(lap_name, "lap_%d_%u", laps.size()-1, laps.back().parts);
+    sprintf(lap_name, "lap_%u_%u", (unsigned)(laps.size()-1), (unsigned)laps.back().parts);
     if (!file.open(lap_name, O_WRITE | O_APPEND | O_CREAT)) {
         Serial.print("Error opening file: ");
         Serial.println(lap_name);
@@ -128,7 +128,7 @@ void TCXLogger::addTrackpoint(const Trackpoint& tp) {
         file.close();
 
         memset(lap_name,0,32);
-        sprintf(lap_name, "lap_%d_%d", laps.size()-1, laps.back().parts);
+        sprintf(lap_name, "lap_%u_%u", (unsigned)(laps.size()-1), (unsigned)laps.back().parts);
         if (!file.open(lap_name, O_WRITE | O_APPEND | O_CREAT)) {
             Serial.print("Error opening file: ");
             Serial.println(lap_name);
@@ -155,7 +155,7 @@ void TCXLogger::newLap(timeData currentTime) {
     file.close();
 
     memset(lap_name,0,32);
-    sprintf(lap_name, "lap_%d_%d", laps.size()-1, laps.back().parts);
+    sprintf(lap_name, "lap_%u_%u", (unsigned)(laps.size()-1), (unsigned)laps.back().parts);
     if (!file.open(lap_name, O_WRITE | O_APPEND | O_CREAT)) {
         Serial.print("Error opening file: ");
         Serial.println(lap_name);
@@ -192,11 +192,6 @@ bool TCXLogger::finaliseLogging() {
     file.close();
 
     int lapSize = laps.size();
-
-    int numparts = 0;
-    for(int i=0;i<lapSize;i++) {
-        numparts += laps[i].parts;
-    }
 
     if (!final_file.open(_filename, O_WRITE | O_APPEND | O_CREAT)) {
         final_file.print("Error opening : ");Serial.println(_filename);

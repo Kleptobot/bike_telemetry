@@ -1,0 +1,1 @@
+{"birthday":645408000,"mass":78,"caloricProfile":"M","zone1Start":55,"zone2Start":117,"zone3Start":138,"zone4Start":151,"zone5Start":162}

@@ -1,0 +1,1 @@
+{"displays":[{"x0":0,"y0":0,"x1":2,"y1":1,"type":"Speed"},{"x0":0,"y0":1,"x1":1,"y1":2,"type":"Cadence"},{"x0":1,"y0":1,"x1":2,"y1":2,"type":"HeartRate"},{"x0":0,"y0":2,"x1":1,"y1":3,"type":"Power"},{"x0":1,"y0":2,"x1":2,"y1":3,"type":"TotalDist"}],"rows":3,"cols":2}
