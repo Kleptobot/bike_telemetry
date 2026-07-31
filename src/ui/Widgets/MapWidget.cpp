@@ -221,15 +221,26 @@ void MapWidget::loadTilesToCache() {
 
 void MapWidget::renderFromCache() {
     uint16_t* canvasBuf = canvas.getBuffer();
+    if (!canvasBuf) return;   // GFXcanvas16's malloc can fail and is unchecked
 
-    for (int row = 0; row < MAP_H; ++row) {
-        // Source row in _tilePixels.
-        const uint16_t* src = tilePixels + row * MAP_W;
+    // Clip to the canvas. This writes straight into the framebuffer rather
+    // than going through Adafruit_GFX, so it bypasses the bounds checking in
+    // drawPixel -- nothing here was clamping _x/_y, and the widget's position
+    // is user-configurable via the display-edit screen. A widget placed with
+    // _x > 160 or _y > 240 wrote outside the 153,600-byte allocation.
+    const int startX = _x < 0 ? -_x : 0;
+    const int startY = _y < 0 ? -_y : 0;
+    const int endX   = min(MAP_W, SCREEN_WIDTH  - _x);
+    const int endY   = min(MAP_H, SCREEN_HEIGHT - _y);
 
-        // Destination row in the full-screen canvas.
-        uint16_t* dst = canvasBuf + (_y + row) * SCREEN_WIDTH + _x;
+    if (endX <= startX || endY <= startY) return;   // fully off-screen
 
-        memcpy(dst, src, MAP_W * sizeof(uint16_t));
+    const size_t rowBytes = (size_t)(endX - startX) * sizeof(uint16_t);
+
+    for (int row = startY; row < endY; ++row) {
+        const uint16_t* src = tilePixels + row * MAP_W + startX;
+        uint16_t* dst = canvasBuf + (_y + row) * SCREEN_WIDTH + (_x + startX);
+        memcpy(dst, src, rowBytes);
     }
 }
 
@@ -280,15 +291,27 @@ void MapWidget::renderTrack() {
 // ---------------------------------------------------------------------------
 
 void MapWidget::project(double lat, double lon, int& outX, int& outY) const {
-    const double metersPerDegLat = 111132.0;
-    const double metersPerDegLon = 111320.0 * cos(_centerLat * M_PI / 180.0);
+    // Web Mercator, matching the projection the tiles are rendered in.
+    //
+    // This was previously an equirectangular approximation (flat degrees-to-
+    // metres constants) drawn over a Web Mercator raster. The two agree only
+    // near the centre of the viewport and only at low latitudes; away from
+    // either, the track drifted off the roads beneath it. Projecting both
+    // layers the same way removes the class of error rather than tuning it.
+    const double n = (double)(1u << _currentZoom);
+    const double worldPx = n * (double)TileLoader::TILE_SIZE;
 
-    double dxMeters = (lon - _centerLon) * metersPerDegLon;
-    double dyMeters = (lat - _centerLat) * metersPerDegLat;
+    auto lonToWorldX = [&](double l) {
+        return (l + 180.0) / 360.0 * worldPx;
+    };
+    auto latToWorldY = [&](double l) {
+        const double rad = l * M_PI / 180.0;
+        return (1.0 - log(tan(rad) + 1.0 / cos(rad)) / M_PI) / 2.0 * worldPx;
+    };
 
-    double cx = _x + (_width  / 2.0);
-    double cy = _y + (_height / 2.0);
+    const double cx = _x + (_width  / 2.0);
+    const double cy = _y + (_height / 2.0);
 
-    outX = (int)(cx + (dxMeters / _metersPerPixel));
-    outY = (int)(cy - (dyMeters / _metersPerPixel));
+    outX = (int)(cx + (lonToWorldX(lon) - lonToWorldX(_centerLon)));
+    outY = (int)(cy + (latToWorldY(lat) - latToWorldY(_centerLat)));
 }

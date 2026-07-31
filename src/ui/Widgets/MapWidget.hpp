@@ -44,6 +44,9 @@ private:
     DataModel& _model;
     double _centerLat  = 0.0;
     double _centerLon  = 0.0;
+    // Requested scale. Only used to choose the integer zoom level; once that
+    // is chosen, both the tiles and the track overlay work in that level's
+    // Web Mercator world-pixel space, so nothing else reads this.
     float  _metersPerPixel = 4.0f;
     int    _currentZoom    = -1;   // cached, recomputed only when _metersPerPixel changes
     uint32_t _lastVersion  = 0;
