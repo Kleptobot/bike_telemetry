@@ -201,19 +201,35 @@ public:
 
 private:
     void appendPoint(double lat, double lon, uint32_t ts) {
-        if (_recent.empty() || _recent.back().lat != lat || _recent.back().lon != lon) {
-            _recent.emplace_back(lat, lon, ts);
-            if (_recent.size() > _maxPoints) {
-                // simple pop-front
-                _recent.erase(_recent.begin());
-            }
+        // Decimate by time. This used to append on every update() where the
+        // position differed at all -- i.e. at main-loop rate -- so the 600
+        // point buffer covered a few seconds of riding rather than the
+        // breadcrumb trail it is meant to be. GPS fixes arrive at 1 Hz, so
+        // anything faster is duplicating the same fix.
+        if (!_recent.empty() && (ts - _lastPointMs) < _minPointIntervalMs) return;
+
+        if (!_recent.empty() && _recent.back().lat == lat && _recent.back().lon == lon) return;
+
+        _recent.emplace_back(lat, lon, ts);
+        _lastPointMs = ts;
+
+        // erase(begin()) is O(n), but with the decimation above it runs at
+        // most once per second over 600 elements. A ring buffer would avoid
+        // the memmove, but consumers rely on _recent being in chronological
+        // order -- MapWidget draws the polyline by iterating it and takes
+        // back() as the current position -- so it is not worth the ordering
+        // hazard for a 14 KB move at 1 Hz.
+        if (_recent.size() > _maxPoints) {
+            _recent.erase(_recent.begin());
         }
     }
-    
+
     Telemetry _data{};
     uint32_t _version = 0;
     std::vector<GPSPoint> _recent;
-    const size_t _maxPoints = 600;
+    uint32_t _lastPointMs = 0;
+    static const size_t _maxPoints = 600;
+    static const uint32_t _minPointIntervalMs = 1000;   // GPS fixes arrive at 1 Hz
 };
 
 #endif
