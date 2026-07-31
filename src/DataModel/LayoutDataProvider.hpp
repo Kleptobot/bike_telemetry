@@ -89,10 +89,17 @@ struct DisplayItem {
     }
 };
 
+// Bounds for the telemetry grid. Enforced when a layout is loaded from disk
+// and when one is edited, so consumers can divide by rows/cols safely.
+static constexpr int LAYOUT_MIN_ROWS = 2;
+static constexpr int LAYOUT_MAX_ROWS = 5;
+static constexpr int LAYOUT_MIN_COLS = 2;
+static constexpr int LAYOUT_MAX_COLS = 5;
+
 struct LayoutData {
     std::vector<DisplayItem> displays;
-    uint8_t rows;
-    uint8_t cols;
+    uint8_t rows = LAYOUT_MIN_ROWS;
+    uint8_t cols = LAYOUT_MIN_COLS;
 };
 
 class LayoutDataProvider {

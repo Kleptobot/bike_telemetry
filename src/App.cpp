@@ -524,8 +524,14 @@ void App::loadLayout() {
             displays.push_back(disp);
         }
 
-        uint8_t rows = jsonBuffer["rows"];
-        uint8_t cols = jsonBuffer["cols"];
+        // Clamp on load rather than making every consumer defend itself.
+        // ArduinoJson yields 0 for a missing or unparseable key, and
+        // MainScreen::onEnter divides by both of these to compute its grid
+        // pitch -- so a truncated layout.txt was a divide by zero on the
+        // main screen. DisplayEditScreen already clamped to 2..5; this makes
+        // the guarantee hold at the point the data enters the model.
+        uint8_t rows = constrain((int)(jsonBuffer["rows"] | 0), LAYOUT_MIN_ROWS, LAYOUT_MAX_ROWS);
+        uint8_t cols = constrain((int)(jsonBuffer["cols"] | 0), LAYOUT_MIN_COLS, LAYOUT_MAX_COLS);
 
         model.layout().update({displays, rows, cols});
         dataFile.close();
