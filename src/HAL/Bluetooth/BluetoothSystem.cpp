@@ -122,9 +122,14 @@ void BluetoothSystem::scan_callback(ble_gap_evt_adv_report_t* report) {
 
 void BluetoothSystem::scan_discovery(ble_gap_evt_adv_report_t* report) {
     BluetoothDevice newDevice(report->peer_addr.addr);
-    memset(&newDevice.name,0,32);
+    memset(newDevice.name, 0, sizeof(newDevice.name));
 
-    Bluefruit.Scanner.parseReportByType(report, BLE_GAP_AD_TYPE_COMPLETE_LOCAL_NAME, (uint8_t*)newDevice.name, sizeof(newDevice.name));
+    // Leave room for a terminator: parseReportByType fills up to the length
+    // given and does not NUL-terminate, so a name of exactly sizeof(name)
+    // characters would leave the buffer unterminated for the Serial.println
+    // and String conversion below.
+    Bluefruit.Scanner.parseReportByType(report, BLE_GAP_AD_TYPE_COMPLETE_LOCAL_NAME,
+                                        (uint8_t*)newDevice.name, sizeof(newDevice.name) - 1);
 
     bool bMatch = false;
     //check if the list contains anything
@@ -246,8 +251,12 @@ void BluetoothSystem::loadDevices() {
 
             BluetoothDevice newDevice(MAC);
 
-            device["name"].as<String>().toCharArray(newDevice.name, device["name"].as<String>().length() + 1);
-            
+            // Size argument must be the DESTINATION capacity, not the source
+            // length -- newDevice.name is char[32] and this string comes from
+            // a user-editable file on the SD card. toCharArray truncates and
+            // NUL-terminates when given the real capacity.
+            device["name"].as<String>().toCharArray(newDevice.name, sizeof(newDevice.name));
+
             newDevice.type = device["type"];
             newDevice.saved = true;
 

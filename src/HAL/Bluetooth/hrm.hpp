@@ -16,6 +16,7 @@ private:
   BLEClientCharacteristic hrm_loc = BLEClientCharacteristic(UUID16_CHR_BODY_SENSOR_LOCATION);
   uint16_t u16_bpm=0;
   float f32_bpm=0;
+  bool _hasData=false;   // set once a measurement notification has been decoded
 
   static std::vector<hrm*> _hrmDevices;
 
@@ -48,6 +49,8 @@ public:
   };
 
   static data_record getHRM();
+
+  bool hasData() const { return _hasData; }
 
     void begin();
 

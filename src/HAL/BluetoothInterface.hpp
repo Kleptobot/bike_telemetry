@@ -17,19 +17,20 @@ enum E_Type_BT_Mode {
 };
 
 struct BluetoothDevice {
-    char name[32];
+    char name[32] = {0};
     MacAddress MAC;
-    uint16_t batt;
-    E_Type_BT_Device type;
-    bool connected;
-    bool saved;
+    uint16_t batt = 100;
+    // Defaulted so a device whose advertisement matches none of the three
+    // service UUIDs does not carry an indeterminate type into createDevice().
+    E_Type_BT_Device type = E_Type_BT_Device::bt_csc;
+    bool connected = false;
+    bool saved = false;
 
     BluetoothDevice(){}
-    BluetoothDevice(uint8_t* macAddr, bool conn = false, bool save=false) : 
+    BluetoothDevice(uint8_t* macAddr, bool conn = false, bool save=false) :
         MAC(macAddr),
         connected(conn),
-        saved(save) {
-        batt = 100; }
+        saved(save) {}
 } ;
 
 #endif /* BLUETOOTHINTERFACE_H */

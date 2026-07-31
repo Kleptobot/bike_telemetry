@@ -9,12 +9,24 @@
 #include "BT_Device.hpp"
 #include "HAL/SensorData.hpp"
 
-// Cycling Speed and Cadence configuration
+// Cycling Power configuration
 #define     GATT_CPS_UUID                           0x1818
 #define     GATT_CPS_MEASUREMENT_UUID               0x2A63
 #define     GATT_CPS_VECTOR_UUID                    0x2A64
 #define     GATT_CPS_FEATURE_UUID                   0x2A65
 #define     GATT_CPS_CONTROL_POINT_UUID             0x2A66
+
+/* Cycling Power Measurement flags (uint16, little endian).
+ * Note this field is 16-bit, unlike the 8-bit flags in CSC Measurement --
+ * the two characteristics do not share a layout. */
+#define     CPS_FLAG_PEDAL_BALANCE_PRESENT          0x0001  // uint8,  1/2 %
+#define     CPS_FLAG_PEDAL_BALANCE_REFERENCE        0x0002  // no data
+#define     CPS_FLAG_ACCUM_TORQUE_PRESENT           0x0004  // uint16, 1/32 Nm
+#define     CPS_FLAG_ACCUM_TORQUE_SOURCE            0x0008  // no data
+#define     CPS_FLAG_WHEEL_REV_PRESENT              0x0010  // uint32 + uint16
+#define     CPS_FLAG_CRANK_REV_PRESENT              0x0020  // uint16 + uint16
+#define     CPS_FLAG_EXTREME_FORCE_PRESENT          0x0040  // sint16 + sint16
+#define     CPS_FLAG_EXTREME_TORQUE_PRESENT         0x0080  // sint16 + sint16
 
 class cps : public BT_Device {
 
@@ -26,9 +38,21 @@ class cps : public BT_Device {
 
     static std::vector<cps*> _cpsDevices;
 
-    bool _CadencePresent, _TorquePresent, _BalancePresent, _ForceMagPresent;
-    uint16_t u16_feature;
-    uint8_t u8_location;
+    // In-class initialisers: cps objects are heap-allocated via `new cps(MAC)`,
+    // so unlike the HAL/App singletons they get no static zero-init. getPower()
+    // is called from HAL::update() on every main-loop iteration starting at
+    // BOOT -- before any notification has arrived -- so these must not be
+    // indeterminate.
+    bool _CadencePresent = false;
+    bool _TorquePresent = false;
+    bool _BalancePresent = false;
+    bool _ForceMagPresent = false;
+    bool _hasData = false;          // set once a measurement has been decoded
+    bool _hasCrankData = false;     // set once a crank revolution pair is known
+    uint16_t u16_feature = 0;
+    uint8_t u8_location = 0;
+    uint16_t u16_CrankRevs_Prev = 0;
+    uint16_t u16_CrankEvt_Prev = 0;
 
     cps(){
       this->bt_type = E_Type_BT_Device::bt_cps;
@@ -49,7 +73,16 @@ class cps : public BT_Device {
     }
 
   public:
-    float f32_power, f32_cadence, f32_torque, f32_pedal_balance, f32_force_magnitude;
+    float f32_power = 0.0f;
+    float f32_cadence = 0.0f;
+    float f32_torque = 0.0f;
+    float f32_pedal_balance = 0.0f;
+    float f32_force_magnitude = 0.0f;
+
+    // True once at least one measurement notification has been decoded.
+    // getPower() must not report a reading before this.
+    bool hasData() const { return _hasData; }
+
     virtual ~cps(){};
     
     static void create_cps(MacAddress MAC)
