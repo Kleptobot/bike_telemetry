@@ -234,8 +234,6 @@ void App::updateTelemetry() {
         grade = altVelocity.value*3.6f*100.0f/speed;
     }
 
-    float gearRatio = HAL::inst().getCadence()/wheelRPM.value;
-
     model.telemetry().update({  HAL::inst().getIMUData(),
                                 HAL::inst().getDPSData(),
                                 HAL::inst().getBatteryPercentage(),
@@ -388,6 +386,10 @@ void App::saveBiometrics() {
         _storage->remove("/biometrics.txt");
 
     File32 dataFile = _storage->openFile("/biometrics.txt", FILE_WRITE);
+    if (!dataFile) {
+        Serial.println("[App] failed to open /biometrics.txt for writing");
+        return;
+    }
 
     serializeJson(doc, dataFile);
     dataFile.close();
@@ -395,10 +397,14 @@ void App::saveBiometrics() {
 
 void App::loadBiometrics() {
     
-    if (_storage->exists("biometrics.txt")) {
+    if (_storage->exists("/biometrics.txt")) {
         Serial.println("Found biometrics.txt");
         // Open file for reading
         File32 dataFile = _storage->openFile("/biometrics.txt", FILE_READ);
+        if (!dataFile) {
+            Serial.println("[App] failed to open /biometrics.txt for reading");
+            return;
+        }
         // Allocate the memory pool on the stack.
         JsonDocument jsonBuffer;
         // Parse the root object
@@ -406,7 +412,9 @@ void App::loadBiometrics() {
         DeserializationError error = deserializeJson(jsonBuffer, dataFile);
 
         if (error) {
-            Serial.print("deserializeJson() failed: ");
+            Serial.print("[App] deserializeJson() failed for /biometrics.txt: ");
+            Serial.println(error.c_str());
+            dataFile.close();
             return;
         }
 
@@ -439,6 +447,10 @@ void App::saveBikeStats() {
         _storage->remove("/bikeStats.txt");
 
     File32 dataFile = _storage->openFile("/bikeStats.txt", FILE_WRITE);
+    if (!dataFile) {
+        Serial.println("[App] failed to open /bikeStats.txt for writing");
+        return;
+    }
 
     serializeJson(doc, dataFile);
     dataFile.close();
@@ -446,10 +458,14 @@ void App::saveBikeStats() {
 
 void App::loadBikeStats() {
     
-    if (_storage->exists("bikeStats.txt")) {
+    if (_storage->exists("/bikeStats.txt")) {
         Serial.println("Found bikeStats.txt");
         // Open file for reading
         File32 dataFile = _storage->openFile("/bikeStats.txt", FILE_READ);
+        if (!dataFile) {
+            Serial.println("[App] failed to open /bikeStats.txt for reading");
+            return;
+        }
         // Allocate the memory pool on the stack.
         JsonDocument jsonBuffer;
         // Parse the root object
@@ -457,7 +473,9 @@ void App::loadBikeStats() {
         DeserializationError error = deserializeJson(jsonBuffer, dataFile);
 
         if (error) {
-            Serial.print("deserializeJson() failed: ");
+            Serial.print("[App] deserializeJson() failed for /bikeStats.txt: ");
+            Serial.println(error.c_str());
+            dataFile.close();
             return;
         }
 
@@ -479,7 +497,7 @@ void App::saveLayout() {
     doc["rows"] = l.rows;
     doc["cols"] = l.cols;
 
-    for (int j = 0; j < l.displays.size(); j++) {
+    for (size_t j = 0; j < l.displays.size(); j++) {
         d[j]["x0"] = l.displays[j].x0;
         d[j]["y0"] = l.displays[j].y0;
         d[j]["x1"] = l.displays[j].x1;
@@ -491,16 +509,24 @@ void App::saveLayout() {
         _storage->remove("/layout.txt");
 
     File32 dataFile = _storage->openFile("/layout.txt", FILE_WRITE);
+    if (!dataFile) {
+        Serial.println("[App] failed to open /layout.txt for writing");
+        return;
+    }
 
     serializeJson(doc, dataFile);
     dataFile.close();
 }
 
 void App::loadLayout() {
-    if (_storage->exists("layout.txt")) {
+    if (_storage->exists("/layout.txt")) {
         Serial.println("Found layout.txt");
         // Open file for reading
         File32 dataFile = _storage->openFile("/layout.txt", FILE_READ);
+        if (!dataFile) {
+            Serial.println("[App] failed to open /layout.txt for reading");
+            return;
+        }
         // Allocate the memory pool on the stack.
         JsonDocument jsonBuffer;
         // Parse the root object
@@ -508,7 +534,9 @@ void App::loadLayout() {
         DeserializationError error = deserializeJson(jsonBuffer, dataFile);
 
         if (error) {
-            Serial.print("deserializeJson() failed: ");
+            Serial.print("[App] deserializeJson() failed for /layout.txt: ");
+            Serial.println(error.c_str());
+            dataFile.close();
             return;
         }
 
@@ -548,6 +576,10 @@ void App::saveTime() {
         _storage->remove("/time.txt");
 
     File32 dataFile = _storage->openFile("/time.txt", FILE_WRITE);
+    if (!dataFile) {
+        Serial.println("[App] failed to open /time.txt for writing");
+        return;
+    }
 
     serializeJson(doc, dataFile);
     dataFile.close();
@@ -555,10 +587,14 @@ void App::saveTime() {
 }
 
 void App::loadTime() {
-    if (_storage->exists("time.txt")) {
+    if (_storage->exists("/time.txt")) {
         Serial.println("Found time.txt");
         // Open file for reading
         File32 dataFile = _storage->openFile("/time.txt", FILE_READ);
+        if (!dataFile) {
+            Serial.println("[App] failed to open /time.txt for reading");
+            return;
+        }
         // Allocate the memory pool on the stack.
         JsonDocument jsonBuffer;
         // Parse the root object
@@ -566,7 +602,9 @@ void App::loadTime() {
         DeserializationError error = deserializeJson(jsonBuffer, dataFile);
 
         if (error) {
-            Serial.print("deserializeJson() failed: ");
+            Serial.print("[App] deserializeJson() failed for /time.txt: ");
+            Serial.println(error.c_str());
+            dataFile.close();
             return;
         }
         int UTCOffset = jsonBuffer["UTCOffset"];
