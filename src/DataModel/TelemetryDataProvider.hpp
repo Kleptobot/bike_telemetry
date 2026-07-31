@@ -81,29 +81,14 @@ struct Telemetry {
         , grade(grade_)
     {}
 
-    Telemetry& operator=(const Telemetry& _new) {
-        if (this == &_new) {
-            return *this;
-        }
-
-        imu            = _new.imu;
-        dps            = _new.dps;
-        BattPercentage = _new.BattPercentage;
-        speed          = _new.speed;
-        cadence        = _new.cadence;
-        temperature    = _new.temperature;
-        altitude       = _new.altitude;
-        heartrate      = _new.heartrate;
-        power          = _new.power;
-        validLocation  = _new.validLocation;
-        longitude      = _new.longitude;
-        latitude       = _new.latitude;
-        distance       = _new.distance;
-        totalDistance  += _new.totalDistance;
-        grade          = _new.grade;
-
-        return *this;
-    }
+    // Copy assignment is a plain copy. It previously did
+    //     totalDistance += _new.totalDistance;
+    // which hid a distance accumulator inside operator=, so assigning one
+    // Telemetry to another was not idempotent: `a = b; a = b;` produced a
+    // different result from `a = b`. It happened to give the right answer
+    // because exactly one call site ever assigned a Telemetry. Accumulation
+    // now lives in TelemetryDataProvider::update, where it is visible.
+    Telemetry& operator=(const Telemetry&) = default;
 };
 
 inline TelemetryType& operator++(TelemetryType& t) {
@@ -192,8 +177,16 @@ public:
     uint32_t version() const { return _version; }
 
     void update(const Telemetry& newData) {
+        // Carry the running total across, then add this tick's increment.
+        // Telemetry's constructor seeds totalDistance from the per-tick
+        // distance, so newData.totalDistance is the increment, not a total.
+        // This accumulation used to be hidden inside Telemetry::operator=.
+        const float carried = _data.totalDistance;
+
         _data = newData;
+        _data.totalDistance = carried + newData.totalDistance;
         ++_version;
+
         // append gps point if valid
         if (_data.validLocation) {
             appendPoint(_data.latitude, _data.longitude, millis());
