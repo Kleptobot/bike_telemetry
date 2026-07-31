@@ -9,12 +9,24 @@
 #include "BT_Device.hpp"
 #include "HAL/SensorData.hpp"
 
-// Cycling Speed and Cadence configuration
+// Cycling Power configuration
 #define     GATT_CPS_UUID                           0x1818
 #define     GATT_CPS_MEASUREMENT_UUID               0x2A63
 #define     GATT_CPS_VECTOR_UUID                    0x2A64
 #define     GATT_CPS_FEATURE_UUID                   0x2A65
 #define     GATT_CPS_CONTROL_POINT_UUID             0x2A66
+
+/* Cycling Power Measurement flags (uint16, little endian).
+ * Note this field is 16-bit, unlike the 8-bit flags in CSC Measurement --
+ * the two characteristics do not share a layout. */
+#define     CPS_FLAG_PEDAL_BALANCE_PRESENT          0x0001  // uint8,  1/2 %
+#define     CPS_FLAG_PEDAL_BALANCE_REFERENCE        0x0002  // no data
+#define     CPS_FLAG_ACCUM_TORQUE_PRESENT           0x0004  // uint16, 1/32 Nm
+#define     CPS_FLAG_ACCUM_TORQUE_SOURCE            0x0008  // no data
+#define     CPS_FLAG_WHEEL_REV_PRESENT              0x0010  // uint32 + uint16
+#define     CPS_FLAG_CRANK_REV_PRESENT              0x0020  // uint16 + uint16
+#define     CPS_FLAG_EXTREME_FORCE_PRESENT          0x0040  // sint16 + sint16
+#define     CPS_FLAG_EXTREME_TORQUE_PRESENT         0x0080  // sint16 + sint16
 
 class cps : public BT_Device {
 

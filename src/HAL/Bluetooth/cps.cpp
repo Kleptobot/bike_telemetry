@@ -71,58 +71,97 @@ bool cps::discovered() {
 }
 
 void cps::cps_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len) {
-  //https://github.com/oesmith/gatt-xml/blob/master/org.bluetooth.service.cycling_power.xml
+  (void)chr;
+  // Cycling Power Measurement (0x2A63):
+  //
+  //   uint16  flags
+  //   sint16  instantaneous power (watts)
+  //   ... optional fields, in ascending flag-bit order
+  //
+  // The flags field is 16-bit and power starts at offset 2. The previous
+  // implementation followed the CSC layout instead -- 8-bit flags, power at
+  // offset 1 -- so power straddled the flags high byte and the power low byte,
+  // and every optional field after it was shifted by one. The flag bits were
+  // also misassigned: bit 1 is the balance *reference*, not cadence-present,
+  // and cadence has to be derived from the crank revolution pair on bit 5.
 
-  uint16_t power;
-  uint16_t cadence = 0;
-  int16_t torque = 0;
-  int16_t pedal_balance = 0;
-  int16_t force_magnitude = 0;
-  uint8_t offset = 1;
+  if (len < 4) return;                          // flags + power are mandatory
 
-  _CadencePresent = false;
-  _TorquePresent = false;
-  _BalancePresent = false;
+  const uint16_t flags = (uint16_t)data[0] | ((uint16_t)data[1] << 8);
+
+  int16_t power;
+  memcpy(&power, data + 2, 2);
+  uint16_t offset = 4;
+
+  _BalancePresent  = false;
+  _TorquePresent   = false;
+  _CadencePresent  = false;
   _ForceMagPresent = false;
 
-  memcpy(&power, data + offset, 2);
-  offset += 2;
-  
-  if (data[0] & 0x02) {
-    memcpy(&cadence, data + offset, 2);
-    _CadencePresent = true;
-    offset += 2;
+  if (flags & CPS_FLAG_PEDAL_BALANCE_PRESENT) {
+    if (len < offset + 1u) return;
+    f32_pedal_balance = static_cast<float>(data[offset]) * 0.5f;   // 1/2 %
+    _BalancePresent = true;
+    offset += 1;
   }
-  
-  if (data[0] & 0x04) {
+
+  if (flags & CPS_FLAG_ACCUM_TORQUE_PRESENT) {
+    if (len < offset + 2u) return;
+    uint16_t torque;
     memcpy(&torque, data + offset, 2);
+    f32_torque = static_cast<float>(torque) / 32.0f;               // 1/32 Nm
     _TorquePresent = true;
     offset += 2;
   }
-  
-  if (data[0] & 0x08) {
-    memcpy(&pedal_balance, data + offset, 2);
-    _BalancePresent = true;
-    offset += 2;
+
+  if (flags & CPS_FLAG_WHEEL_REV_PRESENT) {
+    if (len < offset + 6u) return;
+    offset += 6;   // uint32 cumulative + uint16 event time; speed comes from CSC
   }
-  
-  if (data[0] & 0x10) {
-    memcpy(&force_magnitude, data + offset, 2);
+
+  if (flags & CPS_FLAG_CRANK_REV_PRESENT) {
+    if (len < offset + 4u) return;
+    uint16_t revs, evt;
+    memcpy(&revs, data + offset, 2);
+    memcpy(&evt,  data + offset + 2, 2);
+    offset += 4;
+
+    // Cadence is a rate, not a transmitted value: revolutions per minute from
+    // the change in cumulative revolutions over the change in event time,
+    // which is expressed in 1/1024 s. Both counters are free-running uint16,
+    // so plain unsigned subtraction handles wraparound.
+    if (_hasCrankData) {
+      uint16_t dRev = (uint16_t)(revs - u16_CrankRevs_Prev);
+      uint16_t dEvt = (uint16_t)(evt  - u16_CrankEvt_Prev);
+      if (dEvt > 0) {
+        f32_cadence = 60.0f * 1024.0f * (float)dRev / (float)dEvt;
+        _CadencePresent = true;
+      }
+    }
+    u16_CrankRevs_Prev = revs;
+    u16_CrankEvt_Prev  = evt;
+    _hasCrankData = true;
+  }
+
+  if (flags & CPS_FLAG_EXTREME_FORCE_PRESENT) {
+    if (len < offset + 4u) return;
+    int16_t maxForce;
+    memcpy(&maxForce, data + offset, 2);
+    f32_force_magnitude = static_cast<float>(maxForce);            // newtons
     _ForceMagPresent = true;
-    offset += 2;
+    offset += 4;   // max and min
   }
-  
+
   f32_power = static_cast<float>(power);
-  f32_cadence = static_cast<float>(cadence);
-  f32_torque = static_cast<float>(torque) / 32.0; // Convert to Nm
-  f32_pedal_balance = static_cast<float>(pedal_balance) / 100.0; // Convert to %
-  f32_force_magnitude = static_cast<float>(force_magnitude) / 10.0; // Convert to Nm
-  
-  Serial.print("Power: "); Serial.println(f32_power);
-  Serial.print("Cadence: "); Serial.println(f32_cadence);
-  Serial.print("Torque: "); Serial.println(f32_torque);
-  Serial.print("Pedal Balance: "); Serial.println(f32_pedal_balance);
-  Serial.print("Force Magnitude: "); Serial.println(f32_force_magnitude);
+  _hasData = true;
+
+  if (ENABLE_BLUETOOTH_DEBUG) {
+    Serial.print("[CPS] power "); Serial.print(f32_power);
+    Serial.print(" W, cadence "); Serial.print(f32_cadence);
+    Serial.print(" rpm, torque "); Serial.print(f32_torque);
+    Serial.print(" Nm, balance "); Serial.print(f32_pedal_balance);
+    Serial.println(" %");
+  }
 }
 
 data_record cps::getPower() {
