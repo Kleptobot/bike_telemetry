@@ -30,19 +30,29 @@ altitude age all exercise the production code path.
 
 ## Quick start
 
-One prerequisite: run `pio run` once in the repo root so `.pio/libdeps` exists
-(the simulator links the same library sources the firmware does).
+One prerequisite: run `pio run` in the repo root once, so `.pio/libdeps` exists
+— the simulator links the same library sources the firmware does.
 
-From Git Bash:
+**Windows** (cmd.exe, PowerShell, or just double-click `run.bat`):
 
 ```
 cd sim
-./run.sh --headless --frames 30 --out out      # build + run, writes 30 frames
-python tools/ppm2png.py out --scale 2          # frames -> viewable PNGs
+run.bat --headless --frames 30 --out out
+python tools\ppm2png.py out --scale 2
 ```
 
-`run.sh` builds if needed and finds the MinGW-w64 compiler automatically, so
-nothing has to be added to PATH. The Makefile does the same, if you prefer:
+**Git Bash / Linux / macOS:**
+
+```
+cd sim
+./run.sh --headless --frames 30 --out out
+python3 tools/ppm2png.py out --scale 2
+```
+
+Then open `out/frame_0029.png`.
+
+Both launchers build if needed and locate the compiler themselves, so nothing
+has to be added to PATH. If you would rather drive make directly:
 
 ```
 mingw32-make            # SDL window if SDL2 is available
@@ -50,16 +60,31 @@ mingw32-make headless   # force the no-SDL build
 mingw32-make run
 ```
 
+Note the Makefile recipes use `mkdir -p` and `rm -rf`; `run.bat` puts Git for
+Windows' `usrin` on PATH so those exist under cmd.exe.
+
 ## Run
 
 ```
-./run.sh                                       # interactive window (needs SDL2)
-./run.sh --headless --frames 200 --out out     # frame dump, no dependencies
+run.bat                                     # interactive window (needs SDL2)
+run.bat --headless --frames 200 --out out   # frame dump, no dependencies
 ```
 
-Frames are RGB565 PPM. `tools/ppm2png.py` converts them using only the Python
-standard library; pass `--gif out/ride.gif` for an animation (that part needs
-Pillow).
+Frames are RGB565 PPM, which most image viewers will not open.
+`tools/ppm2png.py` converts them using only `zlib` and `struct` from the
+standard library, so no Pillow install is needed. `--gif out/ride.gif` also
+writes an animation — that one path does want Pillow.
+
+## Toolchain
+
+If the launcher reports no compiler:
+
+```
+winget install BrechtSanders.WinLibs.POSIX.UCRT
+```
+
+SDL2 is optional. Without it the build falls back to headless automatically,
+and the simulator still runs and writes frames.
 
 | Flag | Meaning |
 |---|---|
