@@ -55,9 +55,17 @@ public:
     }
     
     bool shouldRepeat(uint32_t heldTime) {
+        // heldTime resets to 0 when the button is released, but lastHeldTime
+        // kept the value from the previous hold -- so on the next press
+        // (heldTime - lastHeldTime) underflowed the unsigned subtraction into
+        // a huge number and the repeat fired immediately instead of after the
+        // interval. Widget::shouldRepeat already guards this; this copy did
+        // not.
+        if (heldTime < lastHeldTime) lastHeldTime = 0;
+
         // Start repeating after initial delay
         if (heldTime < HOLD_REPEAT_DELAY) return false;
-        
+
         // Check if enough heldTime has passed since last repeat action
         return (heldTime - lastHeldTime) >= HOLD_REPEAT_INTERVAL;
     }

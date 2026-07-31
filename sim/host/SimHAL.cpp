@@ -155,10 +155,23 @@ void HAL::init_low() {
 }
 
 void HAL::init(timeData* date) {
+    // Mirror the real HAL::init's GPIO setup. GPIOB3 in particular is the GPS
+    // enable line, and InputSystem reads it back to decide whether the device
+    // should sleep -- main.cpp's loop() does
+    //     if (!getGpsEnableState()) { delay(200); NRF_POWER->SYSTEMOFF = 1; }
+    // so leaving it low made every simulated loop burn 200 ms of simulated
+    // time, which made held-button repeat fire ~40x too fast.
+    inputSystem.setOutput(GPIOB3, true);
+    inputSystem.update(false);
+
     Wire.begin();
     sensorSystem.init();
     bluetoothSystem.init(&storageSystem);
     storageSystem.init(date);
+
+    inputSystem.setOutput(GPIOB6, true);   // backlight, as the real init does
+    inputSystem.update(false);
+
     Serial.println("[sim] HAL initialised");
 }
 
