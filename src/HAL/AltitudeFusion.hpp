@@ -4,12 +4,15 @@
 #include <Arduino.h>
 #include <limits.h>
 
+// Standard gravity, m/s^2. The IMU reports acceleration in multiples of this.
+static constexpr float STANDARD_GRAVITY = 9.80665f;
+
 class AltitudeFusion {
     private:
 
-    unsigned long last_micros;
+    unsigned long last_micros = 0;
     uint32_t lastGPSAltUpdate = (uint32_t)ULONG_MAX;
-    bool altitudeValidLast;
+    bool altitudeValidLast = false;
 
     float est_alt = 0.0f;           // Cleaned Absolute Altitude (meters above sea level)
     float est_vel_z = 0.0f;         // Vertical speed / Climb rate (m/s)
