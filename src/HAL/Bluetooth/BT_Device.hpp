@@ -48,11 +48,14 @@ class BT_Device {
     
     MacAddress MAC;
     uint8_t u8_Batt = 100;
-    bool _begun;
-    uint16_t _conn_handle;
-    E_Type_BT_Device bt_type;
+    // Derived devices are heap-allocated, so these need explicit initialisers.
+    // _disconnected in particular is read as a condition in csc::csc_notify
+    // before anything assigns it.
+    bool _begun = false;
+    uint16_t _conn_handle = BLE_CONN_HANDLE_INVALID;
+    E_Type_BT_Device bt_type = E_Type_BT_Device::bt_csc;
     static std::vector<std::unique_ptr<BT_Device>> btDevices;
-    bool _disconnected;
+    bool _disconnected = false;
 
     BT_Device(){};
     virtual void removeFromLocalList() {};

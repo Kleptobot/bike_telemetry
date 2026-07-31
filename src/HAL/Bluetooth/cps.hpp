@@ -26,9 +26,21 @@ class cps : public BT_Device {
 
     static std::vector<cps*> _cpsDevices;
 
-    bool _CadencePresent, _TorquePresent, _BalancePresent, _ForceMagPresent;
-    uint16_t u16_feature;
-    uint8_t u8_location;
+    // In-class initialisers: cps objects are heap-allocated via `new cps(MAC)`,
+    // so unlike the HAL/App singletons they get no static zero-init. getPower()
+    // is called from HAL::update() on every main-loop iteration starting at
+    // BOOT -- before any notification has arrived -- so these must not be
+    // indeterminate.
+    bool _CadencePresent = false;
+    bool _TorquePresent = false;
+    bool _BalancePresent = false;
+    bool _ForceMagPresent = false;
+    bool _hasData = false;          // set once a measurement has been decoded
+    bool _hasCrankData = false;     // set once a crank revolution pair is known
+    uint16_t u16_feature = 0;
+    uint8_t u8_location = 0;
+    uint16_t u16_CrankRevs_Prev = 0;
+    uint16_t u16_CrankEvt_Prev = 0;
 
     cps(){
       this->bt_type = E_Type_BT_Device::bt_cps;
@@ -49,7 +61,16 @@ class cps : public BT_Device {
     }
 
   public:
-    float f32_power, f32_cadence, f32_torque, f32_pedal_balance, f32_force_magnitude;
+    float f32_power = 0.0f;
+    float f32_cadence = 0.0f;
+    float f32_torque = 0.0f;
+    float f32_pedal_balance = 0.0f;
+    float f32_force_magnitude = 0.0f;
+
+    // True once at least one measurement notification has been decoded.
+    // getPower() must not report a reading before this.
+    bool hasData() const { return _hasData; }
+
     virtual ~cps(){};
     
     static void create_cps(MacAddress MAC)

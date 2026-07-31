@@ -57,9 +57,12 @@ class csc : public BT_Device {
     // Body sensor location value is 8 bit
     const char* feat_str[4] = {"other", "Speed", "Cadence", "Speed & Cadence"};
     const float f32_circ = 2127;
-    uint32_t u32_WheelCount_Prev;
-    uint16_t u16_SpeedEvt_Prev, u16_CrankCount_Prev, u16_CrankEvt_Prev;
-    uint8_t u8_feature, u8_location;
+    // csc objects are heap-allocated via `new csc(MAC)`, so these get no
+    // static zero-init. begin() already zeroed the two presence flags; the
+    // rest were left indeterminate.
+    uint32_t u32_WheelCount_Prev = 0;
+    uint16_t u16_SpeedEvt_Prev = 0, u16_CrankCount_Prev = 0, u16_CrankEvt_Prev = 0;
+    uint8_t u8_feature = 0, u8_location = 0;
     uint32_t millis_at_spd_evt = 0, millis_at_cad_evt = 0;
     uint32_t exp_next_spd_evt= 0, exp_next_cad_evt=0;
     uint32_t u32_WheelCount_delta = 0;
@@ -84,8 +87,9 @@ class csc : public BT_Device {
     }
 
   public:
-    bool b_speed_present, b_cadence_present;
-    float raw_wheel_rpm, f32_wheel_rpm, f32_cadence_raw, f32_cadence;
+    bool b_speed_present = false, b_cadence_present = false;
+    float raw_wheel_rpm = 0.0f, f32_wheel_rpm = 0.0f;
+    float f32_cadence_raw = 0.0f, f32_cadence = 0.0f;
     virtual ~csc(){};
     
     static void create_csc(MacAddress MAC)
