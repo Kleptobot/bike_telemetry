@@ -139,7 +139,8 @@ LC76G::State LC76G::stateMachine() {
             if (_mode == MODE_RECEIVE) {
                 if (length == 0) {
                     _state=STATE_IDLE;
-                    return _state;
+                    break;      // break, not return: the _stateEntry bookkeeping
+                                // at the bottom of this function must still run
                 }
                 // Limit to max read size
                 _transactionLength = min(length, (uint16_t)MAX_BUFFER);
@@ -147,7 +148,7 @@ LC76G::State LC76G::stateMachine() {
                 // MODE_TRANSMIT - check buffer size
                 if (_txLength > length) {
                     _state=STATE_ERROR;
-                    return _state;
+                    break;
                 }
                 _transactionLength = _txLength;
             }
@@ -207,7 +208,12 @@ LC76G::State LC76G::stateMachine() {
         break;
     
     case STATE_PROCESS_RECEIVE:
-        _CR = false;
+        // _CR is deliberately NOT reset here. Reads are capped at MAX_BUFFER
+        // (64) bytes and NMEA sentences routinely exceed that, so a sentence
+        // whose '\r' lands at the end of one read and '\n' at the start of the
+        // next must carry the flag across. Clearing it here dropped every
+        // sentence that straddled a read boundary -- GSV worst of all. The
+        // per-character else-branch below already maintains it correctly.
         for(int i=0; i<_transactionLength;i++){
             if (_rxBuffer[i] == '$') _$found = true;             // check for '$'
             if(_$found) {
