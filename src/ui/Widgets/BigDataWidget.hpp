@@ -185,7 +185,7 @@ private:
         if (absVal >= 100) integerDigits = 3;
         else if (absVal >= 10) integerDigits = 2;
         uint16_t signChars = value < 0 ? 1 : 0;
-        uint16_t decimals = maxLen - integerDigits - signChars - 1; // 1 for dot
+        int16_t decimals = maxLen - integerDigits - signChars - 1; // 1 for dot
         if (decimals < 0) decimals = 0;
         String formatted = String(value, decimals);
         while (formatted.length() > maxLen && decimals > 0) {

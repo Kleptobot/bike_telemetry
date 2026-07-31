@@ -20,6 +20,7 @@ void setup() {
     HAL::inst().init_low();
 }
 
+uint32_t gpsLastEnableTime = millis();
 void loop() {
     //check if we need to run the higher level init functions (only once started)
     if (!started) {
@@ -42,8 +43,11 @@ void loop() {
 
     //read the state of the gps enable pin, if its low then sleep
     if ( !App::instance().getGpsEnableState() ) {
-        digitalWrite(D6, false); //turn off the auxilary supply
-        delay(200);
-        NRF_POWER->SYSTEMOFF = 1;
+        if ((millis() - gpsLastEnableTime) > 500) { //small debounce
+            digitalWrite(D6, false); //turn off the auxilary supply
+            NRF_POWER->SYSTEMOFF = 1;
+        }
+    } else {
+        gpsLastEnableTime = millis();
     }
 }
