@@ -3,7 +3,6 @@
 
 #include <Arduino.h>
 #include <SPI.h>
-#include <vector>
 #include <SdFat.h>
 #include "ILogger.hpp"
 #include "HAL/StorageInterface.hpp"

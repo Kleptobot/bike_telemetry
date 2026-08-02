@@ -5,14 +5,20 @@ void TCXLogger::startLogging(const timeData& currentTime) {
     _startTime = currentTime;
     _currentTime = currentTime;
     laps.clear();
-    laps.push_back({currentTime, 1, 1, 0, 0, 0, 0});
+    laps.push_back({currentTime, 0, 0, 0, 0, 0, 0});
     resetTotals();
-    sprintf(_filename, "%d-%d-%d_%02d-%02d-%02d.tcx", _startTime.day(),_startTime.month(),_startTime.year(),_startTime.hour(),_startTime.minute(),_startTime.second());
+    snprintf(_filename, sizeof(_filename), "/%04d%02d%02d_%02d%02d%02d.tcx",
+             _startTime.year(), _startTime.month(), _startTime.day(),
+             _startTime.hour(), _startTime.minute(), _startTime.second());
+
+    if (file.isOpen()) {
+        file.close();
+    }
 
     //open the first lap file
     memset(lap_name,0,32);
-    sprintf(lap_name, "lap_%u_%u", (unsigned)(laps.size()-1), (unsigned)laps.back().parts);
-    if (!file.open(lap_name, O_WRITE | O_APPEND | O_CREAT)) {
+    snprintf(lap_name, sizeof(lap_name), "/lap_%u_%u", (unsigned)(laps.size()-1), (unsigned)laps.back().parts);
+    if (!file.open(lap_name, O_WRITE | O_CREAT | O_TRUNC)) {
         Serial.print("Error opening file: ");
         Serial.println(lap_name);
     }
@@ -34,15 +40,18 @@ void TCXLogger::writeLapHeader(uint16_t lapIndex, File32 *file) {
     }
 
     auto& a = _model.bio().get();
-    float age = timeDuration(_currentTime - a.birthday).days()/356.25;
+    float age = timeDuration(_currentTime - a.birthday).years();
 
-    float avgHRM = float(lp.totalHRM) / float(ts._totalSeconds);
+    float avgHRM = 0;
+    if (ts._totalSeconds > 0) {
+        avgHRM = float(lp.totalHRM) / float(ts._totalSeconds);
+    }
     float avgCAD = lp.totalCadence / ts._totalSeconds;
 
     int f = ((age * 0.074) - (float(a.mass) * 0.1265672342) + (avgHRM * 0.4472) - 20.4022) * float(_elapsed_Lap.totalseconds()) / 251.1;
     int m = ((age * 0.2017) - (float(a.mass) * 0.1992094632) + (avgHRM * 0.6309) - 55.0969) * float(_elapsed_Lap.totalseconds()) / 251.1;
 
-    uint32_t Calories;
+    int32_t Calories;
     switch(a.caloricProfile) {
         case CaloricProfile::Female: 
         Calories = f;
@@ -128,7 +137,7 @@ void TCXLogger::addTrackpoint(const Trackpoint& tp) {
         file.close();
 
         memset(lap_name,0,32);
-        sprintf(lap_name, "lap_%u_%u", (unsigned)(laps.size()-1), (unsigned)laps.back().parts);
+        snprintf(lap_name, sizeof(lap_name), "/lap_%u_%u", (unsigned)(laps.size()-1), (unsigned)laps.back().parts);
         if (!file.open(lap_name, O_WRITE | O_APPEND | O_CREAT)) {
             Serial.print("Error opening file: ");
             Serial.println(lap_name);
@@ -155,7 +164,7 @@ void TCXLogger::newLap(timeData currentTime) {
     file.close();
 
     memset(lap_name,0,32);
-    sprintf(lap_name, "lap_%u_%u", (unsigned)(laps.size()-1), (unsigned)laps.back().parts);
+    snprintf(lap_name, sizeof(lap_name), "/lap_%u_%u", (unsigned)(laps.size()-1), (unsigned)laps.back().parts);
     if (!file.open(lap_name, O_WRITE | O_APPEND | O_CREAT)) {
         Serial.print("Error opening file: ");
         Serial.println(lap_name);
@@ -188,19 +197,36 @@ void TCXLogger::dataTransfer(File32 *from, File32 *to) {
 }
 
 bool TCXLogger::finaliseLogging() {
+    Serial.println("TCX::finaliseLogging entry");
+    Serial.flush();
+
     File32 final_file;
-    file.close();
+    if (file.isOpen()) {
+        Serial.println("TCX::closing active lap file");
+        Serial.flush();
+        file.flush();
+        file.close();
+    }
 
     int lapSize = laps.size();
+    Serial.print("TCX::lap count=");
+    Serial.println(lapSize);
+    Serial.flush();
 
-    if (!final_file.open(_filename, O_WRITE | O_APPEND | O_CREAT)) {
-        final_file.print("Error opening : ");Serial.println(_filename);
+    Serial.print("TCX::opening final file ");
+    Serial.println(_filename);
+    Serial.flush();
+    if (!final_file.open(_filename, O_WRITE | O_CREAT | O_TRUNC)) {
+        Serial.print("TCX::open final file failed: ");
+        Serial.println(_filename);
+        Serial.flush();
         return false;
     }
 
+    Serial.println("TCX::opened final file");
+    Serial.flush();
+
     //nested loop to add all laps and their parts into the main file
-    char time[32];
-    sprintf(time, "%u-%02u-%02uT%02u:%02u:%02u", _startTime.day(),_startTime.month(),_startTime.year(),_startTime.hour(),_startTime.minute(),_startTime.second());
 
     Serial.print("Writing head to "); Serial.println(_filename);
 
@@ -209,7 +235,7 @@ bool TCXLogger::finaliseLogging() {
     final_file.println("<TrainingCenterDatabase xmlns=\"http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2\">");
     final_file.println("  <Activities>");
     final_file.println("    <Activity Sport=\"Biking\">");
-    final_file.print("      <Id>");final_file.print(time);final_file.println("</Id>");
+    final_file.print("      <Id>");final_file.print(_startTime.toString());final_file.println("</Id>");
 
     Serial.println("Processing laps...");
     for(int i=0;i<lapSize;i++) {
@@ -220,24 +246,28 @@ bool TCXLogger::finaliseLogging() {
         for(int j=0;j<=laps[i].parts;j++) { 
             //transfer lap_%d_%d, i,j to _filename
             memset(lap_name, 0 , 32);
-            sprintf(lap_name, "lap_%d_%d", i, j);
+            snprintf(lap_name, sizeof(lap_name), "/lap_%d_%d", i, j);
             Serial.print("processing file "); Serial.println(lap_name);
-            if (!file.open(lap_name, O_READ)) {
-                Serial.println("Error opening : ");Serial.println(lap_name);
+            File32 lap_file;
+            if (!lap_file.open(lap_name, O_READ)) {
+                Serial.print("Error opening lap file: "); Serial.println(lap_name);
                 return false;
             }
+            Serial.print("Copying lap chunk: "); Serial.println(lap_name);
             memset(buffer, 0, sizeof(buffer)); // Clear buffer
-            while ((bytesRead = file.read(buffer, sizeof(buffer)-1)) > 0) {
+            while ((bytesRead = lap_file.read(buffer, sizeof(buffer)-1)) > 0) {
                 uint16_t written = final_file.write(buffer, bytesRead);
                 memset(buffer, 0, sizeof(buffer)); // Clear buffer
                 if (written != bytesRead) {
-                Serial.println("Write error!");
-                break;
+                    Serial.print("Write error for "); Serial.println(lap_name);
+                    break;
                 }
             }
-            file.close();
+            lap_file.close();
             final_file.flush();
-            _storage->remove(lap_name);
+            if (!_storage->remove(lap_name)) {
+                Serial.print("Failed to remove lap file: "); Serial.println(lap_name);
+            }
         }
         final_file.println("        </Track>");
         final_file.println("      </Lap>"); // Close the Lap element

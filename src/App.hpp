@@ -5,6 +5,7 @@
 #include "HAL/HAL.hpp"
 #include "Loggers/TCXLogger.hpp"
 #include "Loggers/FITLogger.hpp"
+#include "Loggers/CSVLogger.hpp"
 #include "AppEvents.hpp"
 #include "DataModel/DataModel.hpp"
 #include "HAL/BluetoothInterface.hpp"
@@ -59,8 +60,9 @@ private:
 
     TCXLogger* tcxLogger = nullptr;
     FITLogger* fitLogger = nullptr;
+    CSVLogger* csvLogger = nullptr;
 
-    AppState state = AppState::BOOT, state_prev;
+    AppState state = AppState::BOOT, state_prev = AppState::BOOT;
     TinyGPSLocation _lastLocation;
     DateTime _gpsNow;
     bool _gpsNowValid = false;
@@ -90,6 +92,43 @@ private:
 
     void saveTime();
     void loadTime();
+
+    void updateLoggerInstance() {
+            const LoggerType selectedLogger = model.bike().get().logger;
+
+            //delete previously created loggers if they exist
+            if (fitLogger) {
+                delete fitLogger;
+                fitLogger = nullptr;
+            }
+            if (tcxLogger) {
+                delete tcxLogger;
+                tcxLogger = nullptr;
+            }
+            if (csvLogger) {
+                delete csvLogger;
+                csvLogger = nullptr;
+            }
+
+            switch (selectedLogger) {
+                case LoggerType::FIT:
+                    fitLogger = new FITLogger(_storage);
+                    _logger = fitLogger;
+                    Serial.println("FIT logger initialized.");
+                    break;
+                case LoggerType::TCX:
+                    tcxLogger = new TCXLogger(_storage, model);
+                    _logger = tcxLogger;
+                    Serial.println("TCX logger initialized.");
+                    break;
+                case LoggerType::CSV:
+                    // Implement CSV logger initialization if needed
+                    csvLogger = new CSVLogger(_storage);
+                    _logger = csvLogger;
+                    Serial.println("CSV logger initialized.");
+                    break;
+            }
+    }
 };
 
 #endif /* APP_H */

@@ -2,6 +2,7 @@
 #define LOGGERINTERFACE_H
 
 #include "DataModel/TimeDataProvider.hpp"
+#include <vector>
 
 struct Trackpoint {
     timeData currentTime;    // Time in ISO 8601 format
@@ -53,6 +54,8 @@ public:
     }
     
     virtual ~ILogger() = default;
+protected:
+    std::vector<Lap> laps; // kept public to match original's `laps.back()` usage
 };
 
 #endif /* LOGGERINTERFACE_H */

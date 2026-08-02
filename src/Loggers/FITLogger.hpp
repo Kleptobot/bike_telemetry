@@ -1,7 +1,6 @@
 #ifndef FITLOGGER_H
 #define FITLOGGER_H
 
-#include <vector>
 #include "ILogger.hpp"
 #include "FitWriter.hpp"
  
@@ -41,8 +40,6 @@ public:
         if (laps.empty()) return timeDuration(0);
         return _currentTime - laps.back().startTime;
     }
- 
-    std::vector<Lap> laps; // kept public to match original's `laps.back()` usage
  
 private:
     FitWriter _writer;

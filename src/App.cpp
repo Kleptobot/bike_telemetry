@@ -16,13 +16,6 @@
 void App::begin(IStorage* storage) {
     _storage = storage;
 
-    //instantiate an instance of both loggers
-    //tcxLogger = new TCXLogger(_storage, model);
-    fitLogger = new FITLogger(_storage);
-
-    //set the logger interface
-    _logger = fitLogger;
-
     state = AppState::BOOT;
     Disp::init();
 
@@ -120,6 +113,9 @@ void App::update() {
             loadBikeStats();
             loadLayout();
             loadTime();
+
+            updateLoggerInstance();
+
             ui.showScreen(ScreenID::MainMenu);
             state = AppState::IDLE;
             break;
@@ -129,11 +125,10 @@ void App::update() {
                 HAL::inst().bluetooth().setMode(E_Type_BT_Mode::connect);
             else
                 HAL::inst().bluetooth().setMode(E_Type_BT_Mode::idle);
-            if(state_prev==AppState::LOGGING) {
+            if (state_prev == AppState::LOGGING && _logger) {
+                Serial.println("[App] Finalizing logger.");
                 _logger->finaliseLogging();
-                model.logger().update({timeDuration(0), timeDuration(0)});
             }
-            
             model.telemetry().resetDistance();
 
             //on SD card detection go back to boot
@@ -365,6 +360,7 @@ void App::handleAppEvent(const AppEvent& e) {
 
         case AppEventType::SaveBikeStats:
             saveBikeStats();
+            updateLoggerInstance();
             break;
 
         default:
@@ -446,6 +442,7 @@ void App::saveBikeStats() {
     
     doc["mass"] = a.mass;
     doc["wheelCircumference"] = a.wheelCircumference;
+    doc["logger"] = loggerToString(a.logger);
 
     if (_storage->exists("/bikeStats.txt"))
         _storage->remove("/bikeStats.txt");
@@ -486,6 +483,7 @@ void App::loadBikeStats() {
         BikeData a;
         a.mass = jsonBuffer["mass"];
         a.wheelCircumference = jsonBuffer["wheelCircumference"];
+        a.logger = loggerFromString(jsonBuffer["logger"]);
 
         model.bike().update(a);
         dataFile.close();
