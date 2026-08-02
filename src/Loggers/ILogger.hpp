@@ -1,23 +1,8 @@
 #ifndef LOGGERINTERFACE_H
 #define LOGGERINTERFACE_H
 
-#include "DataModel/TimeDataProvider.hpp"
-
-struct Trackpoint {
-    timeData currentTime;    // Time in ISO 8601 format
-    double latitude;
-    double longitude;
-    double altitude;
-    double heartRate;    // Optional
-    double power;        // Optional
-    double cadence;      // Optional
-    // Instantaneous speed in KILOMETRES PER HOUR, matching Telemetry::speed,
-    // which is what App::update passes in. This previously said metres per
-    // second while receiving km/h, and FITLogger encoded it as m/s -- so every
-    // logged ride was 3.6x too fast. Loggers must convert on the way out.
-    double speed;
-    double distance;     // Cumulative distance in meters
-};
+#include "DataModel/DataModel.hpp"
+#include <vector>
 
 // FIT and TCX both want speed in m/s; the telemetry pipeline works in km/h.
 inline double kmhToMs(double kmh) { return kmh / 3.6; }
@@ -35,8 +20,8 @@ struct Lap {
 class ILogger {
 public:
     virtual void startLogging(const timeData& currentTime) =0 ;
-    virtual void addTrackpoint(const Trackpoint& tp) = 0;
-    virtual void newLap(timeData currentTime) = 0;
+    virtual void addTrackpoint(const Telemetry& tp, const timeData& currentTime) = 0;
+    virtual void newLap(const timeData& currentTime) = 0;
     virtual bool finaliseLogging() = 0;
     virtual const timeDuration elapsed_Total() const = 0;
     virtual const timeDuration elapsed_Lap() const = 0;
@@ -53,6 +38,8 @@ public:
     }
     
     virtual ~ILogger() = default;
+protected:
+    std::vector<Lap> laps; // kept public to match original's `laps.back()` usage
 };
 
 #endif /* LOGGERINTERFACE_H */

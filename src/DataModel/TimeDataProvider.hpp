@@ -14,6 +14,7 @@ struct timeDuration {
     long totalSeconds() const { return _totalSeconds; }
     long days()    const { return _totalSeconds / 86400L; }
     long totalHours() const { return _totalSeconds / 3600L; } // raw, unwrapped (e.g. 27 for a 27h lap)
+    double years() const { return (double)_totalSeconds / 31556952.0; } // average Gregorian year
     int  hours()   const { return (int)((_totalSeconds % 86400L) / 3600L); }
     int  minutes() const { return (int)((_totalSeconds % 3600L) / 60L); }
     int  seconds() const { return (int)(_totalSeconds % 60L); }
@@ -167,6 +168,23 @@ public:
         static const long EPOCH_DAYS = days_since_epoch_s(1970, 1, 1);
         return (days_since_epoch_s(_year, _month, _day) - EPOCH_DAYS) * 86400LL
             + (long long)_hour * 3600LL + (long long)_minute * 60LL + _second;
+    }
+
+    String toString() const {
+        char buffer[35]; // Increased size slightly to prevent overflow truncation
+        char sign = (_offset >= 0) ? '+' : '-';
+        int abs_offset = abs(_offset);
+
+        if (_offset == 0) {
+            snprintf(buffer, sizeof(buffer), "%04d-%02d-%02dT%02d:%02d:%02dZ", 
+                    _year, _month, _day, _hour, _minute, _second);
+        } else {
+            snprintf(buffer, sizeof(buffer), "%04d-%02d-%02dT%02d:%02d:%02d%c%02d:%02d", 
+                    _year, _month, _day, _hour, _minute, _second, 
+                    sign, abs_offset / 60, abs_offset % 60);
+        }
+        
+        return String(buffer);
     }
 
     // --- Local-time getters (offset-adjusted) ---

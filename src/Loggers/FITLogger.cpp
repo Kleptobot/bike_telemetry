@@ -120,9 +120,9 @@ void FITLogger::startLogging(const timeData& currentTime) {
     newLap(currentTime); // implicitly start lap 0, matching typical TCX flow
 }
 
-void FITLogger::addTrackpoint(const Trackpoint& tp) {
-    _currentTime = tp.currentTime;
-    uint32_t ts = toFitTimestamp(tp.currentTime.unixtime());
+void FITLogger::addTrackpoint(const Telemetry& tp, const timeData& currentTime) {
+    _currentTime = currentTime;
+    uint32_t ts = toFitTimestamp(currentTime.unixtime());
 
     // altitude field is scale 5, offset 500 per FIT profile: stored = (m + 500) * 5
     uint16_t altitudeEncoded = static_cast<uint16_t>((tp.altitude + 500.0) * 5.0);
@@ -135,7 +135,7 @@ void FITLogger::addTrackpoint(const Trackpoint& tp) {
     _writer.writeU32(static_cast<uint32_t>(tp.distance * 100.0));      // cumulative, scale 100
     // FIT speed is m/s at scale 1000; Trackpoint::speed is km/h.
     _writer.writeU16(static_cast<uint16_t>(kmhToMs(tp.speed) * 1000.0));
-    _writer.writeU8(tp.heartRate > 0 ? static_cast<uint8_t>(tp.heartRate) : 0xFF);
+    _writer.writeU8(tp.heartrate > 0 ? static_cast<uint8_t>(tp.heartrate) : 0xFF);
     _writer.writeU8(tp.cadence > 0 ? static_cast<uint8_t>(tp.cadence) : 0xFF);
     _writer.writeU16(tp.power > 0 ? static_cast<uint16_t>(tp.power) : 0xFFFF);
 
@@ -144,9 +144,9 @@ void FITLogger::addTrackpoint(const Trackpoint& tp) {
     Lap& lap = laps.back();
     lap.parts++;
     if (tp.speed > lap.maxSpeed) lap.maxSpeed = static_cast<float>(tp.speed);   // km/h, converted on write
-    if (tp.heartRate > 0) {
-        lap.totalHRM += static_cast<float>(tp.heartRate);
-        if (tp.heartRate > lap.maxHRM) lap.maxHRM = static_cast<float>(tp.heartRate);
+    if (tp.heartrate > 0) {
+        lap.totalHRM += static_cast<float>(tp.heartrate);
+        if (tp.heartrate > lap.maxHRM) lap.maxHRM = static_cast<float>(tp.heartrate);
     }
     if (tp.cadence > 0) {
         lap.totalCadence += static_cast<float>(tp.cadence);
@@ -156,7 +156,7 @@ void FITLogger::addTrackpoint(const Trackpoint& tp) {
     // Trackpoint is cumulative-for-the-whole-activity, not per-lap.
 }
 
-void FITLogger::newLap(timeData currentTime) {
+void FITLogger::newLap(const timeData& currentTime) {
     uint32_t endFit = toFitTimestamp(currentTime.unixtime());
 
     if (!laps.empty()) {

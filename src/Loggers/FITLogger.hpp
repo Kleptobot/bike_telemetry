@@ -1,7 +1,6 @@
 #ifndef FITLOGGER_H
 #define FITLOGGER_H
 
-#include <vector>
 #include "ILogger.hpp"
 #include "FitWriter.hpp"
  
@@ -29,8 +28,8 @@ public:
     explicit FITLogger(IStorage* storage) : _writer(storage) {}
  
     void startLogging(const timeData& currentTime) override;
-    void addTrackpoint(const Trackpoint& tp) override;
-    void newLap(timeData currentTime) override;
+    void addTrackpoint(const Telemetry& tp, const timeData& currentTime) override;
+    void newLap(const timeData& currentTime) override;
     bool finaliseLogging() override;
  
     const timeDuration elapsed_Total() const override { return _currentTime - _startTime; }
@@ -41,8 +40,6 @@ public:
         if (laps.empty()) return timeDuration(0);
         return _currentTime - laps.back().startTime;
     }
- 
-    std::vector<Lap> laps; // kept public to match original's `laps.back()` usage
  
 private:
     FitWriter _writer;
