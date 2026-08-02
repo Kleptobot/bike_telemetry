@@ -38,8 +38,8 @@ class TCXLogger : public ILogger {
     explicit TCXLogger(IStorage* storage, DataModel& model) : _storage(storage), _model(model) {};
 
     void startLogging(const timeData& currentTime);
-    void addTrackpoint(const Trackpoint& tp);
-    void newLap(timeData currentTime);
+    void addTrackpoint(const Telemetry& tp, const timeData& currentTime);
+    void newLap(const timeData& currentTime);
     bool finaliseLogging();
 
     const timeDuration elapsed_Total() const {return _currentTime-_startTime;};

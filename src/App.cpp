@@ -157,15 +157,7 @@ void App::update() {
             
             //check if seconds has changed for logging tick
             if (currentTime.second() != lastSecond) {
-                _logger->addTrackpoint({ currentTime,
-                                        tel.latitude,
-                                        tel.longitude,
-                                        tel.altitude,
-                                        tel.heartrate,
-                                        tel.power,
-                                        tel.cadence,
-                                        tel.speed,
-                                        tel.totalDistance});
+                _logger->addTrackpoint(tel, currentTime);
             }
             break;
         

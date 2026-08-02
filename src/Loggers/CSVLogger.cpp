@@ -29,50 +29,36 @@ void CSVLogger::writeHeader() {
         Serial.println("Error file not open: ");
         return;
     }
-    file.println("Timestamp,Latitude,Longitude,Altitude,Speed,HeartRate,Cadence,Power");
+    file.println("acc_x,acc_y,acc_z,gyro_x,gyro_y,gyro_z,BattPercentage,speed,cadence,temperature,altitude,heartrate,power,validLocation,longitude,latitude,distance,totalDistance,grade");
     file.flush();
 }
 
-void CSVLogger::addTrackpoint(const Trackpoint& tp) {
+void CSVLogger::addTrackpoint(const Telemetry& tp, const timeData& currentTime) {
     if (!file.isOpen()) {
         Serial.println("Error file not open: ");
         return;
     }
-    file.print(tp.currentTime.toString()); file.print(",");
+    file.print(currentTime.toString()); file.print(",");
     file.print(tp.latitude, 6); file.print(",");
     file.print(tp.longitude, 6); file.print(",");
     file.print(tp.altitude); file.print(",");
     file.print(tp.speed); file.print(",");
-    file.print(tp.heartRate); file.print(",");
+    file.print(tp.heartrate); file.print(",");
     file.print(tp.cadence); file.print(",");
     file.println(tp.power);
     file.flush();
 
-    _currentTime = tp.currentTime;
-
-    Lap& lap = laps.back();
-    lap.parts++;
-    if (tp.speed > lap.maxSpeed) lap.maxSpeed = static_cast<float>(tp.speed);   // km/h, converted on write
-    if (tp.heartRate > 0) {
-        lap.totalHRM += static_cast<float>(tp.heartRate);
-        if (tp.heartRate > lap.maxHRM) lap.maxHRM = static_cast<float>(tp.heartRate);
-    }
-    if (tp.cadence > 0) {
-        lap.totalCadence += static_cast<float>(tp.cadence);
-    }
-
-    laps.back().totalHRM += tp.heartRate;
-    laps.back().totalCadence += tp.cadence;
+    _currentTime = currentTime;
 
     if (tp.speed > laps.back().maxSpeed)
         laps.back().maxSpeed = tp.speed;
-    if (tp.heartRate > laps.back().maxHRM)
-        laps.back().maxHRM = tp.heartRate;
+    if (tp.heartrate > laps.back().maxHRM)
+        laps.back().maxHRM = tp.heartrate;
 
     laps.back().totalDistance = tp.distance;
 }
 
-void CSVLogger::newLap(timeData currentTime) {
+void CSVLogger::newLap(const timeData& currentTime) {
     laps.push_back({currentTime, 1, 1, 0, 0, 0, 0});
 }
 

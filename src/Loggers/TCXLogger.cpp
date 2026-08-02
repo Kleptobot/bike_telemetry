@@ -88,10 +88,10 @@ void TCXLogger::writeLapHeader(uint16_t lapIndex, File32 *file) {
     file->println("        <Track>");
 };
 
-void TCXLogger::addTrackpoint(const Trackpoint& tp) {
+void TCXLogger::addTrackpoint(const Telemetry& tp, const timeData& currentTime) {
 
     char time[32];
-    sprintf(time, "%d-%02d-%02dT%02d:%02d:%02d", tp.currentTime.year(), tp.currentTime.month(), tp.currentTime.day(), tp.currentTime.hour(), tp.currentTime.minute(), tp.currentTime.second());
+    sprintf(time, "%d-%02d-%02dT%02d:%02d:%02d", currentTime.year(), currentTime.month(), currentTime.day(), currentTime.hour(), currentTime.minute(), currentTime.second());
 
     file.println("          <Trackpoint>");
     file.print("            <Time>");file.print(time);file.println("</Time>");
@@ -102,9 +102,9 @@ void TCXLogger::addTrackpoint(const Trackpoint& tp) {
     file.print("            <AltitudeMeters>");file.print(tp.altitude);file.println("</AltitudeMeters>");
     file.print("            <DistanceMeters>");file.print(tp.distance);file.println("</DistanceMeters>");
 
-    if (tp.heartRate > 0) { // Optional heart rate
+    if (tp.heartrate > 0) { // Optional heart rate
         file.println("            <HeartRateBpm>");
-        file.println("              <Value>" + String(tp.heartRate) + "</Value>");
+        file.println("              <Value>" + String(tp.heartrate) + "</Value>");
         file.println("            </HeartRateBpm>");
     }
 
@@ -128,7 +128,7 @@ void TCXLogger::addTrackpoint(const Trackpoint& tp) {
     file.println("          </Trackpoint>");
     file.flush();
 
-    _currentTime = tp.currentTime;
+    _currentTime = currentTime;
 
     totalPoints ++;
     if(totalPoints >= points_per_chunk) {
@@ -144,20 +144,20 @@ void TCXLogger::addTrackpoint(const Trackpoint& tp) {
         }
     }
     
-    laps.back().totalHRM += tp.heartRate;
+    laps.back().totalHRM += tp.heartrate;
     laps.back().totalCadence += tp.cadence;
 
     if(tp.speed>laps.back().maxSpeed)
         laps.back().maxSpeed=tp.speed;
-    if(tp.heartRate>laps.back().maxHRM)
-        laps.back().maxHRM=tp.heartRate;
+    if(tp.heartrate>laps.back().maxHRM)
+        laps.back().maxHRM=tp.heartrate;
 
     laps.back().totalDistance = tp.distance;
 };
 
 void TCXLogger::resetTotals() { totalPoints = 0; };
 
-void TCXLogger::newLap(timeData currentTime) {
+void TCXLogger::newLap(const timeData& currentTime) {
     totalPoints = 0;
     resetTotals();
     laps.push_back({currentTime, 1, 1, 0, 0, 0, 0});
