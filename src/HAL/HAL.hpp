@@ -82,7 +82,7 @@ class HAL {
     AltitudeFusion altFusion;
 
     // private memeber variables
-    float f32_cadence, f32_temp, f32_alt, f32_bpm, f32_pow;
+    float f32_cadence, f32_temp, f32_alt, f32_bpm, f32_pow, f32_altitude;
     data_record gpsKmh, wheelRPM;
     uint8_t _rxBuffer[1024];
     uint32_t _resetGPSTime, _resetDispTime;

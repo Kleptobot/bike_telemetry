@@ -36,22 +36,41 @@ void HAL::init(timeData* date) {
     //reset some systems
     resetDisplay();
 
-    inputSystem.setOutput(GPIOB6,true); //turn on the screen backlight
+    inputSystem.setOutput(GPIOB6,false); //turn on the screen backlight
 
     //set up some callbacks
-    sensorSystem.onDPS([this](data_record alt) {
-        altFusion.altitudeDPSUpdate(alt.value);
-        _dpsValid = alt.live;
+    sensorSystem.onDPS([this](dps_data dps) {
+        f32_altitude = altFusion.computeAltitudeFromPressure(dps.f32_DSP_Pa, dps.f32_DSP_Temp);
+        if (altFusion.seaLevelPressureCalibrated()) {
+            altFusion.altitudeDPSUpdate(f32_altitude);
+        }
+        _dpsValid = dps.dpsValid;
     });
     sensorSystem.onIMU([this](data_record acc_z) {
-        altFusion.altitudeIMUUpdate(acc_z.value);
+        altFusion.altitudeIMUUpdate(-1*acc_z.value);
     });
 }
 
+uint32_t lastHdopCheck = 0, lastbaroCalibration = 0;;
 void HAL::update() {
     _LC76G.update();
 
     //check the age of the gps altitude measurement
+    if (millis() - lastHdopCheck > 1000 && _LC76G.gps().hdop.isValid()) {
+        Serial.print("HDOP: "); Serial.println(_LC76G.gps().hdop.hdop());
+        Serial.print("GPS Altitude: "); Serial.println(_LC76G.gps().altitude.meters());
+        Serial.print("Baro Altitude: ");
+        Serial.println(altFusion.computeAltitudeFromPressure(sensorSystem.dps().f32_DSP_Pa, sensorSystem.dps().f32_DSP_Temp));
+        Serial.print("IMU Acc Z: "); Serial.println(sensorSystem.imu().f32_acc_z);
+        Serial.print("altFusion Altitude: "); Serial.println(altFusion.altitude());
+        Serial.print("altFusion Vertical Velocity: "); Serial.println(altFusion.rise());
+        lastHdopCheck = millis();
+
+        if (_LC76G.gps().altitude.isValid() && _LC76G.gps().hdop.hdop() < 2.0f) {
+            altFusion.baroCalibrateFromGPS(_LC76G.gps().altitude.meters(), sensorSystem.dps().f32_DSP_Pa, sensorSystem.dps().f32_DSP_Temp);
+        }
+    }
+
     if (_LC76G.gps().altitude.age() < gpsAltAge) {
         altFusion.altitudeGPSCorrect(_LC76G.gps().altitude.meters());
     }
@@ -154,6 +173,7 @@ void HAL::buzzStop() {
 
 void HAL::sleep() {
     Serial.println("sleep");
+    inputSystem.setOutput(GPIOB6,true); //turn off the screen backlight
     if (!_sleep) {
         _sleep = true;
         _LC76G.sendCommand(LC76G::PAIR_LOW_POWER_ENTRY_RTC_MODE,&HAL::onSleep,this,nullptr);

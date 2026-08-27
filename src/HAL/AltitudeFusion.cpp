@@ -23,28 +23,72 @@ void AltitudeFusion::altitudeIMUUpdate(float accZ) {
 }
 
 void AltitudeFusion::altitudeDPSUpdate(float dpsAlt) {
+    float corrected_baro = dpsAlt - baro_bias_z;
+    float error = corrected_baro - est_alt;
 
-    // The core fusion check: update altitude and capture acceleration errors
-    float error = dpsAlt - est_alt;
-    
     est_alt += error * k_baro;
     est_vel_z += error * (k_baro * 0.1f);
-    
-    // This line absorbs long-term tilt errors or constant vibration biases
     acc_bias_z -= error * k_bias;
 }
 
 void AltitudeFusion::altitudeGPSCorrect(float gpsAlt) {
-    // 1. Critical initialization step
     if (!altitudeValidLast) {
-        // First time getting a valid lock, instantly snap to GPS height
-        // This anchors your absolute baseline right away
         est_alt = gpsAlt;
+        baro_bias_z = 0.0f;
         altitudeValidLast = true;
     } else {
-        // 2. Continuous drift correction
-        // Slowly nudge the filter toward the absolute GPS value
         float gps_error = gpsAlt - est_alt;
-        est_alt += gps_error * k_gps;
+        baro_bias_z -= gps_error * k_gps;
     }
+}
+
+float AltitudeFusion::computeAltitudeFromPressure(float pressurePa, float tempC) const {
+    float Tb = 273.15f + tempC;
+    float P_Pb = pow(pressurePa / P0_local, -BARO_EXPONENT);
+    return (Tb * P_Pb - Tb) / (BARO_LAPSE_RATE * P_Pb);
+}
+
+float AltitudeFusion::computeSeaLevelPressure(float pressurePa, float tempC, float knownAltM) const {
+    float Tb = 273.15f + tempC;
+    float exponent = 1.0f / BARO_EXPONENT;
+    float base = 1.0f - (BARO_LAPSE_RATE * knownAltM) / Tb;
+    return pressurePa / powf(base, exponent);
+}
+
+bool AltitudeFusion::gpsHistoryIsStable() const {
+    if (gps_hist_count < 5) return false;
+    float minV = gps_alt_history[0], maxV = gps_alt_history[0];
+    for (uint8_t i = 1; i < 5; i++) {
+        minV = min(minV, gps_alt_history[i]);
+        maxV = max(maxV, gps_alt_history[i]);
+    }
+    return (maxV - minV) <= GPS_STABILITY_THRESHOLD_M;
+}
+
+void AltitudeFusion::baroCalibrateFromGPS(float gpsAlt, float pressurePa, float tempC) {
+    // Always feed the rolling history so the stability check reflects live
+    // data, regardless of how often the caller happens to invoke this.
+    for (uint8_t i = 0; i < 4; i++) gps_alt_history[i] = gps_alt_history[i + 1];
+    gps_alt_history[4] = gpsAlt;
+    if (gps_hist_count < 5) gps_hist_count++;
+
+    if (!P0_calibrated) {
+        // Bootstrap from a single sample rather than waiting on 5 stable
+        // history entries -- altitudeDPSUpdate() is gated off until this
+        // fires (see HAL.cpp), so getting *some* P0 quickly matters more
+        // than getting a perfect one. A noisy first snap gets pulled toward
+        // the true value by the slow-track branch below once the history
+        // is stable.
+        P0_local = computeSeaLevelPressure(pressurePa, tempC, gpsAlt);
+        P0_calibrated = true;
+        lastP0UpdateMs = millis();
+        return;
+    }
+
+    if (!gpsHistoryIsStable()) return;
+    if (millis() - lastP0UpdateMs < P0_UPDATE_COOLDOWN_MS) return;
+
+    float impliedP0 = computeSeaLevelPressure(pressurePa, tempC, gpsAlt);
+    P0_local += (impliedP0 - P0_local) * P0_LOWPASS_ALPHA;
+    lastP0UpdateMs = millis();
 }

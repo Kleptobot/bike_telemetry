@@ -23,7 +23,7 @@
 #define BAT_FULL_V  (4.20F)
 #define BAT_EMPTY_V (3.30F)
 
-#define DS3231 true
+#define DS3231 false
 
 class SensorSystem {
 public:
@@ -47,7 +47,7 @@ public:
     dps_data dps() const {return dps_dat;}
     void setTime(DateTime date);
 
-    using DPSCallback = std::function<void(data_record f32_Alt)>;
+    using DPSCallback = std::function<void(dps_data dps)>;
     using IMUCallback = std::function<void(data_record f32_acc_z)>;
 
     void onDPS(DPSCallback cb) { dpsCallback = cb; }
@@ -55,9 +55,9 @@ public:
 
 private:
     static const uint16_t BAT_Read_Period = 29999;
-    static const uint16_t IMU_Read_Period = 1999;
-    static const uint16_t DPS_Read_Period = 4999;
-    static const uint16_t RTC_Read_Period = 450;
+    static const uint16_t IMU_Read_Period = 60;
+    static const uint16_t DPS_Read_Period = 500;
+    static const uint16_t RTC_Read_Period = 950;
 
     LSM6DS3* _myIMU;
     #if DS3231

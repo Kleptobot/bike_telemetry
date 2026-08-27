@@ -1,11 +1,12 @@
 #include "Sensors.hpp"
 
 void SensorSystem::init_low() {
-    if (!_rtc.begin()) {
+    while (!_rtc.begin()) {
         Serial.println("Couldn't find RTC");
-    } else {
-        Serial.println("RTC initialised");
+        delay(100);
     }
+    Serial.println("RTC initialised");
+    
     pinMode(VBAT_ENABLE, OUTPUT);
     pinMode(BAT_CHARGE_STATE, INPUT);
 
@@ -50,11 +51,12 @@ bool SensorSystem::update(bool i2cBusy) {
 
         lastRTCTime = millis();
         update = true;
-    } else if ((millis() - lastDSPTime > DPS_Read_Period) && !i2cBusy) {
+    }
+    if ((millis() - lastDSPTime > DPS_Read_Period) && !i2cBusy) {
 
         ret = _dps.getContResults(temperature, temperatureCount, pressure, pressureCount);
-        //Dps3xxPressureSensor.measureTempOnce(f32_DSP_Temp, 7);
-        //Dps3xxPressureSensor.measurePressureOnce(f32_DSP_Pa, 7);
+        //_dps.measureTempOnce(f32_DSP_Temp, 7);
+        //_dps.measurePressureOnce(f32_DSP_Pa, 7);
         if (ret != 0)
         {
             // Serial.print("FAIL! ret = ");
@@ -75,21 +77,16 @@ bool SensorSystem::update(bool i2cBusy) {
             dps_dat.f32_DSP_Pa+=pressure[i];
             }
             dps_dat.f32_DSP_Pa = dps_dat.f32_DSP_Pa/(float)pressureCount;
-
-            //estimate altitude from pressure and temperature
-            float Tb = 273.15+dps_dat.f32_DSP_Temp;
-            float P_Pb = pow(dps_dat.f32_DSP_Pa/101325.0,-0.1902663539);
-            float Lb = 0.0065;
-            dps_dat.f32_Alt = (Tb*P_Pb-Tb)/(Lb*P_Pb);
             _dpsValid = true;
         }
-        if (dpsCallback) {
-            dpsCallback({dps_dat.f32_Alt, _dpsValid});
-        }
         dps_dat.dpsValid = _dpsValid;
+        if (dpsCallback) {
+            dpsCallback({dps_dat});
+        }
         update = true;
         lastDSPTime = millis();    
-    } else if ((millis() - lastIMUTime > IMU_Read_Period) && !i2cBusy) {
+    }
+    if ((millis() - lastIMUTime > IMU_Read_Period) && !i2cBusy) {
         _imu.f32_acc_x = _myIMU->readFloatAccelX();
         _imu.f32_acc_y = _myIMU->readFloatAccelY();
         _imu.f32_acc_z = _myIMU->readFloatAccelZ();
@@ -101,7 +98,8 @@ bool SensorSystem::update(bool i2cBusy) {
         if (imuCallback) {
             imuCallback({_imu.f32_acc_z,true});
         }
-    } else if (millis() - lastBATTime > BAT_Read_Period) {
+    }
+    if (millis() - lastBATTime > BAT_Read_Period) {
         //get BAT data
         digitalWrite(VBAT_ENABLE, LOW);
 

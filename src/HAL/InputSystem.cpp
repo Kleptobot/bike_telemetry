@@ -32,7 +32,8 @@ void InputSystem::init() {
   _mcp.digitalWrite(GPIOB4, true);    //turn the gps enable supply on
   
   _mcp.digitalWrite(GPIOB5, true);    //set the reset pin of the gps
-  _mcp.digitalWrite(GPIOB6, false);   //turn the display off
+  _mcp.digitalWrite(GPIOB6, true);   //turn the display off
+  //_mcp.digitalWrite(GPIOB6, true);   //turn the display on
   _mcp.digitalWrite(GPIOB7, true);    //set the reset pin of the display
 
 }
