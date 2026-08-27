@@ -41,10 +41,9 @@ void loop() {
     HAL::inst().update();
     App::instance().update();
 
-    //read the state of the gps enable pin, if its low then sleep
+    // read the state of the gps enable pin, if its low then sleep
     if ( !App::instance().getGpsEnableState() ) {
         if ((millis() - gpsLastEnableTime) > 500) { //small debounce
-            digitalWrite(D6, false); //turn off the auxilary supply
             NRF_POWER->SYSTEMOFF = 1;
         }
     } else {

@@ -2,11 +2,16 @@
 #define SENSORS_H
 
 #include <Arduino.h>
-#include <RTClib.h>
 #include <Dps3xx.h>
 #include <LSM6DS3.h>
 #include <functional>
 #include "SensorData.hpp"
+#if DS3231
+    #include <RTClib.h>
+#else
+    #include <PCF85063A.h>
+    #include <time.h>
+#endif
 
 #define LSM6DS3_ADDR 0x6A //I2C device address 0x6A
 #define BAT_HIGH_CHARGE 22  // HIGH for 50mA, LOW for 100mA
@@ -38,14 +43,14 @@ public:
     #if DS3231
         RTC_DS3231* RTC() {return &_rtc;}
     #else
-        const RTC_PCF8563& RTC() {return _rtc;}
+        const PCF85063A & RTC() {return _rtc;}
     #endif
     
-    DateTime now() const {return _now;}
+    time_t now() const {return _now;}
     int16_t batt() const {return _nBattPercentage;}
     imu_data imu() const {return _imu;}
     dps_data dps() const {return dps_dat;}
-    void setTime(DateTime date);
+    void setTime(struct tm date);
 
     using DPSCallback = std::function<void(dps_data dps)>;
     using IMUCallback = std::function<void(data_record f32_acc_z)>;
@@ -63,7 +68,7 @@ private:
     #if DS3231
         RTC_DS3231 _rtc;
     #else
-        RTC_PCF8563 _rtc;
+        PCF85063A _rtc;
     #endif
 
     Dps3xx _dps;
@@ -74,7 +79,8 @@ private:
     bool _dpsValid = false;
 
     float _f32_RTC_Temp;
-    DateTime _now, _newDate;
+    struct tm  _newDate;
+    time_t _now;
     int16_t _nBattPercentage;
     bool _setTime = false;
 

@@ -46,10 +46,15 @@ class HAL {
     bool SDMounted() const { return storageSystem.isMounted(); };
     void unMountSD() {storageSystem.unMount(); };
 
-    void setTime(DateTime date) { sensorSystem.setTime(date); }
+    void setTime(struct tm date) { sensorSystem.setTime(date); }
+    void screenOn() { inputSystem.setOutput(GPIOB6,true); }
+    void screenOff() { inputSystem.setOutput(GPIOB6,false); }
 
     void buzzStart();
     void buzzStop();
+
+    void disableAuxRail();
+    void enableAuxRail();
 
     int16_t getBatteryPercentage() const { return sensorSystem.batt(); }
     data_record getGPSSpeed() const { return gpsKmh; }
@@ -65,7 +70,7 @@ class HAL {
     TinyGPSLocation getGPSLocation() const { return _LC76G.gps().location; }
     TinyGPSTime getGPSTime() const { return _LC76G.gps().time; }
     TinyGPSDate getGPSDate() const { return _LC76G.gps().date; }
-    DateTime getRTCtime() const { return sensorSystem.now(); }
+    time_t getRTCtime() const { return sensorSystem.now(); }
     imu_data getIMUData() const { return sensorSystem.imu(); }
     dps_data getDPSData() const { return sensorSystem.dps(); }
 
@@ -92,7 +97,6 @@ class HAL {
     bool _dpsValid = false;
 
     //private methods
-    void resetDisplay();
     static void onSleep(int numArgs, const void* payload, void* context);
     static void onPAIRResponse(int numArgs, const void* payload, void* context);
     void handlePAIRResponse(int numArgs, const void* payload);

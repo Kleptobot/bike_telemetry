@@ -21,13 +21,13 @@ void InputSystem::init() {
   _mcp.pinMode(GPIOA5, INPUT_PULLUP);
   _mcp.pinMode(GPIOA6, INPUT_PULLUP);
   _mcp.pinMode(GPIOA7, INPUT_PULLUP);
+  _mcp.pinMode(GPIOB2, OUTPUT);
   _mcp.pinMode(GPIOB3, OUTPUT);
   _mcp.pinMode(GPIOB4, OUTPUT);
   _mcp.pinMode(GPIOB5, OUTPUT);
   _mcp.pinMode(GPIOB6, OUTPUT);
-  _mcp.pinMode(GPIOB7, OUTPUT);
   _mcp.setupInterruptPin(GPIOA5, HIGH);
-
+ 
   _mcp.digitalWrite(GPIOB3, false);   //turn the gps backup supply off
   _mcp.digitalWrite(GPIOB4, true);    //turn the gps enable supply on
   

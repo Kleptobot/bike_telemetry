@@ -1,10 +1,9 @@
 #include "Sensors.hpp"
 
 void SensorSystem::init_low() {
-    while (!_rtc.begin()) {
-        Serial.println("Couldn't find RTC");
-        delay(100);
-    }
+    _rtc.begin();
+    _rtc.bit_op8(0x00, ~0x01, 0x01);
+
     Serial.println("RTC initialised");
     
     pinMode(VBAT_ENABLE, OUTPUT);
@@ -41,13 +40,13 @@ bool SensorSystem::update(bool i2cBusy) {
     if ((millis() - lastRTCTime > RTC_Read_Period) && !i2cBusy) {
         if (_setTime) {
             _setTime = false;
-            _rtc.adjust(_newDate);
+            _rtc.set(&_newDate);
         }
         #if DS3231
             _f32_RTC_Temp = _rtc.getTemperature();
         #endif
         dps_dat.f32_RTC_Temp = _f32_RTC_Temp;
-        _now = _rtc.now();
+        _now = _rtc.time(NULL);
 
         lastRTCTime = millis();
         update = true;
@@ -130,7 +129,7 @@ bool SensorSystem::update(bool i2cBusy) {
     return update; 
 }
 
-void SensorSystem::setTime(DateTime date) {
+void SensorSystem::setTime(struct tm date) {
     _setTime = true;
     _newDate = date;
 }

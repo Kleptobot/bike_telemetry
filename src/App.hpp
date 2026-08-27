@@ -64,9 +64,9 @@ private:
 
     AppState state = AppState::BOOT, state_prev = AppState::BOOT;
     TinyGPSLocation _lastLocation;
-    DateTime _gpsNow;
+    time_t _gpsNow;
     bool _gpsNowValid = false;
-    uint32_t _lastSeconds;
+    time_t _lastSeconds;
     uint32_t _lastRenderMillis = 0;
     int messageType = 0;
     uint32_t _messageSendMillis = 0;

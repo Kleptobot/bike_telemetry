@@ -10,6 +10,8 @@ void HAL::init_low() {
 }
 
 void HAL::init(timeData* date) {
+
+    HAL::inst().enableAuxRail();
     //turn the gps power supply on
     inputSystem.setOutput(GPIOB3, true);
     inputSystem.update(false);
@@ -32,11 +34,6 @@ void HAL::init(timeData* date) {
         Serial.println("No SD card detected.");
     }
     _LC76G.begin(&Wire);
-
-    //reset some systems
-    resetDisplay();
-
-    inputSystem.setOutput(GPIOB6,false); //turn on the screen backlight
 
     //set up some callbacks
     sensorSystem.onDPS([this](dps_data dps) {
@@ -148,19 +145,11 @@ void HAL::update() {
             _resetDispTime = 0;
         }
     }
-
-    
-    
 }
 
 void HAL::resetGPS() {
     inputSystem.setOutput(GPIOB5, false);
     _resetGPSTime = millis();
-}
-
-void HAL::resetDisplay() {
-    inputSystem.setOutput(GPIOB7, false);
-    _resetDispTime = millis();
 }
 
 void HAL::buzzStart() {
@@ -173,7 +162,7 @@ void HAL::buzzStop() {
 
 void HAL::sleep() {
     Serial.println("sleep");
-    inputSystem.setOutput(GPIOB6,true); //turn off the screen backlight
+    disableAuxRail();
     if (!_sleep) {
         _sleep = true;
         _LC76G.sendCommand(LC76G::PAIR_LOW_POWER_ENTRY_RTC_MODE,&HAL::onSleep,this,nullptr);
@@ -216,4 +205,38 @@ void HAL::handlePAIRResponse(int numArgs, const void* payload) {
             Serial.println(byte_array[i]);
         }
     }
+}
+void HAL::disableAuxRail() {
+  // Stop hardware SPI first so it releases its pin drive
+  SPI.end();
+
+  // Explicitly float the shared bus lines so no output stage
+  // can backfeed AUX_3V3 through internal clamp diodes
+  pinMode(D0,   INPUT); // TFT_CS
+  pinMode(D1,   INPUT); // SD_CS
+  pinMode(D2,   INPUT); // TFT_DC
+  pinMode(D4,   INPUT); // 
+  pinMode(D5,   INPUT); // 
+  pinMode(D7,   INPUT); // FLASH_CS
+  pinMode(D9,   INPUT); // MISO
+  pinMode(D10,  INPUT); // MOSI
+
+  // Now safe to cut the rail
+  digitalWrite(D6, LOW);
+}
+
+void HAL::enableAuxRail() {
+  digitalWrite(D6, HIGH);
+  delay(5); // allow AUX_3V3 to stabilize before driving the flash chip
+
+  // Restore CS as output, deasserted (idle high for most SPI flash)
+  pinMode(D0,   OUTPUT); // TFT_CS
+  pinMode(D1,   OUTPUT); // SD_CS
+  pinMode(D2,   OUTPUT); // TFT_DC
+  pinMode(D7,   OUTPUT); // FLASH_CS
+  pinMode(D9,   OUTPUT); // MISO
+  pinMode(D10,  OUTPUT); // MOSI
+
+  // Re-init hardware SPI for use
+  SPI.begin();
 }

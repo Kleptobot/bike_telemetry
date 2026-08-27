@@ -2,7 +2,6 @@
 #define APPDATAPROVIDER_H
 
 #include <Arduino.h>
-#include <RTClib.h>
 #include "TimeDataProvider.hpp"
 
 enum class CaloricProfile {
@@ -49,7 +48,7 @@ inline CaloricProfile fromString(String s) {
 }
 
 struct BioData {
-    timeData birthday = DateTime(1993,5,21);
+    timeData birthday = {1993 - 1900, 5 - 1, 21, 0, 0, 0}; // default birthday: 1993-05-21
     uint16_t mass = 75;
     CaloricProfile caloricProfile = CaloricProfile::Other;
     uint8_t zone1Start = 55; // bpm

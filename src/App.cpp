@@ -181,7 +181,7 @@ void App::updateTelemetry() {
     auto gpsNow = HAL::inst().getGPSTime();
     auto rtcNow = HAL::inst().getRTCtime();
 
-    if (rtcNow.secondstime() != _lastSeconds) {
+    if (rtcNow != _lastSeconds) {
         if ( gpsLoc.isValid() && _lastLocation.isValid()) {
             double deg2rad = M_PI/180.0;
             double theta1 = _lastLocation.lat()*deg2rad;
@@ -198,7 +198,7 @@ void App::updateTelemetry() {
             distance = 2.0*6371000.0*asin(sqrt(s1+c1*s2)); //distance in m
         }
         _lastLocation = gpsLoc;
-        _lastSeconds = rtcNow.secondstime();
+        _lastSeconds = rtcNow;
     }
 
     auto wheelRPM = HAL::inst().getWheelRPM();
@@ -262,12 +262,21 @@ void App::updateTelemetry() {
         // was already wrong -- which is exactly when a resync is needed.
         TinyGPSDate gpsDate = HAL::inst().getGPSDate();
         if (gpsDate.isValid()) {
-            _gpsNow = DateTime(gpsDate.year(), gpsDate.month(), gpsDate.day(),
-                               gpsNow.hour(), gpsNow.minute(), gpsNow.second());
+            struct tm _gpsNow;
+            _gpsNow.tm_year = gpsDate.year() - 1900;
+            _gpsNow.tm_mon = gpsDate.month() - 1;
+            _gpsNow.tm_mday = gpsDate.day();
+            _gpsNow.tm_hour = gpsNow.hour();
+            _gpsNow.tm_min = gpsNow.minute();
+            _gpsNow.tm_sec = gpsNow.second();
+            _gpsNow.tm_isdst = 0;
 
-            TimeSpan ts = _gpsNow - rtcNow;
-            if (ts.totalseconds() > 30 || ts.totalseconds() < -30)
+            time_t gpsNow = mktime(&_gpsNow);
+            time_t rtcNow = HAL::inst().getRTCtime();
+            time_t diff = difftime(gpsNow, rtcNow);
+            if (diff < -30 || diff > 30) {
                 HAL::inst().setTime(_gpsNow);
+            }
         }
     }
     _gpsNowValid = gpsLoc.isValid();

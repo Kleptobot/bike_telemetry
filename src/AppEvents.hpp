@@ -3,7 +3,6 @@
 
 #include <Arduino.h>
 #include <variant>
-#include <RTClib.h>
 #include "HAL/BluetoothInterface.hpp"
 #include "DataModel/TimeDataProvider.hpp"
 

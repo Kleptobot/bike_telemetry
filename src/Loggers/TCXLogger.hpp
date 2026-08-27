@@ -26,7 +26,6 @@ class TCXLogger : public ILogger {
     char _filename[32];
     timeData _startTime;
     timeData _currentTime;
-    TimeSpan _elapsed_Total, _elapsed_Lap;
 
     int totalPoints=0;
 

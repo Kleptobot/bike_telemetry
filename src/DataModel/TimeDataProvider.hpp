@@ -2,7 +2,7 @@
 #define TIMEDATAPROVIDER_H
 
 #include <Arduino.h>
-#include <RTClib.h>
+#include <time.h>
 
 struct timeDuration {
     long _totalSeconds;
@@ -134,13 +134,13 @@ public:
         normalize_time();
     }
 
-    timeData(DateTime dt, int offset = 0) : _offset(offset){
-        _year = dt.year();
-        _month = dt.month();
-        _day = dt.day();
-        _hour = dt.hour();
-        _minute = dt.minute();
-        _second = dt.second();
+    timeData(struct tm dt, int offset = 0) : _offset(offset){
+        _year = dt.tm_year + 1900;
+        _month = dt.tm_mon + 1;
+        _day = dt.tm_mday;
+        _hour = dt.tm_hour;
+        _minute = dt.tm_min;
+        _second = dt.tm_sec;
         normalize_time();
     }
 
@@ -215,8 +215,15 @@ public:
 
     // Returns a DateTime built from true UTC fields - the correct thing to
     // hand to an RTC chip (which has no concept of offset).
-    DateTime utcDateTime() const {
-        return {(uint16_t)_year, (uint8_t)_month, (uint8_t)_day, (uint8_t)_hour, (uint8_t)_minute, (uint8_t)_second};
+    struct tm utcDateTime() const {
+        struct tm dt;
+        dt.tm_year = _year - 1900;
+        dt.tm_mon = _month - 1;
+        dt.tm_mday = _day;
+        dt.tm_hour = _hour;
+        dt.tm_min = _minute;
+        dt.tm_sec = _second;
+        return dt;
     }
 
     // --- Unified Delta Methods ---
