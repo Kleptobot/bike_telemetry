@@ -34,51 +34,11 @@ void HAL::init(timeData* date) {
         Serial.println("No SD card detected.");
     }
     _LC76G.begin(&Wire);
-
-    //set up some callbacks
-    sensorSystem.onDPS([this](dps_data dps) {
-        f32_altitude = altFusion.computeAltitudeFromPressure(dps.f32_DSP_Pa, dps.f32_DSP_Temp);
-        if (altFusion.seaLevelPressureCalibrated()) {
-            altFusion.altitudeDPSUpdate(f32_altitude);
-        }
-        _dpsValid = dps.dpsValid;
-    });
-    sensorSystem.onIMU([this](data_record acc_z) {
-        altFusion.altitudeIMUUpdate(-1*acc_z.value);
-    });
 }
 
-uint32_t lastHdopCheck = 0, lastbaroCalibration = 0;;
 void HAL::update() {
+    _tickStartMs = millis();
     _LC76G.update();
-
-    //check the age of the gps altitude measurement
-    if (millis() - lastHdopCheck > 1000 && _LC76G.gps().hdop.isValid()) {
-        Serial.print("HDOP: "); Serial.println(_LC76G.gps().hdop.hdop());
-        Serial.print("GPS Altitude: "); Serial.println(_LC76G.gps().altitude.meters());
-        Serial.print("Baro Altitude: ");
-        Serial.println(altFusion.computeAltitudeFromPressure(sensorSystem.dps().f32_DSP_Pa, sensorSystem.dps().f32_DSP_Temp));
-        Serial.print("IMU Acc Z: "); Serial.println(sensorSystem.imu().f32_acc_z);
-        Serial.print("altFusion Altitude: "); Serial.println(altFusion.altitude());
-        Serial.print("altFusion Vertical Velocity: "); Serial.println(altFusion.rise());
-        lastHdopCheck = millis();
-
-        if (_LC76G.gps().altitude.isValid() && _LC76G.gps().hdop.hdop() < 2.0f) {
-            altFusion.baroCalibrateFromGPS(_LC76G.gps().altitude.meters(), sensorSystem.dps().f32_DSP_Pa, sensorSystem.dps().f32_DSP_Temp);
-        }
-    }
-
-    if (_LC76G.gps().altitude.age() < gpsAltAge) {
-        altFusion.altitudeGPSCorrect(_LC76G.gps().altitude.meters());
-    }
-    gpsAltAge = _LC76G.gps().altitude.age();
-
-    //check the age of the gps speed measurement
-    auto gpsSpd = _LC76G.gps().speed;
-    if (gpsSpd.age() < lastGPSSpdUpdate) {
-        //speedRecord.gps = {(float)gpsSpd.kmph(),millis(),true};
-    }
-    lastGPSSpdUpdate = gpsSpd.age();
 
     //Call GPIO inputs, pass in busy state of i2c
     if(inputSystem.update(_LC76G.isBusy())) {
@@ -92,12 +52,6 @@ void HAL::update() {
         _LC76G.i2c_wait();
     }
     bluetoothSystem.update();
-
-    if (_dpsValid) {
-        f32_alt = altFusion.altitude();
-    } else {
-        f32_alt = _LC76G.gps().altitude.meters();
-    }
 
     // Ambient temperature. This was never assigned anywhere, so getTemperature()
     // returned a constant 0.0 (HAL is a function-local static, so zero-init
@@ -113,6 +67,7 @@ void HAL::update() {
     
     wheelRPM = csc::getSpeed();
     gpsKmh = {0, false};
+    TinyGPSSpeed& gpsSpd = _LC76G.gps().speed;   // non-const: kmph() clears 'updated'
     if (gpsSpd.isValid()) {
         gpsKmh = {(float)gpsSpd.kmph(), true};
     }
@@ -145,6 +100,9 @@ void HAL::update() {
             _resetDispTime = 0;
         }
     }
+
+    // Assemble the measurement frame for this tick (see HAL/Measurements.hpp)
+    refreshFrame();
 }
 
 void HAL::resetGPS() {

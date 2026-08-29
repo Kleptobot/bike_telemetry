@@ -1,5 +1,16 @@
 #include "Sensors.hpp"
 
+namespace {
+    // Observed interval between consecutive accepted samples, clamped into
+    // uint16 milliseconds. A 0 result means "not yet known" (first sample,
+    // or a clock that has not advanced since the previous one).
+    inline uint16_t observedDt(uint32_t nowMs, uint32_t prevMs) {
+        if (prevMs == 0 || nowMs <= prevMs) return 0;
+        const uint32_t dt = nowMs - prevMs;
+        return dt > 65000 ? 65000u : (uint16_t)dt;
+    }
+}
+
 void SensorSystem::init_low() {
     _rtc.begin();
     _rtc.bit_op8(0x00, ~0x01, 0x01);
@@ -48,7 +59,10 @@ bool SensorSystem::update(bool i2cBusy) {
         dps_dat.f32_RTC_Temp = _f32_RTC_Temp;
         _now = _rtc.time(NULL);
 
-        lastRTCTime = millis();
+        const uint32_t nowMs = millis();
+        _rtcDtMs = observedDt(nowMs, lastRTCTime);
+        lastRTCTime = nowMs;
+        ++_rtcSeq;
         update = true;
     }
     if ((millis() - lastDSPTime > DPS_Read_Period) && !i2cBusy) {
@@ -77,6 +91,13 @@ bool SensorSystem::update(bool i2cBusy) {
             }
             dps_dat.f32_DSP_Pa = dps_dat.f32_DSP_Pa/(float)pressureCount;
             _dpsValid = true;
+
+            // Frame stamping: only successful fetches count as samples, so
+            // the interval is success-to-success rather than attempt-to-attempt.
+            const uint32_t nowMs = millis();
+            _dpsDtMs = observedDt(nowMs, _dpsOkTime);
+            _dpsOkTime = nowMs;
+            ++_dpsSeq;
         }
         dps_dat.dpsValid = _dpsValid;
         if (dpsCallback) {
@@ -92,7 +113,10 @@ bool SensorSystem::update(bool i2cBusy) {
         _imu.f32_gyro_x = _myIMU->readFloatGyroX();
         _imu.f32_gyro_y = _myIMU->readFloatGyroY();
         _imu.f32_gyro_z = _myIMU->readFloatGyroZ();
-        lastIMUTime = millis();
+        const uint32_t nowMs = millis();
+        _imuDtMs = observedDt(nowMs, lastIMUTime);
+        lastIMUTime = nowMs;
+        ++_imuSeq;
         update = true;
         if (imuCallback) {
             imuCallback({_imu.f32_acc_z,true});
@@ -124,7 +148,16 @@ bool SensorSystem::update(bool i2cBusy) {
         _nBattPercentage = (int)constrain((vBat - BAT_EMPTY_V) * 100.0f
                                               / (BAT_FULL_V - BAT_EMPTY_V),
                                           0.0f, 100.0f);
-        lastBATTime = millis();
+
+        // Measurement-frame stamping: the voltage is the actual measurement
+        // (the percentage above is derived from it), and the charge-state
+        // input is read alongside. BAT_CHARGE_STATE is LOW while charging.
+        _vBatVolts = vBat;
+        _charging  = (digitalRead(BAT_CHARGE_STATE) == LOW);
+        const uint32_t nowMs = millis();
+        _batDtMs = observedDt(nowMs, lastBATTime);
+        lastBATTime = nowMs;
+        ++_batSeq;
     }
     return update; 
 }

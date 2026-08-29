@@ -3,6 +3,7 @@
 
 #include "UI/UIManager.hpp"
 #include "HAL/HAL.hpp"
+#include "Fusion/Fusion.hpp"
 #include "Loggers/TCXLogger.hpp"
 #include "Loggers/FITLogger.hpp"
 #include "Loggers/CSVLogger.hpp"
@@ -63,10 +64,8 @@ private:
     CSVLogger* csvLogger = nullptr;
 
     AppState state = AppState::BOOT, state_prev = AppState::BOOT;
-    TinyGPSLocation _lastLocation;
     time_t _gpsNow;
     bool _gpsNowValid = false;
-    time_t _lastSeconds;
     uint32_t _lastRenderMillis = 0;
     int messageType = 0;
     uint32_t _messageSendMillis = 0;
@@ -79,6 +78,7 @@ private:
 
     DataModel model;
     UIManager ui;
+    FusionEngine _fusion;
     uint32_t _millis, _last_millis, lastGPS;
 
     void saveBiometrics();

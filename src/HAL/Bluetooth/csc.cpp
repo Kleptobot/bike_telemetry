@@ -136,6 +136,7 @@ void csc::csc_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len) 
     if(_disconnected) {
       u16_SpeedEvt_Prev=u16_SpeedEvt;
       u32_WheelCount_Prev=u32_WheelCount;
+      _wheelResync = true;
       _disconnected=false;
     }
   
@@ -149,9 +150,20 @@ void csc::csc_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len) 
       exp_next_spd_evt = millis_at_spd_evt + uint(u16_speed_delta*0.9765625); //convert 1/1024ths of a second into milliseconds
     }
 
+    u16_SpeedEvt_Last = u16_SpeedEvt;
+
     //free-running uint32 counter, wraps correctly under subtraction
     u32_WheelCount_delta = (uint32_t)(u32_WheelCount - u32_WheelCount_Prev);
     u32_WheelCount_Prev = u32_WheelCount;
+
+    // The cumulative total only advances on genuine deltas: the first packet
+    // after construction/discover/reconnect baselines Prev instead of adding
+    // the sensor's whole lifetime count to the total.
+    if (_wheelResync) {
+      _wheelResync = false;
+    } else {
+      u32_WheelCount_Total += u32_WheelCount_delta;
+    }
 
     //calculate the rate of change and convert to km/h
     raw_wheel_rpm = 0;
@@ -175,6 +187,7 @@ void csc::csc_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len) 
     if(_disconnected) {
       u16_CrankEvt_Prev = u16_CrankEvt;
       u16_CrankCount_Prev = u16_CrankCount;
+      _crankResync = true;
       _disconnected=false;
     }
 
@@ -186,9 +199,17 @@ void csc::csc_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len) 
       u16_CrankEvt_Prev = u16_CrankEvt;
     }
 
+    u16_CrankEvt_Last = u16_CrankEvt;
+
     //free-running uint16 counter, wraps correctly under subtraction
     u16_CrankCount_delta = (uint16_t)(u16_CrankCount - u16_CrankCount_Prev);
     u16_CrankCount_Prev = u16_CrankCount;
+
+    if (_crankResync) {
+      _crankResync = false;
+    } else {
+      u32_CrankCount_Total += u16_CrankCount_delta;
+    }
     
     //calculate rate of change and convert to rpm
     f32_cadence_raw = 0;
@@ -232,6 +253,24 @@ data_record csc::getCadence() {
     cadence.value /= contributors;
   }
   return cadence;
+}
+
+const csc* csc::latestWheelSource() {
+  const csc* best = nullptr;
+  for (const csc* dev : _cscDevices) {
+    if (!dev->b_speed_present) continue;
+    if (!best || dev->wheelEvtMillis() > best->wheelEvtMillis()) best = dev;
+  }
+  return best;
+}
+
+const csc* csc::latestCrankSource() {
+  const csc* best = nullptr;
+  for (const csc* dev : _cscDevices) {
+    if (!dev->b_cadence_present) continue;
+    if (!best || dev->crankEvtMillis() > best->crankEvtMillis()) best = dev;
+  }
+  return best;
 }
 
 void csc::disconnect(uint16_t conn_handle, uint8_t reason) {

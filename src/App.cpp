@@ -174,71 +174,32 @@ void App::update() {
 }
 
 void App::updateTelemetry() {
-    float distance = 0;
+    // Run the fusion pipeline over this tick's acquisition frame. All the
+    // derivation that used to live here (Haversine distance, speed-source
+    // selection, grade) and inside HAL (baro/GPS/IMU altitude fusion) is now
+    // in one place, fed by timestamped samples.
+    const MeasurementFrame& frame = HAL::inst().measurements();
+    _fusion.update(frame, model.bike().get().wheelCircumference);
+    const DerivedChannels& d = _fusion.out();
 
-    // /Haversine formula
     auto gpsLoc = HAL::inst().getGPSLocation();
     auto gpsNow = HAL::inst().getGPSTime();
     auto rtcNow = HAL::inst().getRTCtime();
 
-    if (rtcNow != _lastSeconds) {
-        if ( gpsLoc.isValid() && _lastLocation.isValid()) {
-            double deg2rad = M_PI/180.0;
-            double theta1 = _lastLocation.lat()*deg2rad;
-            double theta2 = gpsLoc.lat()*deg2rad;
-            double phi1 = _lastLocation.lng()*deg2rad;
-            double phi2 = gpsLoc.lng()*deg2rad;
-
-            double s1 = sin((theta2 - theta1)/2.0);
-            s1 = s1*s1;
-            double c1 = cos(theta1) * cos(theta2);
-            double s2 = sin((phi2-phi1)/2.0);
-            s2 = s2*s2;
-
-            distance = 2.0*6371000.0*asin(sqrt(s1+c1*s2)); //distance in m
-        }
-        _lastLocation = gpsLoc;
-        _lastSeconds = rtcNow;
-    }
-
-    auto wheelRPM = HAL::inst().getWheelRPM();
-    auto gpsSpeed = HAL::inst().getGPSSpeed();
-    auto altVelocity = HAL::inst().altVelocity();
-
-    float speed = 0;
-    float circumference = model.bike().get().wheelCircumference;
-
-    // Treat a zero circumference as "no wheel data" rather than computing a
-    // speed of zero from it. Without this, an unconfigured circumference
-    // silently suppressed the GPS fallback: wheelRPM.live is true whenever a
-    // CSC sensor is connected, so the first branch was taken and produced 0.
-    if (wheelRPM.live && circumference > 0) {
-        speed = wheelRPM.value * circumference * 0.00006;
-    } else if (gpsSpeed.live) {
-        speed = gpsSpeed.value;
-    }
-
-    float grade = 0;
-    if (speed >0 && altVelocity.live)
-    {
-        //rise in m/s * 3.6 to convert to km/h, then divide by speed in km/h to get grade as a percentage
-        grade = altVelocity.value*3.6f*100.0f/speed;
-    }
-
     model.telemetry().update({  HAL::inst().getIMUData(),
                                 HAL::inst().getDPSData(),
                                 HAL::inst().getBatteryPercentage(),
-                                speed,
+                                d.speedKmh,
                                 HAL::inst().getCadence(),
                                 HAL::inst().getTemperature(),
-                                HAL::inst().getAltitude(),
+                                d.altitudeM,
                                 HAL::inst().getHeartRate(),
                                 HAL::inst().getPower(),
                                 gpsLoc.isValid(),
                                 gpsLoc.lng(),
                                 gpsLoc.lat(),
-                                distance,
-                                grade});
+                                d.distanceDeltaM,
+                                d.gradePct});
 
     //when gps time goes valid, check if the RTC time needs to be re-synced
     int UTCoffset = model.time().get().offset();

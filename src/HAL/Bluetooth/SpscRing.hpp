@@ -3,6 +3,16 @@
 
 #include <Arduino.h>
 
+// Data-memory barrier. __DMB() is an ARM GCC intrinsic; host builds (the
+// simulator, future native tests) have no second task to order against, and
+// the standard-library fence keeps the semantics expressible there.
+#if defined(__arm__) || defined(__thumb__)
+    #define SPSC_DMB() __DMB()
+#else
+    #include <atomic>
+    #define SPSC_DMB() std::atomic_thread_fence(std::memory_order_seq_cst)
+#endif
+
 /**
  * @class SpscRing
  * @brief Fixed-capacity lock-free queue for handing data from one producer
@@ -50,7 +60,7 @@ public:
         if (next == _head) return false;   // full -- drop rather than block
 
         _buf[tail] = value;
-        __DMB();                            // publish the slot before the index
+        SPSC_DMB();                         // publish the slot before the index
         _tail = next;
         return true;
     }
@@ -61,7 +71,7 @@ public:
         if (head == _tail) return false;    // empty
 
         out = _buf[head];
-        __DMB();                            // finish reading before releasing
+        SPSC_DMB();                         // finish reading before releasing
         _head = (uint8_t)((head + 1) % N);
         return true;
     }

@@ -12,8 +12,7 @@ static constexpr float BARO_EXPONENT = 0.1902663539f;
 class AltitudeFusion {
     private:
 
-    unsigned long last_micros = 0;
-    uint32_t lastGPSAltUpdate = (uint32_t)ULONG_MAX;
+    unsigned long lastGPSAltUpdate = (uint32_t)ULONG_MAX;
     bool altitudeValidLast = false;
 
     float est_alt = 0.0f;
@@ -40,7 +39,7 @@ class AltitudeFusion {
 
     public:
 
-    void altitudeIMUUpdate(float accZ);
+    void altitudeIMUUpdate(float accZ, float dtSeconds);
     void altitudeDPSUpdate(float dpsAlt);
     void altitudeGPSCorrect(float gpsAlt);
 

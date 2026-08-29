@@ -1,5 +1,5 @@
 #define DEBUG_INVALIDATE 0
-#define DEBUG_GPS 0
+#define DEBUG_GPS 1
 #define DEBUG_INPUTS 0
 #define DEBUG_BLUETOOTH 0
 

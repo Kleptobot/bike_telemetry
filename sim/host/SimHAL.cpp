@@ -1,10 +1,11 @@
 // Link-time replacement for src/HAL/HAL.cpp.
 //
 // This is the ONLY firmware translation unit the simulator substitutes.
-// Everything else -- InputSystem, Sensors, SDCard, AltitudeFusion, button,
-// and the whole Bluetooth stack including the CSC/CPS/HRM measurement parsers
-// -- is compiled from the real source and runs unmodified. So does all of
-// App, DataModel, Loggers, Map and the UI.
+// Everything else -- InputSystem, Sensors, SDCard, the whole Fusion layer
+// (altitude fusion, speed/grade/distance estimation), button, and the entire
+// Bluetooth stack including the CSC/CPS/HRM measurement parsers -- is
+// compiled from the real source and runs unmodified. So does all of App,
+// DataModel, Loggers, Map and the UI.
 //
 // Because these are HAL member functions, they can reach the private _LC76G
 // member. That lets the simulator feed synthetic NMEA through the real
@@ -16,6 +17,10 @@
 #include "Adafruit_MCP23X17.h"
 #include <cstdio>
 #include <cmath>
+
+// Scenario-driven barometer hooks (defined in stubs/Dps3xx.cpp).
+extern void simSetPressurePa(float pa);
+extern void simSetBaroTempC(float c);
 
 namespace Sim {
 
@@ -176,6 +181,8 @@ void HAL::init(timeData* date) {
 }
 
 void HAL::update() {
+    _tickStartMs = millis();
+
     // Feed the real NMEA parser so GPS validity, speed and altitude all come
     // through TinyGPSPlus exactly as they do on device.
     static uint32_t lastNmea = 0;
@@ -184,17 +191,23 @@ void HAL::update() {
         Sim::feedNmea(_LC76G.gps(), millis() / 1000);
     }
 
+    const Sim::State& s = Sim::state();
+
+    // Drive the simulated barometer from the scenario altitude so the real
+    // fusion path (baro -> FusionEngine -> altitude/vario/grade) runs in the
+    // simulator exactly as it does on device. Pressure is derived from
+    // altitude with the standard-atmosphere lapse relative to 101325 Pa; the
+    // estimator's own P0 calibration absorbs any absolute offset, and
+    // pressure deltas across ticks give the vario a genuine climb signal.
+    simSetPressurePa(101325.0f * powf(1.0f - (0.0065f * s.altitude)
+                                                  / (s.temperature + 273.15f),
+                                      5.2558797f));
+    simSetBaroTempC(s.temperature);
+
     Sim::tick(0);
     inputSystem.update(false);
     sensorSystem.update(false);
     bluetoothSystem.update();
-
-    const Sim::State& s = Sim::state();
-
-    // Altitude comes from the simulated barometer via AltitudeFusion, unless
-    // the scenario is driving it directly.
-    f32_alt   = s.altitude;
-    _dpsValid = true;
 
     wheelRPM = {s.wheelRPM, s.wheelRPMLive};
     gpsKmh   = {s.gpsSpeedKmh, s.gpsValid};
@@ -208,10 +221,12 @@ void HAL::update() {
 
     if (_resetGPSTime > 0 && millis() - _resetGPSTime > 100) _resetGPSTime = 0;
     if (_resetDispTime > 0 && millis() - _resetDispTime > 100) _resetDispTime = 0;
+
+    // Assemble the measurement frame for this tick (see HAL/Measurements.hpp)
+    refreshFrame();
 }
 
 void HAL::resetGPS()     { _resetGPSTime = millis(); }
-void HAL::resetDisplay() { _resetDispTime = millis(); }
 void HAL::buzzStart()    {}
 void HAL::buzzStop()     {}
 

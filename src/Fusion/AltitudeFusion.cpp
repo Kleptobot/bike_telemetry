@@ -1,9 +1,11 @@
 #include "AltitudeFusion.hpp"
 
-void AltitudeFusion::altitudeIMUUpdate(float accZ) {
-    unsigned long current_micros = micros();
-    float dt = (current_micros - last_micros) / 1000000.0f;
-    last_micros = current_micros;
+void AltitudeFusion::altitudeIMUUpdate(float accZ, float dtSeconds) {
+    // dt now arrives from the measurement frame -- the interval stamped at
+    // acquisition, identical to the micros() diff this used to take at
+    // consumption time. The clamp is kept verbatim; note its first-call
+    // behaviour (dt == 0 -> 0.01 s) is also preserved.
+    float dt = dtSeconds;
 
     if (dt <= 0.0f || dt > 0.1f) dt = 0.01f; // Basic safety check
 

@@ -58,10 +58,36 @@ public:
     void onDPS(DPSCallback cb) { dpsCallback = cb; }
     void onIMU(IMUCallback cb) { imuCallback = cb; }
 
+    // --- Measurement-frame stamping (see HAL/Measurements.hpp) --------------
+    // Timestamps reuse the existing per-block read times; sequence numbers
+    // count accepted samples; observed intervals are the time between
+    // consecutive accepted samples (0 = not yet known). Pure bookkeeping:
+    // no existing behaviour reads or changes because of these.
+    uint32_t imuTsMs()  const { return lastIMUTime; }
+    uint16_t imuSeq()   const { return _imuSeq; }
+    uint16_t imuDtMs()  const { return _imuDtMs; }
+
+    uint32_t dpsTsMs()  const { return _dpsOkTime; }   // last SUCCESSFUL fetch; lastDSPTime tracks attempts
+    uint16_t dpsSeq()   const { return _dpsSeq; }
+    uint16_t dpsDtMs()  const { return _dpsDtMs; }
+
+    uint32_t rtcTsMs()  const { return lastRTCTime; }
+    uint16_t rtcSeq()   const { return _rtcSeq; }
+    uint16_t rtcDtMs()  const { return _rtcDtMs; }
+
+    uint32_t battTsMs() const { return lastBATTime; }
+    uint16_t battSeq()  const { return _batSeq; }
+    uint16_t battDtMs() const { return _batDtMs; }
+
+    // Promoted from a discarded local in update(): the gauge percentage is
+    // derived from this voltage, which is the actual measurement.
+    float vbatVolts() const { return _vBatVolts; }
+    bool  charging()  const { return _charging; }
+
 private:
     static const uint16_t BAT_Read_Period = 29999;
-    static const uint16_t IMU_Read_Period = 60;
-    static const uint16_t DPS_Read_Period = 500;
+    static const uint16_t IMU_Read_Period = 1000;
+    static const uint16_t DPS_Read_Period = 5000;
     static const uint16_t RTC_Read_Period = 950;
 
     LSM6DS3* _myIMU;
@@ -86,6 +112,13 @@ private:
 
     DPSCallback dpsCallback;
     IMUCallback imuCallback;
+
+    // Measurement-frame stamping state (see HAL/Measurements.hpp)
+    uint16_t _imuSeq = 0, _dpsSeq = 0, _rtcSeq = 0, _batSeq = 0;
+    uint16_t _imuDtMs = 0, _dpsDtMs = 0, _rtcDtMs = 0, _batDtMs = 0;
+    uint32_t _dpsOkTime = 0;    // millis() of last successful pressure/temperature fetch
+    float    _vBatVolts = 0.0f;
+    bool     _charging = false;
 
 };
 
