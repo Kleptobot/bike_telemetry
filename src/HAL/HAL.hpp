@@ -62,23 +62,6 @@ class HAL {
     void disableAuxRail();
     void enableAuxRail();
 
-    int16_t getBatteryPercentage() const { return sensorSystem.batt(); }
-    data_record getGPSSpeed() const { return gpsKmh; }
-    data_record getWheelRPM() const { return wheelRPM; }
-    float getCadence() const { return f32_cadence; }
-    float getTemperature() const { return f32_temp; }
-    float getHeartRate() const { return f32_bpm; }
-    float getPower() const { return f32_pow; }
-    
-
-    TinyGPSLocation getGPSLocation() const { return _LC76G.gps().location; }
-    TinyGPSTime getGPSTime() const { return _LC76G.gps().time; }
-    TinyGPSDate getGPSDate() const { return _LC76G.gps().date; }
-    time_t getRTCtime() const { return sensorSystem.now(); }
-    imu_data getIMUData() const { return sensorSystem.imu(); }
-    dps_data getDPSData() const { return sensorSystem.dps(); }
-
-
     private:
     HAL() : _LC76G(storageSystem) {}
 
@@ -90,8 +73,6 @@ class HAL {
     LC76G _LC76G;
 
     // private memeber variables
-    float f32_cadence, f32_temp, f32_bpm, f32_pow;
-    data_record gpsKmh, wheelRPM;
     uint8_t _rxBuffer[1024];
     uint32_t _resetGPSTime, _resetDispTime;
     bool _sleep;

@@ -53,40 +53,6 @@ void HAL::update() {
     }
     bluetoothSystem.update();
 
-    // Ambient temperature. This was never assigned anywhere, so getTemperature()
-    // returned a constant 0.0 (HAL is a function-local static, so zero-init
-    // rather than garbage -- which is why it looked plausible on screen).
-    // The DPS368 reading is the better source; fall back to the RTC's own
-    // sensor when the barometer has not produced a valid sample.
-    const dps_data& dps = sensorSystem.dps();
-    if (dps.dpsValid) {
-        f32_temp = dps.f32_DSP_Temp;
-    } else {
-        f32_temp = dps.f32_RTC_Temp;
-    }
-    
-    wheelRPM = csc::getSpeed();
-    gpsKmh = {0, false};
-    TinyGPSSpeed& gpsSpd = _LC76G.gps().speed;   // non-const: kmph() clears 'updated'
-    if (gpsSpd.isValid()) {
-        gpsKmh = {(float)gpsSpd.kmph(), true};
-    }
-
-    f32_cadence = 0;
-    if (csc::getCadence().live) {
-        f32_cadence = csc::getCadence().value;
-    }
-    
-    f32_bpm = 0;
-    if (hrm::getHRM().live) {
-        f32_bpm = hrm::getHRM().value;
-    }
-
-    f32_pow = 0;
-    if (cps::getPower().live) {
-        f32_pow = cps::getPower().value;
-    }
-
     //if reset time is non zero check if 100ms has passed since the trigger, then reset time to zero and write reset pin high
     if (_resetGPSTime > 0) {
         if (millis() - _resetGPSTime > 100) {

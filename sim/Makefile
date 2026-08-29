@@ -74,7 +74,8 @@ FW_SRCS := \
   $(ROOT)/src/App.cpp \
   $(ROOT)/src/main.cpp \
   $(ROOT)/src/display/Display.cpp \
-  $(ROOT)/src/HAL/AltitudeFusion.cpp \
+  $(ROOT)/src/Fusion/AltitudeFusion.cpp \
+  $(ROOT)/src/Fusion/Fusion.cpp \
   $(ROOT)/src/HAL/InputSystem.cpp \
   $(ROOT)/src/HAL/Sensors.cpp \
   $(ROOT)/src/HAL/SDCard.cpp \
@@ -87,6 +88,7 @@ FW_SRCS := \
   $(ROOT)/src/Loggers/FITLogger.cpp \
   $(ROOT)/src/Loggers/FITWriter.cpp \
   $(ROOT)/src/Loggers/TCXLogger.cpp \
+  $(ROOT)/src/Loggers/CSVLogger.cpp \
   $(ROOT)/src/Map/TileLoader.cpp \
   $(ROOT)/src/ui/UIManager.cpp \
   $(ROOT)/src/ui/Screens/BikeStatsScreen.cpp \

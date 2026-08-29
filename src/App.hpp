@@ -64,8 +64,6 @@ private:
     CSVLogger* csvLogger = nullptr;
 
     AppState state = AppState::BOOT, state_prev = AppState::BOOT;
-    time_t _gpsNow;
-    bool _gpsNowValid = false;
     uint32_t _lastRenderMillis = 0;
     int messageType = 0;
     uint32_t _messageSendMillis = 0;
@@ -73,6 +71,7 @@ private:
 
     bool _gpsEnableState = true;
     bool validLoc_prev = false;
+    bool _prevGpsPosValid = false;  // frame.gpsPos.valid from the previous tick (resync edge-detect)
 
     uint8_t lastSecond;
 

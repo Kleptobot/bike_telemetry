@@ -78,6 +78,18 @@ void FusionEngine::update(const MeasurementFrame& f, uint16_t wheelCircumference
         _out.altitudeValid = f.gpsAltM.valid;
     }
 
+    // --- Stage 5b: temperature source selection --------------------------------
+    // Was HAL's f32_temp fold: baro sensor when valid, RTC otherwise. An
+    // interpretation (which source to trust), not an acquisition, so it lives
+    // here, not in HAL.
+    if (f.baroTempC.valid) {
+        _out.temperatureC = f.baroTempC.value;
+    } else if (f.rtcTempC.valid) {
+        _out.temperatureC = (float)f.rtcTempC.value;
+    } else {
+        _out.temperatureC = 0.0f;
+    }
+
     // --- Stage 6: speed selection (verbatim from App::updateTelemetry) --------
     _out.speedKmh = 0.0f;
     // Treat a zero circumference as "no wheel data" rather than computing a

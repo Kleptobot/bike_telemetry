@@ -182,67 +182,73 @@ void App::updateTelemetry() {
     _fusion.update(frame, model.bike().get().wheelCircumference);
     const DerivedChannels& d = _fusion.out();
 
-    auto gpsLoc = HAL::inst().getGPSLocation();
-    auto gpsNow = HAL::inst().getGPSTime();
-    auto rtcNow = HAL::inst().getRTCtime();
+    // --- Assemble legacy views from the frame --------------------------------
+    // The HAL/App contract is the MeasurementFrame (plus fusion outputs).
+    // These shims translate frame fields into the shapes the existing
+    // DataModel/UI expect, without HAL having to know those shapes exist.
 
-    model.telemetry().update({  HAL::inst().getIMUData(),
-                                HAL::inst().getDPSData(),
-                                HAL::inst().getBatteryPercentage(),
+    const imu_data imu = frame.imu.value;
+
+    dps_data dps;
+    dps.f32_DSP_Pa    = frame.baroPressurePa.value;
+    dps.f32_DSP_Temp  = frame.baroTempC.value;
+    dps.dpsValid      = frame.baroPressurePa.valid;
+    dps.f32_RTC_Temp  = (float)frame.rtcTempC.value;
+
+    const int16_t batteryPct = frame.batteryPct;
+
+    // BLE channels carry data_record (value + live). Publish the value when
+    // the sensor is live, zero otherwise -- exactly what the folded floats
+    // used to hold, but sourced from the timestamped frame.
+    const float cadence = frame.cadenceRpmFiltered.live ? frame.cadenceRpmFiltered.value : 0.0f;
+    const float heartR  = frame.heartRateBpm.live      ? frame.heartRateBpm.value      : 0.0f;
+    const float power   = frame.powerWatts.live         ? frame.powerWatts.value         : 0.0f;
+
+    model.telemetry().update({  imu,
+                                dps,
+                                batteryPct,
                                 d.speedKmh,
-                                HAL::inst().getCadence(),
-                                HAL::inst().getTemperature(),
+                                cadence,
+                                d.temperatureC,
                                 d.altitudeM,
-                                HAL::inst().getHeartRate(),
-                                HAL::inst().getPower(),
-                                gpsLoc.isValid(),
-                                gpsLoc.lng(),
-                                gpsLoc.lat(),
+                                heartR,
+                                power,
+                                frame.gpsPos.valid,
+                                frame.gpsPos.lng,
+                                frame.gpsPos.lat,
                                 d.distanceDeltaM,
                                 d.gradePct});
 
-    //when gps time goes valid, check if the RTC time needs to be re-synced
+    // --- GPS → RTC resync -----------------------------------------------------
+    // Trigger on each fresh GPS position commit: frame.gpsPos.seq advancing
+    // means a new fix has been parsed. The edge-detector (_prevGpsPosValid)
+    // fires once per transition from no-fix-to-fix, matching the original
+    // behaviour that tracked gpsLoc.isValid() across ticks.
     int UTCoffset = model.time().get().offset();
-    if (gpsLoc.isValid() && !_gpsNowValid && gpsNow.isValid()) {
-        // GPS reports UTC, and the RTC stores UTC, so no offset conversion
-        // belongs here at all.
-        //
-        // The previous expression was
-        //     (uint8_t)((int)gpsNow.hour() + UTCoffset*60)
-        // which is wrong twice over. timeData::_offset is in MINUTES (see
-        // TimeDataProvider.hpp, and TimeEditScreen which steps it by 30), so
-        // multiplying by 60 scales it by 3600x; and the result was then
-        // truncated to uint8_t. For UTC+10 that is hour + 36000 -> 172. Any
-        // non-zero offset produced an hour above 23, i.e. an invalid DateTime,
-        // and the +/-30s check below then all but guaranteed it was written to
-        // the RTC. Only UTC+0 ever synced correctly.
-        //
-        // Building the date from the GPS date as well as the GPS time also
-        // fixes a second problem: pairing the GPS hour with the RTC's date
-        // broke across midnight, and across any interval where the RTC date
-        // was already wrong -- which is exactly when a resync is needed.
-        TinyGPSDate gpsDate = HAL::inst().getGPSDate();
-        if (gpsDate.isValid()) {
-            struct tm _gpsNow;
-            _gpsNow.tm_year = gpsDate.year() - 1900;
-            _gpsNow.tm_mon = gpsDate.month() - 1;
-            _gpsNow.tm_mday = gpsDate.day();
-            _gpsNow.tm_hour = gpsNow.hour();
-            _gpsNow.tm_min = gpsNow.minute();
-            _gpsNow.tm_sec = gpsNow.second();
-            _gpsNow.tm_isdst = 0;
+    const bool newFix = frame.gpsPos.valid && !_prevGpsPosValid;
+    if (newFix && frame.gpsUtcTimeHMS.valid && frame.gpsUtcDateYMD.valid) {
+        // Decode the frame's HHMMSS / YYYYMMDD encodings into a struct tm.
+        const uint32_t hms = frame.gpsUtcTimeHMS.value;
+        const uint32_t ymd = frame.gpsUtcDateYMD.value;
+        struct tm gpsNow;
+        gpsNow.tm_year = (ymd / 10000) - 1900;
+        gpsNow.tm_mon  = ((ymd / 100) % 100) - 1;
+        gpsNow.tm_mday =  ymd % 100;
+        gpsNow.tm_hour =  hms / 10000;
+        gpsNow.tm_min  = (hms / 100) % 100;
+        gpsNow.tm_sec  =  hms % 100;
+        gpsNow.tm_isdst = 0;
 
-            time_t gpsNow = mktime(&_gpsNow);
-            time_t rtcNow = HAL::inst().getRTCtime();
-            time_t diff = difftime(gpsNow, rtcNow);
-            if (diff < -30 || diff > 30) {
-                HAL::inst().setTime(_gpsNow);
-            }
+        time_t gpsEpoch = mktime(&gpsNow);
+        time_t rtcEpoch = frame.rtcNow.value;
+        time_t diff = difftime(gpsEpoch, rtcEpoch);
+        if (diff < -30 || diff > 30) {
+            HAL::inst().setTime(gpsNow);
         }
     }
-    _gpsNowValid = gpsLoc.isValid();
-    
-    model.time().update({rtcNow, UTCoffset});
+    _prevGpsPosValid = frame.gpsPos.valid;
+
+    model.time().update({frame.rtcNow.value, UTCoffset});
 }
 
 void App::updateBluetooth(std::vector<BluetoothDevice> devices) {

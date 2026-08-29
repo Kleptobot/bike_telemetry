@@ -34,6 +34,10 @@ struct DerivedChannels {
     // Per-gate distance increment (metres). Accumulation stays in
     // TelemetryDataProvider, exactly as before.
     float distanceDeltaM = 0.0f;
+    // Ambient temperature: barometer's own sensor when valid, otherwise the
+    // RTC's. This fold used to live in HAL::update() -- it is an interpretation
+    // (which source to trust), not an acquisition, so it belongs here.
+    float temperatureC   = 0.0f;
 };
 
 class FusionEngine {
