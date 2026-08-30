@@ -130,7 +130,98 @@ void FusionEngine::update(const MeasurementFrame& f, uint16_t wheelCircumference
 
     _out.gradePct = _filteredGradePct;
 
-    // --- Stage 8: distance (verbatim, see updateDistance) ----------------------
+    // --- Stage 8: cadence ------------------------------------------------------
+    // Derive cadence in RPM from the crank EventCount. The HAL already
+    // pre-computes cadenceRpmFiltered from the CSC parser; we just surface it.
+    _out.cadenceValid = f.cadenceRpmFiltered.live;
+    _out.cadenceRpm = f.cadenceRpmFiltered.live ? f.cadenceRpmFiltered.value : 0.0f;
+
+    // --- Stage 9: gear ratio ---------------------------------------------------
+    // Gear ratio = wheel RPM / crank RPM. Both must be live and cadence must
+    // be above minimum (avoid division by near-zero when coasting/stopped).
+    _out.gearRatioValid = false;
+    _out.gearRatio = 0.0f;
+    if (f.wheelRpmFiltered.live && f.cadenceRpmFiltered.live &&
+        f.cadenceRpmFiltered.value >= GEAR_RATIO_MIN_CADENCE_RPM) {
+        _out.gearRatio = f.wheelRpmFiltered.value / f.cadenceRpmFiltered.value;
+        _out.gearRatioValid = true;
+    }
+
+    // --- Stage 10: energy (integral of power) ----------------------------------
+    // Accumulate energy from power meter data. dt from the RTC tick cadence.
+    // E(kJ) = P(W) * dt(s) / 1000
+    if (f.powerWatts.live && _hasPrev) {
+        float dtSec = (float)(f.rtcNow.tsMs - _prev.rtcNow.tsMs) / 1000.0f;
+        if (dtSec > 0.0f && dtSec < 5.0f) {  // sanity clamp
+            _energyKj += f.powerWatts.value * dtSec / 1000.0f;
+        }
+    }
+    _out.energyKj = _energyKj;
+
+    // --- Stage 11: acceleration (derivative of speed) --------------------------
+    // a = dv/dt. Use the selected speed and RTC interval.
+    _out.accelMs2 = 0.0f;
+    if (_hasPrevSpeed && _hasPrev) {
+        float dtSec = (float)(f.rtcNow.tsMs - _prev.rtcNow.tsMs) / 1000.0f;
+        if (dtSec > 0.0f && dtSec < 5.0f) {
+            float speedMs = _out.speedKmh / 3.6f;
+            _out.accelMs2 = (speedMs - _prevSpeedMs) / dtSec;
+        }
+    }
+    _prevSpeedMs = _out.speedKmh / 3.6f;
+    _hasPrevSpeed = true;
+
+    // --- Stage 12: estimated power (physics model) -----------------------------
+    // Estimate power from speed, grade, and mass when no power meter.
+    // P = (F_roll + F_gravity + F_air + F_accel) * v / efficiency
+    _out.estPowerValid = false;
+    _out.estPowerWatts = 0.0f;
+    if (_out.speedKmh >= GRADE_MIN_SPEED_KMH && _out.varioValid) {
+        float v = _out.speedKmh / 3.6f;  // speed in m/s
+        float gradeFrac = _out.gradePct / 100.0f;  // grade as fraction
+
+        // Rolling resistance: F_rr = CRR * m * g * cos(theta) ≈ CRR * m * g (small angles)
+        float f_roll = EST_POWER_CRR * EST_POWER_MASS_KG * STANDARD_GRAVITY;
+
+        // Gravity: F_g = m * g * sin(theta) ≈ m * g * grade (small angles)
+        float f_gravity = EST_POWER_MASS_KG * STANDARD_GRAVITY * gradeFrac;
+
+        // Aerodynamic drag: F_ad = 0.5 * rho * CdA * v^2
+        float f_air = 0.5f * EST_POWER_AIR_DENSITY * EST_POWER_CDA * v * v;
+
+        // Acceleration: F_a = m * a
+        float f_accel = EST_POWER_MASS_KG * _out.accelMs2;
+
+        // Total force * velocity = power, with drivetrain loss
+        float power = (f_roll + f_gravity + f_air + f_accel) * v * EST_POWER_DRIVETRAIN_LOSS;
+
+        // Only positive power is meaningful (can't estimate regenerative braking)
+        _out.estPowerWatts = max(0.0f, power);
+        _out.estPowerValid = true;
+    }
+
+    // --- Stage 13: total ascent / descent --------------------------------------
+    // Accumulate from vario (vertical velocity) when valid.
+    if (_out.varioValid && _hasPrev) {
+        float dtSec = (float)(f.rtcNow.tsMs - _prev.rtcNow.tsMs) / 1000.0f;
+        if (dtSec > 0.0f && dtSec < 5.0f) {
+            float deltaAlt = _out.varioMs * dtSec;  // metres changed this tick
+            if (deltaAlt > 0.0f) {
+                _totalAscentM += deltaAlt;
+            } else {
+                _totalDescentM += -deltaAlt;  // store as positive value
+            }
+        }
+    }
+    _out.totalAscentM = _totalAscentM;
+    _out.totalDescentM = _totalDescentM;
+
+    // --- Stage 14: coasting detection ------------------------------------------
+    // Coasting = moving but not pedalling (low power, adequate speed).
+    _out.coasting = (_out.speedKmh >= COASTING_MIN_SPEED_KMH) &&
+                     (!f.powerWatts.live || f.powerWatts.value <= COASTING_MAX_POWER_W);
+
+    // --- Stage 15: distance (verbatim, see updateDistance) ---------------------
     updateDistance(f);
 
     _prev = f;
