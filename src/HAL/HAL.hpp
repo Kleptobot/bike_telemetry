@@ -9,6 +9,7 @@
 #include "LC76G.hpp"
 #include "SDCard.hpp"
 #include "Measurements.hpp"
+#include "I2CArbiter.hpp"
 
 class HAL {
     public:
@@ -85,11 +86,23 @@ class HAL {
     uint32_t _tickStartMs = 0;
     uint16_t _frameSeq = 0;
 
+    // I2C bus debug state (ENABLE_I2C_DEBUG, summary printed from HAL.cpp).
+    // HAL.cpp is replaced at link time by the simulator, so this is
+    // firmware-only; the accumulators are just data to the sim.
+    uint32_t _dbgSummaryMs = 0;
+    uint32_t _dbgInBusyUs = 0, _dbgSensBusyUs = 0;
+    uint32_t _dbgPrevTx = 0, _dbgPrevCycles = 0, _dbgPrevBytes = 0, _dbgPrevZero = 0;
+
+    // Bus policy (see HAL/I2CArbiter.hpp). Orchestration lives in HAL.cpp,
+    // which the simulator replaces at link time.
+    I2CArbiter _bus;
+
     //private methods
     static void onSleep(int numArgs, const void* payload, void* context);
     static void onPAIRResponse(int numArgs, const void* payload, void* context);
     void handlePAIRResponse(int numArgs, const void* payload);
     void refreshFrame();
+    void debugBusSummary();
 
     //
 };

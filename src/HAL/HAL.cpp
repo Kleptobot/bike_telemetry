@@ -2,7 +2,63 @@
 #include "DebugConfig.hpp"
 #include <numeric>
 
+namespace {
+    // Set by i2cUnwedgeIfStuck() at boot; surfaced in the [i2c] summary.
+    bool s_busWasWedged = false;
+
+    /**
+     * Release a latched I2C slave before anything claims the bus.
+     *
+     * The GNSS module keeps backup power across MCU resets, so its I2C
+     * engine can come up still holding SDA from a session that ended
+     * mid-transaction. The first Wire call then hangs forever inside the
+     * core's unbounded wait loops -- which at boot happens before
+     * Serial.begin, i.e. a totally silent freeze (no output, no screen).
+     *
+     * Standard remedy: sense the lines; if SDA is held low, clock SCL up to
+     * nine times until the slave lets go, then frame a STOP so every state
+     * machine returns to idle. Runs at the very top of init_low(), ahead of
+     * the MCP23017 and RTC bring-up. The bus pull-ups live on the always-on
+     * rail (inputSystem turns the aux rail off before its own I2C and still
+     * works), so the levels read here are the true bus state.
+     */
+    void i2cUnwedgeIfStuck() {
+        const uint8_t sda = PIN_WIRE_SDA;
+        const uint8_t scl = PIN_WIRE_SCL;
+
+        // Sense with both lines released; the bus pull-ups define idle-high.
+        pinMode(sda, INPUT);
+        pinMode(scl, INPUT);
+        delayMicroseconds(10);
+        if (digitalRead(sda) == HIGH) {
+            return;   // healthy idle bus -- the common case
+        }
+        s_busWasWedged = true;
+
+        // Clock SCL until the stuck slave releases SDA (nine pulses cover a
+        // full byte plus its ACK slot). SCL is only ever driven low and then
+        // released, so a clock-stretching slave is respected.
+        for (int i = 0; i < 9 && digitalRead(sda) == LOW; ++i) {
+            pinMode(scl, OUTPUT);
+            digitalWrite(scl, LOW);
+            delayMicroseconds(5);
+            pinMode(scl, INPUT);   // released; the pull-up raises it
+            delayMicroseconds(5);
+        }
+
+        // Frame a STOP -- SDA low -> high while SCL is high -- so every
+        // listener's state machine returns to the idle state.
+        pinMode(sda, OUTPUT);
+        digitalWrite(sda, LOW);
+        delayMicroseconds(5);
+        pinMode(sda, INPUT);       // released; the pull-up makes the edge
+        delayMicroseconds(10);
+        // Leave both pins as inputs; Wire.begin() takes ownership from here.
+    }
+}
+
 void HAL::init_low() {
+    i2cUnwedgeIfStuck();
     inputSystem.init();
     sensorSystem.init_low();
     _resetGPSTime = 0;
@@ -40,15 +96,27 @@ void HAL::update() {
     _tickStartMs = millis();
     _LC76G.update();
 
-    //Call GPIO inputs, pass in busy state of i2c
-    if(inputSystem.update(_LC76G.isBusy())) {
-        //on success tell the LC76G to delay
+    // Bus grants flow through the arbiter (see HAL/I2CArbiter.hpp): foreign
+    // devices take the bus only while the GNSS is idle AND getting its turns,
+    // and every foreign use resets the GNSS settle window.
+    const bool foreignBusy =
+        _bus.foreignBusy(_LC76G.isBusy(), _LC76G.msSinceLastCycleStart());
+
+    //Call GPIO inputs
+    const uint32_t inT0 = micros();
+    const bool inputsUpdated = inputSystem.update(foreignBusy);
+    _dbgInBusyUs += micros() - inT0;
+    if(inputsUpdated) {
+        //rule 2: postpone the GNSS's next cycle start after foreign use
         _LC76G.i2c_wait();
     }
     
-    //Call sensors, pass in busy state of i2c
-    if(sensorSystem.update(_LC76G.isBusy())) {
-        //on success tell the LC76G to delay
+    //Call sensors
+    const uint32_t sensT0 = micros();
+    const bool sensorsUpdated = sensorSystem.update(foreignBusy);
+    _dbgSensBusyUs += micros() - sensT0;
+    if(sensorsUpdated) {
+        //rule 2
         _LC76G.i2c_wait();
     }
     bluetoothSystem.update();
@@ -69,6 +137,50 @@ void HAL::update() {
 
     // Assemble the measurement frame for this tick (see HAL/Measurements.hpp)
     refreshFrame();
+
+    debugBusSummary();
+}
+
+// Per-second I2C bus summary (ENABLE_I2C_DEBUG). These numbers make the
+// LC76G-vs-sensors bus budget visible on hardware:
+//   tx/s     -- raw Wire transactions the GNSS driver issued
+//   drain/s  -- completed NMEA buffer reads (found data, len > 0)
+//   bytes/s  -- NMEA payload drained
+//   idle/s   -- length polls that found nothing queued
+//   err      -- lifetime state-machine error count (grows on bus trouble)
+//   maxgap   -- worst wait between completed drains, ms
+//   bp       -- lifetime ticks where the arbiter held foreign devices off
+//               for the GNSS (rule 3); zero in normal operation
+//   in/sens  -- microseconds of bus time input/sensor passes consumed
+void HAL::debugBusSummary() {
+    if (!ENABLE_I2C_DEBUG) return;
+    const uint32_t now = millis();
+    if (now - _dbgSummaryMs < 1000) return;
+    _dbgSummaryMs = now;
+
+    const uint32_t tx     = _LC76G.dbgTxCount();
+    const uint32_t cycles = _LC76G.dbgDrainCycles();
+    const uint32_t bytes  = _LC76G.dbgBytesDrained();
+    const uint32_t zero   = _LC76G.dbgZeroLenPolls();
+
+    Serial.printf("[i2c] tx=%lu drain=%lu bytes=%lu idle=%lu err=%u maxgap=%lums bp=%lu wedge=%d in=%luus sens=%luus\r\n",
+                  (unsigned long)(tx - _dbgPrevTx),
+                  (unsigned long)(cycles - _dbgPrevCycles),
+                  (unsigned long)(bytes - _dbgPrevBytes),
+                  (unsigned long)(zero - _dbgPrevZero),
+                  _LC76G.dbgErrorCount(),
+                  (unsigned long)_LC76G.dbgMaxDrainGapMs(),
+                  (unsigned long)_bus.dbgBackpressureTicks(),
+                  (int)s_busWasWedged,
+                  (unsigned long)_dbgInBusyUs,
+                  (unsigned long)_dbgSensBusyUs);
+
+    _dbgPrevTx = tx;
+    _dbgPrevCycles = cycles;
+    _dbgPrevBytes = bytes;
+    _dbgPrevZero = zero;
+    _dbgInBusyUs = 0;
+    _dbgSensBusyUs = 0;
 }
 
 void HAL::resetGPS() {
@@ -86,7 +198,9 @@ void HAL::buzzStop() {
 
 void HAL::sleep() {
     Serial.println("sleep");
-    disableAuxRail();
+    //disableAuxRail();
+    digitalWrite(D6, false); //turn off the auxilary supply
+    inputSystem.setOutput(GPIOB6, false);    //turn off the screen backlight
     if (!_sleep) {
         _sleep = true;
         _LC76G.sendCommand(LC76G::PAIR_LOW_POWER_ENTRY_RTC_MODE,&HAL::onSleep,this,nullptr);

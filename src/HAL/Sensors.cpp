@@ -42,9 +42,21 @@ void SensorSystem::init() {
 bool SensorSystem::update(bool i2cBusy) {
     
     int16_t ret;
-    uint8_t pressureCount = 20;
+    // getContResults() drains the ENTIRE DPS FIFO and treats the count
+    // parameters as OUTPUTS only: the write bound is DPS__FIFO_SIZE (32),
+    // never the arrays passed in. Buffers smaller than that are a stack
+    // overflow waiting for a busy FIFO -- the previous 20-element buffers
+    // were already latent (32 > 20), and shrinking them to 5 caused
+    // hard-fault resets on every DPS pass. Size to what the library can
+    // actually write.
+    //
+    // The bus-time lever is the poll period, not the buffer: results
+    // accumulate at the DPS output rate, so a DPS_Read_Period of 5000 ms
+    // drains ~10 results (~20 transactions) per pass, and polling faster
+    // shrinks each pass further.
+    uint8_t pressureCount = DPS__FIFO_SIZE;
     float pressure[pressureCount];
-    uint8_t temperatureCount = 20;
+    uint8_t temperatureCount = DPS__FIFO_SIZE;
     float temperature[temperatureCount];
     bool update = false;
 
@@ -107,19 +119,32 @@ bool SensorSystem::update(bool i2cBusy) {
         lastDSPTime = millis();    
     }
     if ((millis() - lastIMUTime > IMU_Read_Period) && !i2cBusy) {
-        _imu.f32_acc_x = _myIMU->readFloatAccelX();
-        _imu.f32_acc_y = _myIMU->readFloatAccelY();
-        _imu.f32_acc_z = _myIMU->readFloatAccelZ();
-        _imu.f32_gyro_x = _myIMU->readFloatGyroX();
-        _imu.f32_gyro_y = _myIMU->readFloatGyroY();
-        _imu.f32_gyro_z = _myIMU->readFloatGyroZ();
-        const uint32_t nowMs = millis();
-        _imuDtMs = observedDt(nowMs, lastIMUTime);
-        lastIMUTime = nowMs;
-        ++_imuSeq;
-        update = true;
-        if (imuCallback) {
-            imuCallback({_imu.f32_acc_z,true});
+        // One 12-byte burst over the contiguous output registers
+        // (OUTX_L_G 0x22 .. OUTZ_H_XL 0x2D) replaces six separate per-axis
+        // reads: 2 bus transactions instead of 12, and all six axes carry a
+        // single sample instant, which is what the fusion engine wants.
+        // calc*() applies exactly the scaling readFloat*() used.
+        uint8_t raw[12];
+        if (_myIMU->readRegisterRegion(raw, LSM6DS3_ACC_GYRO_OUTX_L_G, sizeof(raw)) != IMU_SUCCESS) {
+            // Failed read: skip the sample entirely -- no stamping, no
+            // callback -- mirroring how a failed DPS fetch is handled.
+        } else {
+            // LSB-first 16-bit pairs: gyro block first, then accel block
+            // (the same layout readRawGyro*/readRawAccel* decode).
+            _imu.f32_gyro_x = _myIMU->calcGyro((int16_t)(raw[0]  | (raw[1]  << 8)));
+            _imu.f32_gyro_y = _myIMU->calcGyro((int16_t)(raw[2]  | (raw[3]  << 8)));
+            _imu.f32_gyro_z = _myIMU->calcGyro((int16_t)(raw[4]  | (raw[5]  << 8)));
+            _imu.f32_acc_x  = _myIMU->calcAccel((int16_t)(raw[6]  | (raw[7]  << 8)));
+            _imu.f32_acc_y  = _myIMU->calcAccel((int16_t)(raw[8]  | (raw[9]  << 8)));
+            _imu.f32_acc_z  = _myIMU->calcAccel((int16_t)(raw[10] | (raw[11] << 8)));
+            const uint32_t nowMs = millis();
+            _imuDtMs = observedDt(nowMs, lastIMUTime);
+            lastIMUTime = nowMs;
+            ++_imuSeq;
+            update = true;
+            if (imuCallback) {
+                imuCallback({_imu.f32_acc_z,true});
+            }
         }
     }
     if (millis() - lastBATTime > BAT_Read_Period) {
