@@ -102,12 +102,33 @@ void FusionEngine::update(const MeasurementFrame& f, uint16_t wheelCircumference
         _out.speedKmh = (float)f.gpsSpeedKmh.value;
     }
 
-    // --- Stage 7: grade (verbatim from App::updateTelemetry) -------------------
-    _out.gradePct = 0.0f;
-    if (_out.speedKmh > 0 && _out.varioValid) {
-        //rise in m/s * 3.6 to convert to km/h, then divide by speed in km/h to get grade as a percentage
-        _out.gradePct = _out.varioMs*3.6f*100.0f/_out.speedKmh;
+    // --- Stage 7: grade --------------------------------------------------------
+    // The raw grade is vario (m/s -> km/h) / speed (km/h) * 100 for percent.
+    // vario comes from IMU integration and is inherently noisy, so the raw
+    // grade can swing wildly (readings in the hundreds). Apply a first-order
+    // low-pass filter to smooth the output without disturbing the fusion
+    // filter's internal state.
+    //
+    // Minimum speed for meaningful grade calculation (km/h). Below this,
+    // raw grade is forced to 0 -- dividing by near-zero speed would produce
+    // absurd values (e.g. -500% at 0.1 km/h). The filter then decays toward 0.
+    static constexpr float GRADE_MIN_SPEED_KMH = 5.0f;
+
+    float rawGradePct = 0.0f;
+    if (_out.speedKmh >= GRADE_MIN_SPEED_KMH && _out.varioValid) {
+        rawGradePct = _out.varioMs * 3.6f * 100.0f / _out.speedKmh;
     }
+
+    if (!_hasGradeSample) {
+        // Initialize the filter with the first sample to avoid a long ramp.
+        _filteredGradePct = rawGradePct;
+        _hasGradeSample = true;
+    } else {
+        // Exponential moving average: y[n] = y[n-1] + alpha * (x[n] - y[n-1])
+        _filteredGradePct += GRADE_FILTER_ALPHA * (rawGradePct - _filteredGradePct);
+    }
+
+    _out.gradePct = _filteredGradePct;
 
     // --- Stage 8: distance (verbatim, see updateDistance) ----------------------
     updateDistance(f);

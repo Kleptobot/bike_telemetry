@@ -60,6 +60,18 @@ private:
     double _lastLat = 0.0, _lastLng = 0.0;
     bool   _hasLastPos = false;
 
+    // Low-pass filter state for grade smoothing.
+    // The vario (est_vel_z) is derived from IMU integration and can be noisy;
+    // the raw grade (vario/speed) inherits that noise, producing the volatile
+    // readings in the hundreds. A first-order EMA smooths the output without
+    // disturbing the fusion filter's own state.
+    float _filteredGradePct = 0.0f;
+    bool  _hasGradeSample = false;
+
+    // Grade filter alpha: lower = smoother but more lag, higher = more responsive.
+    // 0.1 gives ~10-sample time constant, good for steady-state grade readings.
+    static constexpr float GRADE_FILTER_ALPHA = 0.1f;
+
     DerivedChannels _out{};
 
     void updateDistance(const MeasurementFrame& f);

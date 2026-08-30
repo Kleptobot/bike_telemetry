@@ -298,7 +298,7 @@ void csc::update(uint32_t now) {
   }
   
   //low pass filter the cadance estimate
-  f32_cadence = f32_cad_est * 0.001 + f32_cadence * 0.999;
+  f32_cadence = f32_cad_est * 0.01 + f32_cadence * 0.99;
 
   //use the last known wheelcount delta and an adjusted time delta to come up with an actual speed estimate
   if(now>exp_next_spd_evt) {
@@ -311,5 +311,5 @@ void csc::update(uint32_t now) {
   }
   
   //low pass filter the speed estimate
-  f32_wheel_rpm = est_wheel_rpm * 0.001 + f32_wheel_rpm * 0.999;
+  f32_wheel_rpm = est_wheel_rpm * 0.01 + f32_wheel_rpm * 0.99;
 };

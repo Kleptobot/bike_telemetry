@@ -86,8 +86,12 @@ public:
 
 private:
     static const uint16_t BAT_Read_Period = 29999;
-    static const uint16_t IMU_Read_Period = 1000;
-    static const uint16_t DPS_Read_Period = 5000;
+    // Step 5 ramp increment 1 (was 1000). Judged by the [i2c] summary:
+    // bp must stay ~0, err flat, and the vario/grade tiles sane -- the
+    // fusion dt-clamp makes the vario respond ~5x faster per wall-second
+    // at this cadence than at 1 Hz.
+    static const uint16_t IMU_Read_Period = 100;
+    static const uint16_t DPS_Read_Period = 1000;
     static const uint16_t RTC_Read_Period = 950;
 
     LSM6DS3* _myIMU;
