@@ -13,9 +13,18 @@ void FusionEngine::update(const MeasurementFrame& f, uint16_t wheelCircumference
         if (f.baroPressurePa.valid) {
             const float baroAlt = _alt.computeAltitudeFromPressure(
                 f.baroPressurePa.value, f.baroTempC.value);
+            // Surface the un-filtered baro altitude for diagnostics: it is
+            // the input the whole filter anchors to, and the three-way
+            // comparison with GpsAlt and the fused Altitude shows which
+            // anchor (P0_local, baro_bias_z or est_vel_z) is off.
+            // Before P0 is GPS-calibrated this is standard-atmosphere.
+            _out.baroAltitudeM = baroAlt;
+            _out.baroAltitudeValid = _alt.seaLevelPressureCalibrated();
             if (_alt.seaLevelPressureCalibrated()) {
                 _alt.altitudeDPSUpdate(baroAlt);
             }
+        } else {
+            _out.baroAltitudeValid = false;
         }
     }
 

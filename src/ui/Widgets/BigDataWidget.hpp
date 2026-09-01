@@ -52,17 +52,13 @@ public:
     // update(float dt) override for subscribed widgets.
     // When subscribed to DataBus, the callback sets _dirty when the value changes.
     // This method checks the flag and updates display strings + invalidates.
-    // For non-subscribed widgets, this is a no-op (they use update(const Telemetry&)).
+    // For non-subscribed widgets, this is a no-op (they use poll()).
     void update(float dt) override {
         if (!_subscribed || !_dirty) return;
         _dirty = false;
 
         invalidate();
-
-        int intPart = (int)_value;
-        int decPart = abs((int)((_value - intPart) * 10.0f));
-        intStr = padIntPart(intPart);
-        decStr = "." + String(decPart);
+        formatValue();
     }
 
     void render() override {
@@ -90,6 +86,18 @@ public:
             Disp::setCursor(_x, _y + 8);
             Disp::print("Lng:");
             Disp::print(formatLocationValue(_locationValue.longitude));
+            return;
+        }
+
+        if (_type == TelemetryType::Coasting) {
+            // State rendered as text, not a number: centred, size 2.
+            Disp::setTextSize(2);
+            int16_t bx, by;
+            uint16_t w, h;
+            Disp::getTextBounds(_coastText, 0, 0, &bx, &by, &w, &h);
+            Disp::setCursor(_x + (_width - (int16_t)w) / 2,
+                            _y + (_height - (int16_t)h) / 2);
+            Disp::print(_coastText);
             return;
         }
 
@@ -130,9 +138,9 @@ public:
 
     void setColor(uint16_t color) { _color = color; }
 
-    // Polling path for widget types without a DataBus subscription
-    // (Distance, TotalDist, Location). Reads the bus directly; the old
-    // Telemetry-struct variant and GetTelemetryValue are gone.
+    // Polling path for widget types without a float DataBus subscription:
+    // Distance/TotalDist (floats, just not subscribed), Location (struct),
+    // Coasting (bool rendered as text), GpsSats (uint8 storage).
     void poll(const DataBus& bus) {
         if (_type == TelemetryType::Undefined) return;
 
@@ -146,10 +154,22 @@ public:
             return;
         }
 
+        if (_type == TelemetryType::Coasting) {
+            const bool coasting = bus.get<bool>(Topic::Coasting);
+            const char* text = coasting ? "COAST" : "PEDAL";
+            if (_coastText != text) {
+                _coastText = text;
+                _color = coasting ? ST77XX_ORANGE : ST77XX_GREEN;
+                invalidate();
+            }
+            return;
+        }
+
         float newVal = 0.0f;
         switch (_type) {
             case TelemetryType::Distance:  newVal = bus.get<float>(Topic::DistanceDeltaM); break;
             case TelemetryType::TotalDist: newVal = bus.get<float>(Topic::TotalDistanceM) / 1000.0f; break; // m -> km
+            case TelemetryType::GpsSats:   newVal = (float)bus.get<uint8_t>(Topic::GpsSats); break;
             default: return;  // subscribed types are handled by the callback
         }
 
@@ -159,11 +179,7 @@ public:
                 _value = 0.0f;
             }
             invalidate();
-
-            int intPart = (int)_value;
-            int decPart = abs((int)((_value - intPart) * 10.0f));
-            intStr = padIntPart(intPart);
-            decStr = "." + String(decPart);
+            formatValue();
         }
     }
     
@@ -183,12 +199,18 @@ public:
     static void busCallback(const void* data, void* ctx) {
         BigDataWidget* self = reinterpret_cast<BigDataWidget*>(ctx);
         if (self && data) {
-            // Always update value and set dirty flag, even if the value
-            // hasn't changed. Without this, a widget displaying 0 (e.g.,
-            // stationary speed) would never format its display strings
-            // because _value starts at 0 and the first publish is also 0.
-            self->_value = *reinterpret_cast<const float*>(data);
-            self->_dirty = true;  // Signal that new data arrived
+            const float newValue = *reinterpret_cast<const float*>(data);
+            // Change-gated: only reformat/re-invalidate when the value really
+            // changed. The callback fires at loop rate (App publishes every
+            // tick), so unconditional dirtying here made every render flush
+            // the whole screen over SPI and rebuilt Strings continuously.
+            // _value starts as NaN (NaN != anything), so the FIRST publish
+            // always marks dirty -- a value that arrives as 0 and stays 0
+            // still formats and renders exactly once.
+            if (self->_value != newValue) {
+                self->_value = newValue;
+                self->_dirty = true;
+            }
         }
     }
 
@@ -225,8 +247,9 @@ private:
     bool _subscribed = false;
     bool _dirty = false;   // Set by callback when value changes; cleared by update()
     DataBus* _bus = nullptr;  // Bus this widget is subscribed to (for unsubscribe)
-    float _value;
+    float _value = NAN;    // NaN sentinel: first publish always differs (see busCallback)
     location_data _locationValue;
+    String _coastText = "";   // Coasting tile: "PEDAL" / "COAST"
     String _units;
     uint16_t _color = ST77XX_WHITE;
     
@@ -269,34 +292,78 @@ private:
         return s;
     }
 
+    // Units label comes from the shared type table in TelemetryType.hpp --
+    // one source of truth for the vocabulary.
     const char* labelForType(TelemetryType t) const {
+        return unitsForType(t);
+    }
+
+    // Decimal places to display for each type. Types not listed default to 1.
+    uint8_t decimalsForType(TelemetryType t) const {
         switch (t) {
-            case TelemetryType::Speed: return "km/h";
-            case TelemetryType::Cadence: return "rpm";
-            case TelemetryType::HeartRate: return "bpm";
-            case TelemetryType::Temperature: return "C  ";  //° cannot be rendered
-            case TelemetryType::Power: return "W  ";
-            case TelemetryType::Altitude: return "m  ";
-            case TelemetryType::Distance: return "m  ";
-            case TelemetryType::TotalDist: return "km ";
-            case TelemetryType::Location: return "";
-            case TelemetryType::Grade: return "%  ";
-            default: return " - ";
+            case TelemetryType::GearRatio:
+            case TelemetryType::Accel:
+            case TelemetryType::GpsHdop:
+            case TelemetryType::Torque:
+            case TelemetryType::BatteryVolts:
+                return 2;
+            case TelemetryType::Ascent:
+            case TelemetryType::Descent:
+            case TelemetryType::GpsCourse:
+                return 0;
+            default:
+                return 1;
         }
     }
 
-    // Map TelemetryType to DataBus Topic for subscription.
-    // Returns Topic::TopicCount for types that have no DataBus mapping.
+    // Rebuild intStr/decStr from _value honouring decimalsForType().
+    // Shared by the subscription path (update(float)) and the polling path
+    // (poll()), which used to duplicate this block.
+    void formatValue() {
+        int intPart = (int)_value;
+        const uint8_t decimals = decimalsForType(_type);
+        intStr = padIntPart(intPart);
+        if (decimals == 0) {
+            decStr = "";
+            return;
+        }
+        int scale = 1;
+        for (uint8_t i = 1; i < decimals; i++) scale *= 10;
+        int decPart = abs((int)((_value - intPart) * 10.0f * scale));
+        decStr = "." + String(decPart);
+    }
+    // Map TelemetryType to a DataBus Topic for SUBSCRIPTION (float-backed
+    // storage only -- the callback casts the slot to float). Types with
+    // non-float storage or special rendering return TopicCount and go
+    // through poll() instead: Location (struct), Coasting (bool),
+    // GpsSats (uint8).
     static Topic topicForType(TelemetryType t) {
         switch (t) {
+            // Derived
             case TelemetryType::Speed:       return Topic::SelectedSpeed;
-            case TelemetryType::Cadence:     return Topic::Cadence;
             case TelemetryType::Altitude:    return Topic::FusedAltitude;
+            case TelemetryType::BaroAlt:     return Topic::BaroAlt;
             case TelemetryType::Grade:       return Topic::SmoothedGrade;
+            case TelemetryType::Vario:       return Topic::Vario;
+            case TelemetryType::GearRatio:   return Topic::GearRatio;
+            case TelemetryType::Energy:      return Topic::Energy;
+            case TelemetryType::Accel:       return Topic::Acceleration;
+            case TelemetryType::EstPower:    return Topic::EstimatedPower;
+            case TelemetryType::Ascent:      return Topic::TotalAscent;
+            case TelemetryType::Descent:     return Topic::TotalDescent;
+            // Measured
+            case TelemetryType::Cadence:     return Topic::Cadence;
             case TelemetryType::HeartRate:   return Topic::HeartRate;
             case TelemetryType::Power:       return Topic::PowerMeter;
             case TelemetryType::Temperature: return Topic::Temperature;
-            // Distance, TotalDist, Location: no direct topic mapping
+            case TelemetryType::GpsSpeed:    return Topic::GpsSpeed;
+            case TelemetryType::GpsAlt:      return Topic::GpsAltitude;
+            case TelemetryType::GpsCourse:   return Topic::GpsCourse;
+            case TelemetryType::GpsHdop:     return Topic::GpsHdop;
+            case TelemetryType::PedalBalance: return Topic::PedalBalance;
+            case TelemetryType::Torque:      return Topic::TorqueNm;
+            case TelemetryType::BatteryVolts: return Topic::BatteryVolts;
+            // Distance/TotalDist are floats but poll (cheap, low rate)
             default: return Topic::TopicCount;
         }
     }

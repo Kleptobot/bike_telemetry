@@ -201,6 +201,7 @@ void App::updateTelemetry() {
     // Polling access is also available via model.bus().get<T>(Topic::X).
     DataBus& bus = model.bus();
     bus.publish(Topic::FusedAltitude, d.altitudeM);
+    bus.publish(Topic::BaroAlt, d.baroAltitudeM);
     bus.publish(Topic::Vario, d.varioMs);
     bus.publish(Topic::SelectedSpeed, d.speedKmh);
     bus.publish(Topic::SmoothedGrade, d.gradePct);
@@ -235,6 +236,22 @@ void App::updateTelemetry() {
     bus.publish(Topic::HeartRate,  frame.heartRateBpm.live      ? frame.heartRateBpm.value      : 0.0f);
     bus.publish(Topic::PowerMeter, frame.powerWatts.live         ? frame.powerWatts.value         : 0.0f);
     bus.publish(Topic::Temperature, d.temperatureC);
+
+    // --- Publish remaining measured channels ---------------------------------
+    // GPS doubles narrow to float here: display precision, and it keeps the
+    // bus uniform for the widget's float-based subscription callback.
+    bus.publish(Topic::GpsSpeed,    frame.gpsSpeedKmh.valid ? (float)frame.gpsSpeedKmh.value : 0.0f);
+    bus.publish(Topic::GpsAltitude, frame.gpsAltM.valid     ? (float)frame.gpsAltM.value     : 0.0f);
+    bus.publish(Topic::GpsCourse,   frame.gpsCourseDeg.valid ? (float)frame.gpsCourseDeg.value : 0.0f);
+    bus.publish(Topic::GpsSats,     frame.gpsSatsUsed.value);
+    bus.publish(Topic::GpsHdop,     frame.gpsHdop.valid     ? (float)frame.gpsHdop.value     : 0.0f);
+
+    // CPS decodes torque/balance/force but they were dropped at the frame
+    // boundary until now; balance and torque are worth a tile.
+    bus.publish(Topic::TorqueNm,     frame.torqueNm.live       ? frame.torqueNm.value       : 0.0f);
+    bus.publish(Topic::PedalBalance, frame.pedalBalancePct.live ? frame.pedalBalancePct.value : 0.0f);
+
+    bus.publish(Topic::BatteryVolts, frame.vbatVolts.value);
 
     // Breadcrumb trail for the map widget. The store decimates to 1 Hz and
     // rejects duplicate positions internally, so feeding every tick is fine.

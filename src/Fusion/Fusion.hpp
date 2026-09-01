@@ -23,6 +23,12 @@ struct DerivedChannels {
     // altitude -- exactly the fallback getAltitude() used to perform.
     float altitudeM     = 0.0f;
     bool  altitudeValid = false;
+    // Raw baro altitude computed from pressure and P0_local, BEFORE the
+    // filter's bias trim. Diagnostic: compare against GpsAltitude to tell a
+    // GPS-anchor error (both off together) from a filter-state error
+    // (Altitude off alone).
+    float baroAltitudeM      = 0.0f;
+    bool  baroAltitudeValid  = false;
     // Vertical velocity from the fusion filter (was altVelocity()).
     float varioMs       = 0.0f;
     bool  varioValid    = false;

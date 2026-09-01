@@ -39,9 +39,20 @@ enum class Topic : uint8_t {
     Location,        // location_data: valid + lat/lng (24 bytes, fits a slot)
     DistanceDeltaM,  // float: per-tick distance increment (metres)
     TotalDistanceM,  // float: accumulated ride distance (metres)
+    GpsSpeed,        // float: GPS-reported ground speed (km/h)
+    GpsAltitude,     // float: GPS-reported altitude (metres)
+    GpsCourse,       // float: GPS course over ground (degrees)
+    GpsSats,         // uint8_t: satellites used in the fix
+    GpsHdop,         // float: horizontal dilution of precision
+    BaroAlt,         // float: raw baro altitude from P0_local, before bias trim
+
+    // Power-meter extensions (decoded by the CPS parser, previously dropped)
+    PedalBalance,    // float: left/right pedal balance (percent left)
+    TorqueNm,        // float: pedal torque (newton-metres)
 
     // System channels
     Battery,         // int16_t: percent
+    BatteryVolts,    // float: raw cell voltage
     Temperature,     // float: celsius
     HeartRate,       // float: bpm
     PowerMeter,      // float: watts

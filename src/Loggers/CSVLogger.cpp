@@ -29,7 +29,10 @@ void CSVLogger::writeHeader() {
         Serial.println("Error file not open: ");
         return;
     }
-    file.println("acc_x,acc_y,acc_z,gyro_x,gyro_y,gyro_z,BattPercentage,speed,cadence,temperature,altitude,heartrate,power,validLocation,longitude,latitude,distance,totalDistance,grade");
+    // Header must match addTrackpoint's row exactly: time + the Trackpoint
+    // fields it prints, in order. (The old 19-column header was stale from
+    // the Telemetry-struct era and misaligned every spreadsheet import.)
+    file.println("time,latitude,longitude,altitude,speed,heartrate,cadence,power");
     file.flush();
 }
 
