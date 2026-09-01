@@ -120,7 +120,7 @@ void FITLogger::startLogging(const timeData& currentTime) {
     newLap(currentTime); // implicitly start lap 0, matching typical TCX flow
 }
 
-void FITLogger::addTrackpoint(const Telemetry& tp, const timeData& currentTime) {
+void FITLogger::addTrackpoint(const Trackpoint& tp, const timeData& currentTime) {
     _currentTime = currentTime;
     uint32_t ts = toFitTimestamp(currentTime.unixtime());
 

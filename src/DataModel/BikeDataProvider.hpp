@@ -2,7 +2,6 @@
 #define BIKEDATAPROVIDER_H
 
 #include <Arduino.h>
-#include "TelemetryDataProvider.hpp"
 
 
 enum class LoggerType { FIT, TCX, CSV };

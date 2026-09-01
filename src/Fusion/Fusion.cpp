@@ -255,6 +255,8 @@ void FusionEngine::updateDistance(const MeasurementFrame& f) {
 
             _out.distanceDeltaM = 2.0*6371000.0*asin(sqrt(s1+c1*s2)); //distance in m
         }
+        _totalDistanceM += _out.distanceDeltaM;
+        _out.totalDistanceM = _totalDistanceM;
         _lastLat = f.gpsPos.lat;
         _lastLng = f.gpsPos.lng;
         _hasLastPos = f.gpsPos.valid;

@@ -24,9 +24,8 @@ void setup() {
 
 uint32_t gpsLastEnableTime = millis();
 void loop() {
-    //check if we need to run the higher level init functions (only once started)
+    __NOP();
     if (!started) {
-        digitalWrite(D6, true); //turn on the auxilary supply
         Serial.begin(115200);
         delay(500);
         

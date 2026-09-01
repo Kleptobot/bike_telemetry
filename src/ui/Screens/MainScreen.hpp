@@ -26,7 +26,12 @@ public:
     void onEnter() override {
         auto& l = model.layout().get();
 
+        // clear() destroys any previous widgets; their ~BigDataWidget
+        // unsubscribes them from the bus, so no stale ctx pointers remain.
         dataDisplays.clear();
+        // Reserve up front: push_back must not reallocate AFTER subscriptions
+        // are taken, or the moved widgets would invalidate the ctx pointers.
+        dataDisplays.reserve(l.displays.size());
         _rows = l.rows;
         _cols = l.cols;
 
@@ -57,24 +62,38 @@ public:
             dataDisplays.push_back({x + x0, y + y0, w, h, d.type});
             dataDisplays.back().setEdges(drawRight, drawBottom);
         }
+
+        // Subscribe only once every widget is at its final address.
+        // Subscribing inside the loop above risked a vector reallocation
+        // moving the widgets out from under the registered ctx pointers
+        // (observed as an access violation on the first publish).
+        for (auto& disp : dataDisplays) {
+            disp.subscribe(model.bus());
+        }
     }
 
     void update(float dt) override {
-        //update numeric displays
-        const auto& t = model.telemetry().get();
-        //display if gps has a vlaid location
-        gpsIcon.setVisible(t.validLocation);
+        // Update numeric displays.
+        // Widgets subscribed to DataBus receive updates via callbacks.
+        // Their update(float dt) processes the dirty flag and updates display strings.
+        // Non-subscribed widgets (Location, Distance, TotalDist) poll the bus.
+        const DataBus& bus = model.bus();
 
-        if (version != model.telemetry().version()) {
-            for (auto& disp:dataDisplays) {
-                disp.update(t);
+        // Always call update(float dt) on subscribed widgets so they process dirty flag
+        for (auto& disp : dataDisplays) {
+            if (disp.isSubscribed()) {
+                disp.update(dt);
+            } else {
+                disp.poll(bus);
             }
-            version = model.telemetry().version();
         }
+
+        //display if gps has a valid location
+        gpsIcon.setVisible(bus.get<bool>(Topic::GpsValid));
 
         //display the current time
         timeWidget.update(dt);
-        batt.setBat(t.BattPercentage);
+        batt.setBat(model.bus().get<int16_t>(Topic::Battery));
         
         //get the current lap time
         lapTime.update(dt);
@@ -156,6 +175,5 @@ private:
     uint8_t _rows = 2;
     uint8_t _cols = 2;
 
-    uint32_t version = 0;
     AppState appState_prev = AppState::IDLE;
 };

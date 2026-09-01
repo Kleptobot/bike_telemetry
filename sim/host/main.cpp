@@ -96,14 +96,22 @@ static int runHeadless(int frames, int stepMs, const char* outDir,
             writePPM(path, Adafruit_ST7789::panelBuffer());
         }
         // --stats prints the published telemetry periodically, giving a
-        // run a numeric trace of what the app actually derived.
+        // run a numeric trace of what the app actually derived. Reads the
+        // DataBus -- the same source the UI tiles and loggers use.
         if (stats && (i % 250) == 0) {
-            const Telemetry& t = App::instance().getModel().telemetry().get();
+            const DataBus& bus = App::instance().getModel().bus();
             printf("[stats] t=%4us spd=%5.1f cad=%5.1f pwr=%5.0f hr=%5.0f "
                    "alt=%6.1f tmp=%5.1f dist=%7.1f grd=%5.1f bat=%3d\n",
-                   millis() / 1000u, t.speed, t.cadence, t.power, t.heartrate,
-                   t.altitude, t.temperature, t.totalDistance, t.grade,
-                   t.BattPercentage);
+                   millis() / 1000u,
+                   bus.get<float>(Topic::SelectedSpeed),
+                   bus.get<float>(Topic::Cadence),
+                   bus.get<float>(Topic::PowerMeter),
+                   bus.get<float>(Topic::HeartRate),
+                   bus.get<float>(Topic::FusedAltitude),
+                   bus.get<float>(Topic::Temperature),
+                   bus.get<float>(Topic::TotalDistanceM),
+                   bus.get<float>(Topic::SmoothedGrade),
+                   bus.get<int16_t>(Topic::Battery));
             fflush(stdout);
         }
     }

@@ -34,6 +34,10 @@ struct DerivedChannels {
     // Per-gate distance increment (metres). Accumulation stays in
     // TelemetryDataProvider, exactly as before.
     float distanceDeltaM = 0.0f;
+    // Accumulated ride distance (metres). Sum of distanceDeltaM since the
+    // last FusionEngine::resetDistance() -- previously accumulated inside
+    // TelemetryDataProvider::update, now lives with the delta's producer.
+    float totalDistanceM = 0.0f;
     // Ambient temperature: barometer's own sensor when valid, otherwise the
     // RTC's. This fold used to live in HAL::update() -- it is an interpretation
     // (which source to trust), not an acquisition, so it belongs here.
@@ -68,6 +72,10 @@ public:
     // One call per App tick. wheelCircumferenceMm comes from the bike stats
     // model, so the speed estimator needs no knowledge of where it is stored.
     void update(const MeasurementFrame& f, uint16_t wheelCircumferenceMm);
+
+    // Zero the accumulated ride distance. Called by App when logging starts
+    // or the SD card state changes (previously TelemetryDataProvider::resetDistance).
+    void resetDistance() { _totalDistanceM = 0.0f; }
 
     const DerivedChannels& out() const { return _out; }
 
@@ -104,6 +112,8 @@ private:
     // Total ascent/descent accumulators.
     float _totalAscentM = 0.0f;
     float _totalDescentM = 0.0f;
+    // Accumulated ride distance (metres); zeroed by resetDistance().
+    float _totalDistanceM = 0.0f;
 
     // --- Constants for derived calculations ---
     // Estimated power physics model parameters.

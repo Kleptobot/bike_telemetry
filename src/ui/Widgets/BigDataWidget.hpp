@@ -4,12 +4,15 @@
 #include "UI/GFX.h"
 #include "HAL/SensorData.hpp"
 #include "DataModel/DataModel.hpp"
+#include "DataModel/DataBus.hpp"
 
 class BigDataWidget : public Widget {
 public:
     BigDataWidget(int x, int y, int w, int h, TelemetryType type=TelemetryType::Speed)
         : Widget(x, y),
-        _type(type) {
+        _type(type),
+        _busTopic(topicForType(type)),
+        _subscribed(false) {
         _width = w;
         _height= h;
         unitStr = String(labelForType(_type));
@@ -45,6 +48,22 @@ public:
         Disp::getTextBounds(unitStr, 0, 0, &bx, &by, &unitW, &unitH);
     }
     
+
+    // update(float dt) override for subscribed widgets.
+    // When subscribed to DataBus, the callback sets _dirty when the value changes.
+    // This method checks the flag and updates display strings + invalidates.
+    // For non-subscribed widgets, this is a no-op (they use update(const Telemetry&)).
+    void update(float dt) override {
+        if (!_subscribed || !_dirty) return;
+        _dirty = false;
+
+        invalidate();
+
+        int intPart = (int)_value;
+        int decPart = abs((int)((_value - intPart) * 10.0f));
+        intStr = padIntPart(intPart);
+        decStr = "." + String(decPart);
+    }
 
     void render() override {
         if (!visible) {
@@ -111,41 +130,36 @@ public:
 
     void setColor(uint16_t color) { _color = color; }
 
-    // Without this, update(const Telemetry&) HIDES the virtual
-    // Widget::update(float) rather than overloading it, so a call through a
-    // Widget* would silently reach the base no-op. -Woverloaded-virtual.
-    using Widget::update;
-
-    void update(const Telemetry& t) {
+    // Polling path for widget types without a DataBus subscription
+    // (Distance, TotalDist, Location). Reads the bus directly; the old
+    // Telemetry-struct variant and GetTelemetryValue are gone.
+    void poll(const DataBus& bus) {
         if (_type == TelemetryType::Undefined) return;
-        auto newVal = GetTelemetryValue(t, _type);
-        bool newData = false;
 
-        if (std::holds_alternative<float>(newVal)) {
-            newData = _value != std::get<float>(newVal);
-            _value = std::get<float>(newVal);
-            if (_value != _value) { // Check for NaN
+        if (_type == TelemetryType::Location) {
+            const location_data& lv = bus.get<location_data>(Topic::Location);
+            if (lv != _locationValue) {
+                _locationValue = lv;
+                _color = lv.valid ? ST77XX_GREEN : ST77XX_RED;
+                invalidate();
+            }
+            return;
+        }
+
+        float newVal = 0.0f;
+        switch (_type) {
+            case TelemetryType::Distance:  newVal = bus.get<float>(Topic::DistanceDeltaM); break;
+            case TelemetryType::TotalDist: newVal = bus.get<float>(Topic::TotalDistanceM) / 1000.0f; break; // m -> km
+            default: return;  // subscribed types are handled by the callback
+        }
+
+        if (newVal != _value) {
+            _value = newVal;
+            if (_value != _value) { // NaN guard
                 _value = 0.0f;
             }
-            if (_type == TelemetryType::HeartRate && _value > 0) {
-                //get the zone thresholds from the model and set color accordingly
-                DataModel& model = App::instance().getModel();
-                int hr = static_cast<int>(_value);
-                auto appData = model.bio().get();
-                if (hr < appData.zone1Start) _color = ST77XX_BLUE;
-                else if (hr < appData.zone2Start) _color = ST77XX_GREEN;
-                else if (hr < appData.zone3Start) _color = ST77XX_YELLOW;
-                else if (hr < appData.zone4Start) _color = ST77XX_ORANGE;
-                else _color = ST77XX_RED;
-            }
-        } else {
-            newData = _locationValue != std::get<location_data>(newVal);
-            _locationValue = std::get<location_data>(newVal);
-            _color = _locationValue.valid ? ST77XX_GREEN : ST77XX_RED;
-        }
-        if (newData) {
             invalidate();
-            
+
             int intPart = (int)_value;
             int decPart = abs((int)((_value - intPart) * 10.0f));
             intStr = padIntPart(intPart);
@@ -160,11 +174,57 @@ public:
         _drawBottomEdge = drawBottom;
     }
 
+    // --- DataBus subscription support ---
+    // Returns true if this widget is subscribed to a DataBus topic.
+    bool isSubscribed() const { return _subscribed; }
+
+    // Static trampoline: stable function pointer usable for both subscribe
+    // and unsubscribe. The widget's this arrives as ctx.
+    static void busCallback(const void* data, void* ctx) {
+        BigDataWidget* self = reinterpret_cast<BigDataWidget*>(ctx);
+        if (self && data) {
+            // Always update value and set dirty flag, even if the value
+            // hasn't changed. Without this, a widget displaying 0 (e.g.,
+            // stationary speed) would never format its display strings
+            // because _value starts at 0 and the first publish is also 0.
+            self->_value = *reinterpret_cast<const float*>(data);
+            self->_dirty = true;  // Signal that new data arrived
+        }
+    }
+
+    // Subscribe to the DataBus topic corresponding to this widget's TelemetryType.
+    // The callback only sets a dirty flag - it does NOT call invalidate()
+    // because the callback runs synchronously during DataBus::publish(),
+    // which may be in a context where display operations are unsafe.
+    void subscribe(DataBus& bus) {
+        if (_busTopic == Topic::TopicCount) return;  // No topic mapping
+        if (_subscribed) return;  // Already subscribed
+
+        _subscribed = bus.subscribe(_busTopic, &BigDataWidget::busCallback, this);
+        if (_subscribed) _bus = &bus;
+    }
+
+    // Detach from the bus. Destroying a subscribed widget without this would
+    // leave a dangling ctx pointer in the slot: the next publish() would
+    // dereference freed memory. Critical because widgets live in a
+    // std::vector that is clear()ed and rebuilt on every screen entry.
+    ~BigDataWidget() override {
+        if (_subscribed && _bus) {
+            _bus->unsubscribe(_busTopic, &BigDataWidget::busCallback, this);
+            _subscribed = false;
+            _bus = nullptr;
+        }
+    }
+
 private:
     static constexpr uint8_t MAX_BIG_TEXT_SIZE = 10;
     static constexpr uint8_t UNIT_GAP_PX = 2;
 
     TelemetryType _type;
+    Topic _busTopic;       // Mapped DataBus topic for this TelemetryType
+    bool _subscribed = false;
+    bool _dirty = false;   // Set by callback when value changes; cleared by update()
+    DataBus* _bus = nullptr;  // Bus this widget is subscribed to (for unsubscribe)
     float _value;
     location_data _locationValue;
     String _units;
@@ -222,6 +282,22 @@ private:
             case TelemetryType::Location: return "";
             case TelemetryType::Grade: return "%  ";
             default: return " - ";
+        }
+    }
+
+    // Map TelemetryType to DataBus Topic for subscription.
+    // Returns Topic::TopicCount for types that have no DataBus mapping.
+    static Topic topicForType(TelemetryType t) {
+        switch (t) {
+            case TelemetryType::Speed:       return Topic::SelectedSpeed;
+            case TelemetryType::Cadence:     return Topic::Cadence;
+            case TelemetryType::Altitude:    return Topic::FusedAltitude;
+            case TelemetryType::Grade:       return Topic::SmoothedGrade;
+            case TelemetryType::HeartRate:   return Topic::HeartRate;
+            case TelemetryType::Power:       return Topic::PowerMeter;
+            case TelemetryType::Temperature: return Topic::Temperature;
+            // Distance, TotalDist, Location: no direct topic mapping
+            default: return Topic::TopicCount;
         }
     }
 };

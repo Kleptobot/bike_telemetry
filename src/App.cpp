@@ -45,8 +45,8 @@ void App::begin(IStorage* storage) {
 void App::update() {
     updateTelemetry();
     // Any periodic application-level behavior here
-    Telemetry tel = model.telemetry().get();
     const timeData& currentTime = model.time().get();
+    const DataBus& bus = model.bus();
 
     model.SD().update ({HAL::inst().SDMounted(),!HAL::inst().inputs().SD_Det.state});
 
@@ -66,11 +66,12 @@ void App::update() {
     ui.handleInput(HAL::inst().inputs());
     _last_millis = _millis;
 
-    if (tel.validLocation && ! validLoc_prev){
+    const bool gpsValid = bus.get<bool>(Topic::GpsValid);
+    if (gpsValid && ! validLoc_prev){
         startMessageConfig = true;
 
     }
-    validLoc_prev = tel.validLocation;
+    validLoc_prev = gpsValid;
     if (startMessageConfig){
         switch (messageType)
         {
@@ -129,7 +130,7 @@ void App::update() {
                 Serial.println("[App] Finalizing logger.");
                 _logger->finaliseLogging();
             }
-            model.telemetry().resetDistance();
+            _fusion.resetDistance();
 
             //on SD card detection go back to boot
             if (HAL::inst().inputs().SD_Det.FE) {
@@ -150,14 +151,27 @@ void App::update() {
 
             if(state != state_prev) {
                 _logger->startLogging(currentTime);
-                model.telemetry().resetDistance();
+                _fusion.resetDistance();
             }
 
             model.logger().update({_logger->elapsed_Total(),_logger->elapsed_Lap()});
             
             //check if seconds has changed for logging tick
             if (currentTime.second() != lastSecond) {
-                _logger->addTrackpoint(tel, currentTime);
+                // Assemble the trackpoint from the bus -- the same published
+                // channels the UI tiles show, so logs can never disagree with
+                // the display. (Was a Telemetry struct copy.)
+                const location_data& loc = bus.get<location_data>(Topic::Location);
+                Trackpoint tp;
+                tp.latitude  = loc.latitude;
+                tp.longitude = loc.longitude;
+                tp.altitude  = bus.get<float>(Topic::FusedAltitude);
+                tp.speed     = bus.get<float>(Topic::SelectedSpeed);
+                tp.heartrate = bus.get<float>(Topic::HeartRate);
+                tp.power     = bus.get<float>(Topic::PowerMeter);
+                tp.cadence   = bus.get<float>(Topic::Cadence);
+                tp.distance  = bus.get<float>(Topic::TotalDistanceM);
+                _logger->addTrackpoint(tp, currentTime);
             }
             break;
         
@@ -182,42 +196,51 @@ void App::updateTelemetry() {
     _fusion.update(frame, model.bike().get().wheelCircumference);
     const DerivedChannels& d = _fusion.out();
 
-    // --- Assemble legacy views from the frame --------------------------------
-    // The HAL/App contract is the MeasurementFrame (plus fusion outputs).
-    // These shims translate frame fields into the shapes the existing
-    // DataModel/UI expect, without HAL having to know those shapes exist.
+    // --- Publish fusion outputs to the DataBus -------------------------------
+    // Subscribers (loggers, UI widgets, analytics) are notified synchronously.
+    // Polling access is also available via model.bus().get<T>(Topic::X).
+    DataBus& bus = model.bus();
+    bus.publish(Topic::FusedAltitude, d.altitudeM);
+    bus.publish(Topic::Vario, d.varioMs);
+    bus.publish(Topic::SelectedSpeed, d.speedKmh);
+    bus.publish(Topic::SmoothedGrade, d.gradePct);
+    bus.publish(Topic::Cadence, d.cadenceRpm);
+    bus.publish(Topic::GearRatio, d.gearRatio);
+    bus.publish(Topic::Energy, d.energyKj);
+    bus.publish(Topic::Acceleration, d.accelMs2);
+    bus.publish(Topic::EstimatedPower, d.estPowerWatts);
+    bus.publish(Topic::TotalAscent, d.totalAscentM);
+    bus.publish(Topic::TotalDescent, d.totalDescentM);
+    bus.publish(Topic::Coasting, d.coasting);
 
-    const imu_data imu = frame.imu.value;
-
-    dps_data dps;
-    dps.f32_DSP_Pa    = frame.baroPressurePa.value;
-    dps.f32_DSP_Temp  = frame.baroTempC.value;
-    dps.dpsValid      = frame.baroPressurePa.valid;
-    dps.f32_RTC_Temp  = (float)frame.rtcTempC.value;
-
+    // --- Publish position/distance/system channels to the DataBus -------------
+    // These replace the last duties of the Telemetry struct: the UI (battery
+    // icon, GPS icon, Location/Distance tiles) and the loggers' Trackpoint
+    // all read from the bus now. imu/dps raw blocks are not published -- no
+    // consumer ever read them from Telemetry.
     const int16_t batteryPct = frame.batteryPct;
+    location_data loc;
+    loc.valid     = frame.gpsPos.valid;
+    loc.longitude = frame.gpsPos.lng;
+    loc.latitude  = frame.gpsPos.lat;
+
+    bus.publish(Topic::GpsValid,       frame.gpsPos.valid);
+    bus.publish(Topic::Location,       loc);
+    bus.publish(Topic::DistanceDeltaM, d.distanceDeltaM);
+    bus.publish(Topic::TotalDistanceM, d.totalDistanceM);
+    bus.publish(Topic::Battery,        batteryPct);
 
     // BLE channels carry data_record (value + live). Publish the value when
-    // the sensor is live, zero otherwise -- exactly what the folded floats
-    // used to hold, but sourced from the timestamped frame.
-    const float cadence = frame.cadenceRpmFiltered.live ? frame.cadenceRpmFiltered.value : 0.0f;
-    const float heartR  = frame.heartRateBpm.live      ? frame.heartRateBpm.value      : 0.0f;
-    const float power   = frame.powerWatts.live         ? frame.powerWatts.value         : 0.0f;
+    // the sensor is live, zero otherwise.
+    bus.publish(Topic::HeartRate,  frame.heartRateBpm.live      ? frame.heartRateBpm.value      : 0.0f);
+    bus.publish(Topic::PowerMeter, frame.powerWatts.live         ? frame.powerWatts.value         : 0.0f);
+    bus.publish(Topic::Temperature, d.temperatureC);
 
-    model.telemetry().update({  imu,
-                                dps,
-                                batteryPct,
-                                d.speedKmh,
-                                cadence,
-                                d.temperatureC,
-                                d.altitudeM,
-                                heartR,
-                                power,
-                                frame.gpsPos.valid,
-                                frame.gpsPos.lng,
-                                frame.gpsPos.lat,
-                                d.distanceDeltaM,
-                                d.gradePct});
+    // Breadcrumb trail for the map widget. The store decimates to 1 Hz and
+    // rejects duplicate positions internally, so feeding every tick is fine.
+    if (frame.gpsPos.valid) {
+        model.gpsTrack().append(frame.gpsPos.lat, frame.gpsPos.lng, millis());
+    }
 
     // --- GPS → RTC resync -----------------------------------------------------
     // Trigger on each fresh GPS position commit: frame.gpsPos.seq advancing

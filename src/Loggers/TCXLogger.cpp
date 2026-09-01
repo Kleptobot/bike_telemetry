@@ -88,7 +88,7 @@ void TCXLogger::writeLapHeader(uint16_t lapIndex, File32 *file) {
     file->println("        <Track>");
 };
 
-void TCXLogger::addTrackpoint(const Telemetry& tp, const timeData& currentTime) {
+void TCXLogger::addTrackpoint(const Trackpoint& tp, const timeData& currentTime) {
 
     char time[32];
     sprintf(time, "%d-%02d-%02dT%02d:%02d:%02d", currentTime.year(), currentTime.month(), currentTime.day(), currentTime.hour(), currentTime.minute(), currentTime.second());

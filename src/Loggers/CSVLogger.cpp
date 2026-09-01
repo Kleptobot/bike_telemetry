@@ -33,7 +33,7 @@ void CSVLogger::writeHeader() {
     file.flush();
 }
 
-void CSVLogger::addTrackpoint(const Telemetry& tp, const timeData& currentTime) {
+void CSVLogger::addTrackpoint(const Trackpoint& tp, const timeData& currentTime) {
     if (!file.isOpen()) {
         Serial.println("Error file not open: ");
         return;

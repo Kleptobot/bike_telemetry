@@ -37,7 +37,7 @@ class TCXLogger : public ILogger {
     explicit TCXLogger(IStorage* storage, DataModel& model) : _storage(storage), _model(model) {};
 
     void startLogging(const timeData& currentTime);
-    void addTrackpoint(const Telemetry& tp, const timeData& currentTime);
+    void addTrackpoint(const Trackpoint& tp, const timeData& currentTime);
     void newLap(const timeData& currentTime);
     bool finaliseLogging();
 
