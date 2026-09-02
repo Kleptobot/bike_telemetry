@@ -25,6 +25,11 @@ enum class TelemetryType : uint8_t {
     EstPower,       // physics-estimated power W
     Ascent,         // total ascent          m
     Descent,        // total descent         m
+    // Fitness
+    Calories,       // accumulated energy    kcal
+    NormalizedPower,// rolling 30 s power    W
+    IntensityFactor,// NP / FTP              x
+    Tss,            // training stress score
     // Measured
     Power,          // power meter           W
     HeartRate,      // HRM                   bpm
@@ -42,6 +47,8 @@ enum class TelemetryType : uint8_t {
     // Special-cased (non-numeric rendering)
     Location,       // lat/lng text
     Coasting,       // PEDAL / COAST text
+    HrZone,         // heart-rate zone 1-5 (Z text)
+    PowerZone,      // power zone 1-5 (P text)
     Undefined
 };
 
@@ -69,6 +76,10 @@ static constexpr TelemetryTypeInfo kTypeTable[] = {
     { TelemetryType::EstPower,      "EstPower",     "W~ "  },
     { TelemetryType::Ascent,        "Ascent",       "up "  },
     { TelemetryType::Descent,       "Descent",      "dn "  },
+    { TelemetryType::Calories,      "Calories",     "kcal" },
+    { TelemetryType::NormalizedPower, "NP",         "W  "  },
+    { TelemetryType::IntensityFactor, "IF",         "x  "  },
+    { TelemetryType::Tss,           "TSS",          "pts"  },
     { TelemetryType::Power,         "Power",        "W  "  },
     { TelemetryType::HeartRate,     "HeartRate",    "bpm"  },
     { TelemetryType::Temperature,   "Temperature",  "C  "  },  // deg sign cannot be rendered
@@ -84,6 +95,8 @@ static constexpr TelemetryTypeInfo kTypeTable[] = {
     { TelemetryType::BatteryVolts,  "BattVolts",    "V  "  },
     { TelemetryType::Location,      "Location",     ""     },
     { TelemetryType::Coasting,      "Coasting",     ""     },
+    { TelemetryType::HrZone,        "HrZone",       ""     },
+    { TelemetryType::PowerZone,     "PowerZone",    ""     },
 };
 
 static constexpr size_t kTypeTableSize = sizeof(kTypeTable) / sizeof(kTypeTable[0]);

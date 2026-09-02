@@ -75,9 +75,10 @@ static void writePPM(const char* path, const uint16_t* fb) {
 // ---------------------------------------------------------------------------
 
 static int runHeadless(int frames, int stepMs, const char* outDir,
-                       int lastFrames, bool stats, ScreenID screen) {
+                       int lastFrames, bool stats, ScreenID screen, bool autoLog) {
     setup();
     bool screenShown = (screen == ScreenID::None);
+    bool logRequested = !autoLog;
     for (int i = 0; i < frames; ++i) {
         loop();
         // Drive a real UI navigation event once boot has finished, so a
@@ -85,6 +86,12 @@ static int runHeadless(int frames, int stepMs, const char* outDir,
         if (!screenShown && App::instance().getState() == AppState::IDLE) {
             App::instance().postUIEvent(UIEvent{UIEventType::ChangeScreen, screen});
             screenShown = true;
+        }
+        // --log: start logging once booted, so ride-scoped accumulators
+        // (calories, TSS, time-in-zone, distance) actually accumulate.
+        if (!logRequested && App::instance().getState() == AppState::IDLE) {
+            App::instance().postAppEvent({AppEventType::StartLogging, 0});
+            logRequested = true;
         }
         if (systemOffRequested()) { printf("[sim] SYSTEMOFF requested; stopping\n"); break; }
         simAdvanceMillis(stepMs);
@@ -101,7 +108,8 @@ static int runHeadless(int frames, int stepMs, const char* outDir,
         if (stats && (i % 250) == 0) {
             const DataBus& bus = App::instance().getModel().bus();
             printf("[stats] t=%4us spd=%5.1f cad=%5.1f pwr=%5.0f hr=%5.0f "
-                   "alt=%6.1f tmp=%5.1f dist=%7.1f grd=%5.1f bat=%3d\n",
+                   "alt=%6.1f tmp=%5.1f dist=%7.1f grd=%5.1f "
+                   "kcal=%6.0f np=%5.0f if=%4.2f tss=%5.1f z=%u/%u bat=%3d\n",
                    millis() / 1000u,
                    bus.get<float>(Topic::SelectedSpeed),
                    bus.get<float>(Topic::Cadence),
@@ -111,6 +119,12 @@ static int runHeadless(int frames, int stepMs, const char* outDir,
                    bus.get<float>(Topic::Temperature),
                    bus.get<float>(Topic::TotalDistanceM),
                    bus.get<float>(Topic::SmoothedGrade),
+                   bus.get<float>(Topic::Calories),
+                   bus.get<float>(Topic::NormalizedPower),
+                   bus.get<float>(Topic::IntensityFactor),
+                   bus.get<float>(Topic::Tss),
+                   bus.get<uint8_t>(Topic::HrZone),
+                   bus.get<uint8_t>(Topic::PowerZone),
                    bus.get<int16_t>(Topic::Battery));
             fflush(stdout);
         }
@@ -202,6 +216,7 @@ int main(int argc, char** argv) {
     bool headless = false;
     bool sensorsDemo = false;
     bool stats = false;
+    bool autoLog = false;
     int frames = 200, stepMs = 20, lastFrames = 0;
     const char* screenName = nullptr;
     [[maybe_unused]] int scale = 2;   // SDL frontend only
@@ -217,6 +232,7 @@ int main(int argc, char** argv) {
         else if (a == "--sd"     && i + 1 < argc) simSetSdRoot(argv[++i]);
         else if (a == "--sensors") sensorsDemo = true;
         else if (a == "--stats")   stats = true;
+        else if (a == "--log")     autoLog = true;
         else if (a == "--last"   && i + 1 < argc) lastFrames = atoi(argv[++i]);
         else if (a == "--screen" && i + 1 < argc) screenName = argv[++i];
         else if (a == "--help") {
@@ -230,6 +246,8 @@ int main(int argc, char** argv) {
                    "  --sensors           start with paired CSC/CPS/HRM sensors\n"
                    "                      live at riding values\n"
                    "  --stats             print published telemetry every 250 frames\n"
+                   "  --log               start logging once booted (exercises ride\n"
+                   "                      accumulators: calories, TSS, zones, distance)\n"
                    "  --last N            with --out, dump only the final N frames\n"
                    "  --screen NAME       switch to NAME once booted (BikeStats,\n"
                    "                      Settings, Bluetooth, Biometrics, GPS, ...)\n");
@@ -261,5 +279,5 @@ int main(int argc, char** argv) {
         printf("[sim] unknown screen '%s'\n", screenName);
         return 1;
     }
-    return runHeadless(frames, stepMs, outDir, lastFrames, stats, screen);
+    return runHeadless(frames, stepMs, outDir, lastFrames, stats, screen, autoLog);
 }

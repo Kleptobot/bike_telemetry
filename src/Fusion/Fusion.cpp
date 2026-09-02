@@ -1,8 +1,17 @@
 #include "Fusion.hpp"
 #include <cmath>
 
-void FusionEngine::update(const MeasurementFrame& f, uint16_t wheelCircumferenceMm) {
+void FusionEngine::update(const MeasurementFrame& f, uint16_t wheelCircumferenceMm,
+                          const FitnessProfile& profile) {
     const bool firstTick = !_hasPrev;
+
+    // Observed RTC interval for this tick, sanity-clamped exactly as each
+    // consumer used to do inline: 0 when there is no usable interval.
+    float dtSec = 0.0f;
+    if (_hasPrev) {
+        const float raw = (float)(f.rtcNow.tsMs - _prev.rtcNow.tsMs) / 1000.0f;
+        if (raw > 0.0f && raw < 5.0f) dtSec = raw;
+    }
 
     // --- Stage 1: barometer -> fused altitude --------------------------------
     // Was HAL's onDPS callback. Gated on the baro sample's sequence number,
@@ -159,30 +168,26 @@ void FusionEngine::update(const MeasurementFrame& f, uint16_t wheelCircumference
     // --- Stage 10: energy (integral of power) ----------------------------------
     // Accumulate energy from power meter data. dt from the RTC tick cadence.
     // E(kJ) = P(W) * dt(s) / 1000
-    if (f.powerWatts.live && _hasPrev) {
-        float dtSec = (float)(f.rtcNow.tsMs - _prev.rtcNow.tsMs) / 1000.0f;
-        if (dtSec > 0.0f && dtSec < 5.0f) {  // sanity clamp
-            _energyKj += f.powerWatts.value * dtSec / 1000.0f;
-        }
+    if (f.powerWatts.live && dtSec > 0.0f) {
+        _energyKj += f.powerWatts.value * dtSec / 1000.0f;
     }
     _out.energyKj = _energyKj;
 
     // --- Stage 11: acceleration (derivative of speed) --------------------------
     // a = dv/dt. Use the selected speed and RTC interval.
     _out.accelMs2 = 0.0f;
-    if (_hasPrevSpeed && _hasPrev) {
-        float dtSec = (float)(f.rtcNow.tsMs - _prev.rtcNow.tsMs) / 1000.0f;
-        if (dtSec > 0.0f && dtSec < 5.0f) {
-            float speedMs = _out.speedKmh / 3.6f;
-            _out.accelMs2 = (speedMs - _prevSpeedMs) / dtSec;
-        }
+    if (_hasPrevSpeed && dtSec > 0.0f) {
+        float speedMs = _out.speedKmh / 3.6f;
+        _out.accelMs2 = (speedMs - _prevSpeedMs) / dtSec;
     }
     _prevSpeedMs = _out.speedKmh / 3.6f;
     _hasPrevSpeed = true;
 
     // --- Stage 12: estimated power (physics model) -----------------------------
-    // Estimate power from speed, grade, and mass when no power meter.
+    // Estimate power from speed, grade, and total (rider + bike) mass when no
+    // power meter is connected.
     // P = (F_roll + F_gravity + F_air + F_accel) * v / efficiency
+    const float totalMassKg = profile.totalMassKg();
     _out.estPowerValid = false;
     _out.estPowerWatts = 0.0f;
     if (_out.speedKmh >= GRADE_MIN_SPEED_KMH && _out.varioValid) {
@@ -190,16 +195,16 @@ void FusionEngine::update(const MeasurementFrame& f, uint16_t wheelCircumference
         float gradeFrac = _out.gradePct / 100.0f;  // grade as fraction
 
         // Rolling resistance: F_rr = CRR * m * g * cos(theta) ≈ CRR * m * g (small angles)
-        float f_roll = EST_POWER_CRR * EST_POWER_MASS_KG * STANDARD_GRAVITY;
+        float f_roll = EST_POWER_CRR * totalMassKg * STANDARD_GRAVITY;
 
         // Gravity: F_g = m * g * sin(theta) ≈ m * g * grade (small angles)
-        float f_gravity = EST_POWER_MASS_KG * STANDARD_GRAVITY * gradeFrac;
+        float f_gravity = totalMassKg * STANDARD_GRAVITY * gradeFrac;
 
         // Aerodynamic drag: F_ad = 0.5 * rho * CdA * v^2
         float f_air = 0.5f * EST_POWER_AIR_DENSITY * EST_POWER_CDA * v * v;
 
         // Acceleration: F_a = m * a
-        float f_accel = EST_POWER_MASS_KG * _out.accelMs2;
+        float f_accel = totalMassKg * _out.accelMs2;
 
         // Total force * velocity = power, with drivetrain loss
         float power = (f_roll + f_gravity + f_air + f_accel) * v * EST_POWER_DRIVETRAIN_LOSS;
@@ -211,15 +216,12 @@ void FusionEngine::update(const MeasurementFrame& f, uint16_t wheelCircumference
 
     // --- Stage 13: total ascent / descent --------------------------------------
     // Accumulate from vario (vertical velocity) when valid.
-    if (_out.varioValid && _hasPrev) {
-        float dtSec = (float)(f.rtcNow.tsMs - _prev.rtcNow.tsMs) / 1000.0f;
-        if (dtSec > 0.0f && dtSec < 5.0f) {
-            float deltaAlt = _out.varioMs * dtSec;  // metres changed this tick
-            if (deltaAlt > 0.0f) {
-                _totalAscentM += deltaAlt;
-            } else {
-                _totalDescentM += -deltaAlt;  // store as positive value
-            }
+    if (_out.varioValid && dtSec > 0.0f) {
+        float deltaAlt = _out.varioMs * dtSec;  // metres changed this tick
+        if (deltaAlt > 0.0f) {
+            _totalAscentM += deltaAlt;
+        } else {
+            _totalDescentM += -deltaAlt;  // store as positive value
         }
     }
     _out.totalAscentM = _totalAscentM;
@@ -229,6 +231,22 @@ void FusionEngine::update(const MeasurementFrame& f, uint16_t wheelCircumference
     // Coasting = moving but not pedalling (low power, adequate speed).
     _out.coasting = (_out.speedKmh >= COASTING_MIN_SPEED_KMH) &&
                      (!f.powerWatts.live || f.powerWatts.value <= COASTING_MAX_POWER_W);
+
+    // --- Stage 14b: fitness channels (calories, zones, NP/IF/TSS) --------------
+    // Runs after the power stages so it can pick between the power meter and
+    // the physics estimate. dtSec is shared with stages 10-13 above.
+    {
+        const float powerWatts = f.powerWatts.live ? f.powerWatts.value : 0.0f;
+        _fitness.update(f, profile, dtSec, powerWatts, _out.estPowerWatts);
+        const FitnessOutput& fit = _fitness.out();
+        _out.caloriesKcal     = fit.caloriesKcal;
+        _out.hrZone           = fit.hrZone;
+        _out.powerZone        = fit.powerZone;
+        _out.normalizedPowerW = fit.normalizedPowerW;
+        _out.intensityFactor  = fit.intensityFactor;
+        _out.tss              = fit.tss;
+        for (int i = 0; i < 5; i++) _out.timeInZoneSec[i] = fit.timeInZoneSec[i];
+    }
 
     // --- Stage 15: distance (verbatim, see updateDistance) ---------------------
     updateDistance(f);

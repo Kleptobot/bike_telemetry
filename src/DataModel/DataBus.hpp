@@ -34,6 +34,14 @@ enum class Topic : uint8_t {
     TotalDescent,
     Coasting,
 
+    // Fitness (from FitnessFusion; ride-scoped, reset with distance)
+    Calories,        // float: kcal accumulated this ride
+    NormalizedPower, // float: 30 s rolling NP (power meter), watts
+    IntensityFactor, // float: NP / FTP
+    Tss,             // float: accumulated training stress score
+    HrZone,          // uint8_t: 0 = none, else 1..5
+    PowerZone,       // uint8_t: 0 = none/FTP unset, else 1..5
+
     // Position / distance
     GpsValid,        // bool: current GPS fix validity
     Location,        // location_data: valid + lat/lng (24 bytes, fits a slot)

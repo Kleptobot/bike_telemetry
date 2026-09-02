@@ -22,9 +22,10 @@ void FITLogger::writeDefinitionsOnce() {
         _writer.writeDefinition(LOCAL_FILE_ID, FitMesg::FILE_ID, f, 5);
     }
 
-    // RECORD: timestamp(u32), position_lat(s32), position_long(s32),
+        // RECORD: timestamp(u32), position_lat(s32), position_long(s32),
     //         altitude(u16, scale 5, offset 500), distance(u32, scale 100),
-    //         speed(u16, scale 1000), heart_rate(u8), cadence(u8), power(u16)
+    //         speed(u16, scale 1000), heart_rate(u8), cadence(u8), power(u16),
+    //         calories(u16, scale 10 = kcal x 10)
     {
         FitFieldDef f[] = {
             {253, 4, FitBaseType::UINT32}, // timestamp
@@ -36,13 +37,15 @@ void FITLogger::writeDefinitionsOnce() {
             {3,   1, FitBaseType::UINT8},  // heart_rate (bpm, 0xFF = invalid)
             {4,   1, FitBaseType::UINT8},  // cadence (rpm, 0xFF = invalid)
             {7,   2, FitBaseType::UINT16}, // power (watts, 0xFFFF = invalid)
+            {15,  2, FitBaseType::UINT16}, // calories, scale 10 (kcal x 10)
         };
-        _writer.writeDefinition(LOCAL_RECORD, FitMesg::RECORD, f, 9);
+        _writer.writeDefinition(LOCAL_RECORD, FitMesg::RECORD, f, 10);
     }
 
-    // LAP: timestamp(u32), start_time(u32), total_elapsed_time(u32, scale 1000),
+        // LAP: timestamp(u32), start_time(u32), total_elapsed_time(u32, scale 1000),
     //      total_distance(u32, scale 100), max_speed(u16, scale 1000),
-    //      avg_heart_rate(u8), max_heart_rate(u8), avg_cadence(u8)
+    //      avg_heart_rate(u8), max_heart_rate(u8), avg_cadence(u8),
+    //      total_calories(u32, scale 10 = kcal x 10)
     {
         FitFieldDef f[] = {
             {253, 4, FitBaseType::UINT32}, // timestamp (= end of lap)
@@ -53,8 +56,9 @@ void FITLogger::writeDefinitionsOnce() {
             {15,  1, FitBaseType::UINT8},  // avg_heart_rate (bpm)
             {16,  1, FitBaseType::UINT8},  // max_heart_rate (bpm)
             {17,  1, FitBaseType::UINT8},  // avg_cadence (rpm)
+            {32,  4, FitBaseType::UINT32}, // total_calories, scale 10 (kcal x 10)
         };
-        _writer.writeDefinition(LOCAL_LAP, FitMesg::LAP, f, 8);
+        _writer.writeDefinition(LOCAL_LAP, FitMesg::LAP, f, 9);
     }
 
     // SESSION: timestamp(u32), start_time(u32), total_elapsed_time(u32,scale1000),
@@ -90,8 +94,10 @@ void FITLogger::writeDefinitionsOnce() {
 void FITLogger::startLogging(const timeData& currentTime) {
     _startTime = currentTime;
     _currentTime = currentTime;
-    _lastDistanceM = 0;
+        _lastDistanceM = 0;
     _lapStartDistanceM = 0;
+    _lastCalories = 0;
+    _lapStartCalories = 0;
     _definitionsWritten = false;
     laps.clear();
 
@@ -137,7 +143,10 @@ void FITLogger::addTrackpoint(const Trackpoint& tp, const timeData& currentTime)
     _writer.writeU16(static_cast<uint16_t>(kmhToMs(tp.speed) * 1000.0));
     _writer.writeU8(tp.heartrate > 0 ? static_cast<uint8_t>(tp.heartrate) : 0xFF);
     _writer.writeU8(tp.cadence > 0 ? static_cast<uint8_t>(tp.cadence) : 0xFF);
-    _writer.writeU16(tp.power > 0 ? static_cast<uint16_t>(tp.power) : 0xFFFF);
+        _writer.writeU16(tp.power > 0 ? static_cast<uint16_t>(tp.power) : 0xFFFF);
+    // calories field 15: scale 10 (kcal x 10), per FIT profile
+        _writer.writeU16(static_cast<uint16_t>(tp.calories * 10.0));
+    _lastCalories = tp.calories;
 
     _lastDistanceM = tp.distance;
 
@@ -148,9 +157,11 @@ void FITLogger::addTrackpoint(const Trackpoint& tp, const timeData& currentTime)
         lap.totalHRM += static_cast<float>(tp.heartrate);
         if (tp.heartrate > lap.maxHRM) lap.maxHRM = static_cast<float>(tp.heartrate);
     }
-    if (tp.cadence > 0) {
+        if (tp.cadence > 0) {
         lap.totalCadence += static_cast<float>(tp.cadence);
     }
+    // Track cumulative calories from FitnessFusion for the lap summary
+    lap.totalCalories = tp.calories;
     // lap.totalDistance is finalized (as a delta from lap start) when the
     // lap closes -- see writeLapMessage / newLap below -- since distance on
     // Trackpoint is cumulative-for-the-whole-activity, not per-lap.
@@ -162,6 +173,11 @@ void FITLogger::newLap(const timeData& currentTime) {
     if (!laps.empty()) {
         Lap& closingLap = laps.back();
         closingLap.totalDistance = static_cast<float>(_lastDistanceM - _lapStartDistanceM);
+        // Convert cumulative FitnessFusion calories to this lap's delta, the
+        // same way totalDistance is a per-lap delta from an activity-cumulative
+        // Trackpoint field.
+        closingLap.totalCalories = static_cast<float>(_lastCalories - _lapStartCalories);
+        if (closingLap.totalCalories < 0) closingLap.totalCalories = 0;
         writeLapMessage(closingLap, toFitTimestamp(closingLap.startTime.unixtime()), endFit);
     }
 
@@ -171,11 +187,13 @@ void FITLogger::newLap(const timeData& currentTime) {
     lap.totalHRM = 0;
     lap.totalCadence = 0;
     lap.maxSpeed = 0;
-    lap.totalDistance = 0;
+        lap.totalDistance = 0;
     lap.parts = 0;
+    lap.totalCalories = 0;
     laps.push_back(lap);
 
     _lapStartDistanceM = _lastDistanceM;
+    _lapStartCalories = _lastCalories;
 }
 
 void FITLogger::writeLapMessage(const Lap& lap, uint32_t startTimeFit, uint32_t endTimeFit) {
@@ -192,7 +210,8 @@ void FITLogger::writeLapMessage(const Lap& lap, uint32_t startTimeFit, uint32_t 
     _writer.writeU16(static_cast<uint16_t>(kmhToMs(lap.maxSpeed) * 1000));   // m/s, scale 1000
     _writer.writeU8(avgHr);
     _writer.writeU8(maxHr);
-    _writer.writeU8(avgCadence);
+        _writer.writeU8(avgCadence);
+    _writer.writeU32(static_cast<uint32_t>(lap.totalCalories * 10)); // scale 10
 }
 
 void FITLogger::writeSessionMessage(uint32_t endTimeFit) {
@@ -226,6 +245,8 @@ bool FITLogger::finaliseLogging() {
     if (!laps.empty()) {
         Lap& closingLap = laps.back();
         closingLap.totalDistance = static_cast<float>(_lastDistanceM - _lapStartDistanceM);
+        closingLap.totalCalories = static_cast<float>(_lastCalories - _lapStartCalories);
+        if (closingLap.totalCalories < 0) closingLap.totalCalories = 0;
         writeLapMessage(closingLap, toFitTimestamp(closingLap.startTime.unixtime()), endFit);
     }
     writeSessionMessage(endFit);

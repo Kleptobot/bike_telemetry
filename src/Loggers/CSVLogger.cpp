@@ -32,7 +32,7 @@ void CSVLogger::writeHeader() {
     // Header must match addTrackpoint's row exactly: time + the Trackpoint
     // fields it prints, in order. (The old 19-column header was stale from
     // the Telemetry-struct era and misaligned every spreadsheet import.)
-    file.println("time,latitude,longitude,altitude,speed,heartrate,cadence,power");
+    file.println("time,latitude,longitude,altitude,speed,heartrate,cadence,power,calories,normalizedpower,intensityfactor,tss,hrzone,powerzone");
     file.flush();
 }
 
@@ -47,8 +47,14 @@ void CSVLogger::addTrackpoint(const Trackpoint& tp, const timeData& currentTime)
     file.print(tp.altitude); file.print(",");
     file.print(tp.speed); file.print(",");
     file.print(tp.heartrate); file.print(",");
-    file.print(tp.cadence); file.print(",");
-    file.println(tp.power);
+        file.print(tp.cadence); file.print(",");
+    file.print(tp.power); file.print(",");
+    file.print(tp.calories); file.print(",");
+    file.print(tp.normalizedPower); file.print(",");
+    file.print(tp.intensityFactor); file.print(",");
+    file.print(tp.tss); file.print(",");
+    file.print(tp.hrZone); file.print(",");
+    file.print(tp.powerZone); file.println();
     file.flush();
 
     _currentTime = currentTime;

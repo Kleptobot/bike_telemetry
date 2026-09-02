@@ -50,6 +50,9 @@ private:
     double _lapStartDistanceM = 0; // cumulative distance at the start of the current lap,
                                     // used to derive this lap's totalDistance on rollover
  
+    double _lastCalories = 0;        // most recent cumulative calories (from Trackpoint::calories)
+    double _lapStartCalories = 0;    // cumulative calories at the start of the current lap
+
     bool _definitionsWritten = false;
     bool _open = false;   // did the .fit file actually open?
     void writeDefinitionsOnce();

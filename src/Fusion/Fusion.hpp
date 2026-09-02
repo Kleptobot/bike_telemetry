@@ -2,6 +2,7 @@
 #define FUSION_H
 
 #include "AltitudeFusion.hpp"
+#include "FitnessFusion.hpp"
 #include "HAL/Measurements.hpp"
 
 // =============================================================================
@@ -71,22 +72,38 @@ struct DerivedChannels {
     float totalDescentM = 0.0f;
     // Coasting detection: true when speed is significant but power is negligible.
     bool  coasting      = false;
+    // Fitness channels -- accumulated by FitnessFusion over the current ride
+    // (reset exactly when distance resets, i.e. logging start).
+    float caloriesKcal       = 0.0f;
+    uint8_t hrZone           = 0;      // 0 = no HR / below zone 1; else 1..5
+    uint8_t powerZone        = 0;      // 0 = no power / FTP unset; else 1..5
+    float normalizedPowerW   = 0.0f;   // 30 s rolling NP (power meter)
+    float intensityFactor    = 0.0f;   // NP / FTP
+    float tss                = 0.0f;   // accumulated TSS
+    // Seconds accumulated in each HR zone: index 0..4 == zone1..zone5.
+    float timeInZoneSec[5]   = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
 };
 
 class FusionEngine {
 public:
     // One call per App tick. wheelCircumferenceMm comes from the bike stats
-    // model, so the speed estimator needs no knowledge of where it is stored.
-    void update(const MeasurementFrame& f, uint16_t wheelCircumferenceMm);
+    // model and profile is the per-tick snapshot of the rider's bio/bike
+    // settings (mass, age, FTP, zone starts), so the estimators need no
+    // knowledge of where they are stored.
+    void update(const MeasurementFrame& f, uint16_t wheelCircumferenceMm,
+                const FitnessProfile& profile);
 
     // Zero the accumulated ride distance. Called by App when logging starts
     // or the SD card state changes (previously TelemetryDataProvider::resetDistance).
-    void resetDistance() { _totalDistanceM = 0.0f; }
+    // Ride-scoped accumulators that share the distance's lifetime (energy,
+    // calories, TSS, time-in-zone) reset here too, via FitnessFusion::reset().
+    void resetDistance() { _totalDistanceM = 0.0f; _fitness.reset(); }
 
     const DerivedChannels& out() const { return _out; }
 
 private:
     AltitudeFusion _alt;
+    FitnessFusion _fitness;
 
     // Previous frame, for per-channel sequence-number gating.
     MeasurementFrame _prev{};
@@ -123,8 +140,8 @@ private:
 
     // --- Constants for derived calculations ---
     // Estimated power physics model parameters.
-    // Total mass (rider + bike) in kg. Used for gravity and acceleration terms.
-    static constexpr float EST_POWER_MASS_KG = 80.0f;
+    // Total mass (rider + bike) in kg comes from FitnessProfile::totalMassKg(),
+    // so the physics estimate tracks the rider/bike settings on the SD card.
     // Rolling resistance coefficient (asphalt, typical tyres).
     static constexpr float EST_POWER_CRR = 0.005f;
     // Aerodynamic drag coefficient * frontal area (CdA), m^2.

@@ -89,7 +89,8 @@ public:
             return;
         }
 
-        if (_type == TelemetryType::Coasting) {
+        if (_type == TelemetryType::Coasting ||
+            _type == TelemetryType::HrZone || _type == TelemetryType::PowerZone) {
             // State rendered as text, not a number: centred, size 2.
             Disp::setTextSize(2);
             int16_t bx, by;
@@ -160,6 +161,21 @@ public:
             if (_coastText != text) {
                 _coastText = text;
                 _color = coasting ? ST77XX_ORANGE : ST77XX_GREEN;
+                invalidate();
+            }
+            return;
+        }
+
+        if (_type == TelemetryType::HrZone || _type == TelemetryType::PowerZone) {
+            const uint8_t zone = (_type == TelemetryType::HrZone)
+                                     ? bus.get<uint8_t>(Topic::HrZone)
+                                     : bus.get<uint8_t>(Topic::PowerZone);
+            const char tag = (_type == TelemetryType::HrZone) ? 'Z' : 'P';
+            const String text = (zone >= 1 && zone <= 5) ? String(tag) + String((int)zone)
+                                                         : String("--");
+            if (_coastText != text) {
+                _coastText = text;
+                _color = ST77XX_WHITE;
                 invalidate();
             }
             return;
@@ -306,10 +322,14 @@ private:
             case TelemetryType::GpsHdop:
             case TelemetryType::Torque:
             case TelemetryType::BatteryVolts:
+            case TelemetryType::IntensityFactor:
                 return 2;
             case TelemetryType::Ascent:
             case TelemetryType::Descent:
             case TelemetryType::GpsCourse:
+            case TelemetryType::Calories:
+            case TelemetryType::NormalizedPower:
+            case TelemetryType::Tss:
                 return 0;
             default:
                 return 1;
@@ -351,6 +371,10 @@ private:
             case TelemetryType::EstPower:    return Topic::EstimatedPower;
             case TelemetryType::Ascent:      return Topic::TotalAscent;
             case TelemetryType::Descent:     return Topic::TotalDescent;
+            case TelemetryType::Calories:    return Topic::Calories;
+            case TelemetryType::NormalizedPower: return Topic::NormalizedPower;
+            case TelemetryType::IntensityFactor: return Topic::IntensityFactor;
+            case TelemetryType::Tss:         return Topic::Tss;
             // Measured
             case TelemetryType::Cadence:     return Topic::Cadence;
             case TelemetryType::HeartRate:   return Topic::HeartRate;

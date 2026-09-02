@@ -29,6 +29,17 @@ void BiometricsScreen::handleInput(physIO input) {
             }
             if(input.Select.press) calorieWidget.setSelected(!calorieWidget.isSelected());
             break;
+        case EditField::Ftp:
+            if (ftpWidget.isSelected()) {
+                if (input.Up.state && ftpWidget.shouldRepeat(input.Up.heldTime)) {
+                    ++_ftpWatts;
+                } else if (input.Down.state && ftpWidget.shouldRepeat(input.Down.heldTime)) {
+                    --_ftpWatts;
+                } else if (input.Up.press) ++_ftpWatts;
+                else if (input.Down.press) --_ftpWatts;
+            }
+            if(input.Select.press) ftpWidget.setSelected(!ftpWidget.isSelected());
+            break;
         case EditField::Zone1Start:
             if (zone1StartWidget.isSelected()) {
                 if (input.Up.state && zone1StartWidget.shouldRepeat(input.Up.heldTime)) {
@@ -99,7 +110,8 @@ void BiometricsScreen::moveFocusUp() {
         case EditField::Birthday: focusField = EditField::Back;break;
         case EditField::Mass: focusField = EditField::Birthday; break;
         case EditField::CaloricProfile: focusField = EditField::Mass; break;
-        case EditField::Zone1Start: focusField = EditField::CaloricProfile; break;
+        case EditField::Ftp: focusField = EditField::CaloricProfile; break;
+        case EditField::Zone1Start: focusField = EditField::Ftp; break;
         case EditField::Zone2Start: focusField = EditField::Zone1Start; break;
         case EditField::Zone3Start: focusField = EditField::Zone2Start; break;
         case EditField::Zone4Start: focusField = EditField::Zone3Start; break;
@@ -113,7 +125,8 @@ void BiometricsScreen::moveFocusDown() {
     switch (focusField) {
         case EditField::Birthday: focusField = EditField::Mass;break;
         case EditField::Mass: focusField = EditField::CaloricProfile; break;
-        case EditField::CaloricProfile: focusField = EditField::Zone1Start; break;
+        case EditField::CaloricProfile: focusField = EditField::Ftp; break;
+        case EditField::Ftp: focusField = EditField::Zone1Start; break;
         case EditField::Zone1Start: focusField = EditField::Zone2Start; break;
         case EditField::Zone2Start: focusField = EditField::Zone3Start; break;
         case EditField::Zone3Start: focusField = EditField::Zone4Start; break;

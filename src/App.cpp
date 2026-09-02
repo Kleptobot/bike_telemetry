@@ -163,7 +163,7 @@ void App::update() {
                 // the display. (Was a Telemetry struct copy.)
                 const location_data& loc = bus.get<location_data>(Topic::Location);
                 Trackpoint tp;
-                tp.latitude  = loc.latitude;
+                                tp.latitude  = loc.latitude;
                 tp.longitude = loc.longitude;
                 tp.altitude  = bus.get<float>(Topic::FusedAltitude);
                 tp.speed     = bus.get<float>(Topic::SelectedSpeed);
@@ -171,6 +171,13 @@ void App::update() {
                 tp.power     = bus.get<float>(Topic::PowerMeter);
                 tp.cadence   = bus.get<float>(Topic::Cadence);
                 tp.distance  = bus.get<float>(Topic::TotalDistanceM);
+                // Fitness channels (Phase B: wire live FitnessFusion values into the trackpoint)
+                tp.calories          = bus.get<float>(Topic::Calories);
+                tp.normalizedPower   = bus.get<float>(Topic::NormalizedPower);
+                tp.intensityFactor   = bus.get<float>(Topic::IntensityFactor);
+                tp.tss               = bus.get<float>(Topic::Tss);
+                tp.hrZone            = bus.get<uint8_t>(Topic::HrZone);
+                tp.powerZone         = bus.get<uint8_t>(Topic::PowerZone);
                 _logger->addTrackpoint(tp, currentTime);
             }
             break;
@@ -193,7 +200,24 @@ void App::updateTelemetry() {
     // selection, grade) and inside HAL (baro/GPS/IMU altitude fusion) is now
     // in one place, fed by timestamped samples.
     const MeasurementFrame& frame = HAL::inst().measurements();
-    _fusion.update(frame, model.bike().get().wheelCircumference);
+
+    // Snapshot the rider/bike settings into the profile the fusion pipeline
+    // consumes. Cheap value semantics; the source of truth stays in DataModel.
+    const auto& bio  = model.bio().get();
+    const auto& bike = model.bike().get();
+    FitnessProfile profile;
+    profile.riderMassKg      = (float)bio.mass;
+    profile.bikeMassKg       = bike.mass / 10.0f;      // stored in tenths of kg
+    profile.ageYears         = timeDuration(model.time().get() - bio.birthday).years();
+    profile.caloricProfile   = bio.caloricProfile;
+    profile.zoneStartsBpm[0] = (float)bio.zone1Start;
+    profile.zoneStartsBpm[1] = (float)bio.zone2Start;
+    profile.zoneStartsBpm[2] = (float)bio.zone3Start;
+    profile.zoneStartsBpm[3] = (float)bio.zone4Start;
+    profile.zoneStartsBpm[4] = (float)bio.zone5Start;
+    profile.ftpWatts         = bio.ftpWatts;
+
+    _fusion.update(frame, bike.wheelCircumference, profile);
     const DerivedChannels& d = _fusion.out();
 
     // --- Publish fusion outputs to the DataBus -------------------------------
@@ -213,6 +237,12 @@ void App::updateTelemetry() {
     bus.publish(Topic::TotalAscent, d.totalAscentM);
     bus.publish(Topic::TotalDescent, d.totalDescentM);
     bus.publish(Topic::Coasting, d.coasting);
+    bus.publish(Topic::Calories, d.caloriesKcal);
+    bus.publish(Topic::NormalizedPower, d.normalizedPowerW);
+    bus.publish(Topic::IntensityFactor, d.intensityFactor);
+    bus.publish(Topic::Tss, d.tss);
+    bus.publish(Topic::HrZone, d.hrZone);
+    bus.publish(Topic::PowerZone, d.powerZone);
 
     // --- Publish position/distance/system channels to the DataBus -------------
     // These replace the last duties of the Telemetry struct: the UI (battery
@@ -384,6 +414,7 @@ void App::saveBiometrics() {
     doc["birthday"] = a.birthday.unixtime();
     doc["mass"] = a.mass;
     doc["caloricProfile"] = toString(a.caloricProfile);
+    doc["ftp"] = a.ftpWatts;
     doc["zone1Start"] = a.zone1Start;
     doc["zone2Start"] = a.zone2Start;
     doc["zone3Start"] = a.zone3Start;
@@ -432,6 +463,7 @@ void App::loadBiometrics() {
         a.birthday = bd;
         a.mass = jsonBuffer["mass"];
         a.caloricProfile = fromString(jsonBuffer["caloricProfile"]);
+        a.ftpWatts = jsonBuffer["ftp"] | 200;   // fallback keeps old biometrics.txt files working
         a.zone1Start = jsonBuffer["zone1Start"];
         a.zone2Start = jsonBuffer["zone2Start"];
         a.zone3Start = jsonBuffer["zone3Start"];

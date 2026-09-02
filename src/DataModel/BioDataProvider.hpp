@@ -51,6 +51,10 @@ struct BioData {
     timeData birthday = {1993 - 1900, 5 - 1, 21, 0, 0, 0}; // default birthday: 1993-05-21
     uint16_t mass = 75;
     CaloricProfile caloricProfile = CaloricProfile::Other;
+    // Functional threshold power (watts). Drives power zones and IF/TSS;
+    // 0 disables those (kept at a sane default rather than 0 so the power
+    // zones work out of the box).
+    uint16_t ftpWatts = 200;
     uint8_t zone1Start = 55; // bpm
     uint8_t zone2Start = 117; // bpm
     uint8_t zone3Start = 138; // bpm
@@ -61,7 +65,8 @@ struct BioData {
     BioData(
         timeData b, 
         uint16_t m, 
-        CaloricProfile c, 
+        CaloricProfile c,
+        uint16_t ftp,
         uint8_t z1, 
         uint8_t z2, 
         uint8_t z3, 
@@ -70,6 +75,7 @@ struct BioData {
         : birthday(b)
         , mass(m)
         , caloricProfile(c)
+        , ftpWatts(ftp)
         , zone1Start(z1)
         , zone2Start(z2)
         , zone3Start(z3)
@@ -92,6 +98,7 @@ public:
         _data.birthday = newData.birthday;
         _data.mass = newData.mass;
         _data.caloricProfile = newData.caloricProfile;
+        _data.ftpWatts = newData.ftpWatts;
         _data.zone1Start = newData.zone1Start;
         _data.zone2Start = newData.zone2Start;
         _data.zone3Start = newData.zone3Start;
