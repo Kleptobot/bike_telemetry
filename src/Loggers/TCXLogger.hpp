@@ -23,9 +23,7 @@ class TCXLogger : public ILogger {
 
     std::vector<Lap> laps;
 
-    char _filename[32];
-    timeData _startTime;
-    timeData _currentTime;
+    char _filename[32];  // _startTime/_currentTime inherited from ILogger
 
     int totalPoints=0;
 

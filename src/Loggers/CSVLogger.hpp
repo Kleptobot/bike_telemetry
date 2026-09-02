@@ -24,9 +24,7 @@ public:
 private:
     IStorage* _storage;
     File32 file;
-    char _filename[64];
-    timeData _startTime;
-    timeData _currentTime;
+    char _filename[64];  // _startTime/_currentTime inherited from ILogger
 
     void writeHeader();
 };

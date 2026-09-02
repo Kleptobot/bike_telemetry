@@ -42,9 +42,7 @@ public:
     }
  
 private:
-    FitWriter _writer;
-    timeData _startTime;
-    timeData _currentTime;
+    FitWriter _writer;   // _startTime/_currentTime inherited from ILogger
  
     double _lastDistanceM = 0;   // most recent cumulative distance seen (from Trackpoint::distance)
     double _lapStartDistanceM = 0; // cumulative distance at the start of the current lap,

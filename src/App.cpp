@@ -64,6 +64,8 @@ void App::update() {
 
     ui.update((float)(_millis - _last_millis) / 1000.0);
     ui.handleInput(HAL::inst().inputs());
+
+    updateAutoPause(_millis);
     _last_millis = _millis;
 
     const bool gpsValid = bus.get<bool>(Topic::GpsValid);
@@ -126,9 +128,24 @@ void App::update() {
                 HAL::inst().bluetooth().setMode(E_Type_BT_Mode::connect);
             else
                 HAL::inst().bluetooth().setMode(E_Type_BT_Mode::idle);
-            if (state_prev == AppState::LOGGING && _logger) {
+            if ((state_prev == AppState::LOGGING || state_prev == AppState::PAUSED) && _logger) {
                 Serial.println("[App] Finalizing logger.");
                 _logger->finaliseLogging();
+
+                // Passive FTP update: if this ride produced a qualifying
+                // 20-minute window and beat the stored FTP, auto-save the
+                // new max to biometrics. User can always override manually.
+                if (_ftpEstimator.hasQualifyingWindow()) {
+                    uint16_t rideFtp = _ftpEstimator.suggestedFtp();
+                    if (rideFtp > model.bio().get().ftpWatts) {
+                        BioData updated = model.bio().get();
+                        updated.ftpWatts = rideFtp;
+                        model.bio().update(updated);
+                        saveBiometrics();
+                        Serial.print("[App] FTP PB updated to ");
+                        Serial.println(rideFtp);
+                    }
+                }
             }
             _fusion.resetDistance();
 
@@ -149,9 +166,10 @@ void App::update() {
         case AppState::LOGGING:
             HAL::inst().bluetooth().setMode(E_Type_BT_Mode::idle);
 
-            if(state != state_prev) {
+            if (state_prev != AppState::LOGGING && state_prev != AppState::PAUSED) {
                 _logger->startLogging(currentTime);
                 _fusion.resetDistance();
+                _ftpEstimator.reset();
             }
 
             model.logger().update({_logger->elapsed_Total(),_logger->elapsed_Lap()});
@@ -179,6 +197,13 @@ void App::update() {
                 tp.hrZone            = bus.get<uint8_t>(Topic::HrZone);
                 tp.powerZone         = bus.get<uint8_t>(Topic::PowerZone);
                 _logger->addTrackpoint(tp, currentTime);
+
+                // Feed the FTP estimator: best available power source (meter
+                // if live, otherwise the physics estimate) at 1 Hz.
+                const float powerWatts = bus.get<float>(Topic::PowerMeter) > 0.0f
+                    ? bus.get<float>(Topic::PowerMeter)
+                    : bus.get<float>(Topic::EstimatedPower);
+                _ftpEstimator.addSample((uint16_t)(powerWatts > 0.0f ? powerWatts + 0.5f : 0.0f));
             }
             break;
         
@@ -329,6 +354,54 @@ void App::updateGpsEnable(bool state) {
     _gpsEnableState = state;
 }
 
+void App::updateAutoPause(uint32_t now) {
+    if (!model.bike().get().autoPause) return;
+
+    const float speedKmh = model.bus().get<float>(Topic::SelectedSpeed);
+    const float cadence  = model.bus().get<float>(Topic::Cadence);
+    const bool gpsValid  = model.bus().get<bool>(Topic::GpsValid);
+
+    // No wheel sensor speed and no GPS fix means we have no trustworthy
+    // speed source: never pause on absence of data.
+    const bool speedUsable = gpsValid || speedKmh > 0.0f || cadence > 0.0f;
+    if (!speedUsable) { _stopSinceMs = 0; _moveSinceMs = 0; return; }
+
+    if (state == AppState::LOGGING && !_autoPaused) {
+        if (speedKmh < AUTO_PAUSE_SPEED_KMH) {
+            if (_stopSinceMs == 0) {
+                _stopSinceMs = now;
+            } else if (now - _stopSinceMs > AUTO_PAUSE_DELAY_MS) {
+                _autoPaused = true;
+                _stopSinceMs = 0;
+                postAppEvent({AppEventType::PauseLogging,0});
+                Serial.println("[App] auto-paused (stopped)");
+            }
+        } else {
+            _stopSinceMs = 0;
+        }
+    } else if (state == AppState::PAUSED && _autoPaused) {
+        if (speedKmh > AUTO_RESUME_SPEED_KMH || cadence > AUTO_RESUME_CADENCE_RPM) {
+            if (_moveSinceMs == 0) {
+                _moveSinceMs = now;
+            } else if (now - _moveSinceMs > AUTO_RESUME_DELAY_MS) {
+                _autoPaused = false;
+                _moveSinceMs = 0;
+                postAppEvent({AppEventType::ResumeLogging,0});
+                Serial.println("[App] auto-resumed (moving)");
+            }
+        } else {
+            _moveSinceMs = 0;
+        }
+    } else {
+        // Manual pause/resume happened (or we are not logging): reset the
+        // debounce timers. Manual resume leaves state==LOGGING with
+        // _autoPaused still set - clear it so only auto-pauses auto-resume.
+        _stopSinceMs = 0;
+        _moveSinceMs = 0;
+        if (state == AppState::LOGGING) _autoPaused = false;
+    }
+}
+
 void App::handleAppEvent(const AppEvent& e) {
     switch (e.type) {
         case AppEventType::SaveTime:
@@ -351,6 +424,27 @@ void App::handleAppEvent(const AppEvent& e) {
 
         case AppEventType::StopLogging:
             state = AppState::IDLE;
+            break;
+
+        case AppEventType::PauseLogging:
+            if (state == AppState::LOGGING && _logger) {
+                _logger->pause(model.time().get());
+                state = AppState::PAUSED;
+            }
+            break;
+
+        case AppEventType::ResumeLogging:
+            if (state == AppState::PAUSED) {
+                if (_logger) _logger->resume(model.time().get());
+                state = AppState::LOGGING;
+            }
+            break;
+
+        case AppEventType::NewLap:
+            if (_logger && (state == AppState::LOGGING || state == AppState::PAUSED)) {
+                _logger->newLap(model.time().get());
+                Serial.println("[App] New lap.");
+            }
             break;
 
         case AppEventType::ConnectBluetooth:
@@ -483,6 +577,7 @@ void App::saveBikeStats() {
     doc["mass"] = a.mass;
     doc["wheelCircumference"] = a.wheelCircumference;
     doc["logger"] = loggerToString(a.logger);
+    doc["autoPause"] = a.autoPause;
 
     if (_storage->exists("/bikeStats.txt"))
         _storage->remove("/bikeStats.txt");
@@ -524,6 +619,9 @@ void App::loadBikeStats() {
         a.mass = jsonBuffer["mass"];
         a.wheelCircumference = jsonBuffer["wheelCircumference"];
         a.logger = loggerFromString(jsonBuffer["logger"]);
+        // Default true: older bikeStats.txt files have no key, and auto-pause
+        // should stay on rather than silently disappearing after an update.
+        a.autoPause = jsonBuffer["autoPause"] | true;
 
         model.bike().update(a);
         dataFile.close();

@@ -46,6 +46,17 @@ struct Lap {
 
 class ILogger {
 public:
+    // Timer-time support: pause() shifts every time anchor forward by the
+    // time actually spent logging since the last resume/start, so all
+    // wall-clock subtraction (elapsed_Total, elapsed_Lap, and every duration
+    // written to file) always yields timer time with pauses excluded.
+    void pause(const timeData& currentTime) {
+        timeDuration d = currentTime - _pauseAnchor;
+        _startTime = _startTime + d;
+        for (auto& l : laps) l.startTime = l.startTime + d;
+    }
+    void resume(const timeData& currentTime) { _pauseAnchor = currentTime; }
+
     virtual void startLogging(const timeData& currentTime) =0 ;
     virtual void addTrackpoint(const Trackpoint& tp, const timeData& currentTime) = 0;
     virtual void newLap(const timeData& currentTime) = 0;
@@ -66,6 +77,11 @@ public:
     
     virtual ~ILogger() = default;
 protected:
+    // Shared by all loggers: activity anchors + last trackpoint time, in
+    // the base so pause()/resume() can shift them for timer-time.
+    timeData _startTime;
+    timeData _currentTime;
+    timeData _pauseAnchor;  // wall time when logging last became active
     std::vector<Lap> laps; // kept public to match original's `laps.back()` usage
 };
 

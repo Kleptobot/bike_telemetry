@@ -34,6 +34,7 @@ $fw = @(
     "$root\src\Fusion\AltitudeFusion.cpp",
     "$root\src\Fusion\FitnessFusion.cpp",
     "$root\src\Fusion\Fusion.cpp",
+    "$root\src\Fusion\FtpEstimator.cpp",
     "$root\src\HAL\InputSystem.cpp",
     "$root\src\HAL\Sensors.cpp",
     "$root\src\HAL\SDCard.cpp",

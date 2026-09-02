@@ -30,6 +30,8 @@ struct BikeData {
     // sensor, with no indication why.
     uint16_t wheelCircumference = 2105;
     LoggerType logger = LoggerType::FIT;
+    // Auto-pause logging when the rider stops (speed-based with hysteresis).
+    bool autoPause = true;
 };
 
 class BikeDataProvider {

@@ -93,6 +93,7 @@ void FITLogger::writeDefinitionsOnce() {
 
 void FITLogger::startLogging(const timeData& currentTime) {
     _startTime = currentTime;
+    _pauseAnchor = currentTime;
     _currentTime = currentTime;
         _lastDistanceM = 0;
     _lapStartDistanceM = 0;

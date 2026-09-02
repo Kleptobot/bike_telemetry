@@ -64,6 +64,13 @@ void BikeStatsScreen::handleInput(physIO input) {
                 }
             }
             break;
+        case EditField::AutoPause:
+            if(input.Select.press) autoPauseWidget.setSelected(!autoPauseWidget.isSelected());
+            if (autoPauseWidget.isSelected()) {
+                if (input.Up.press) _autoPause = true;
+                else if (input.Down.press) _autoPause = false;
+            }
+            break;
 
         case EditField::Back:
             backWidget.handleInput(input);
@@ -81,7 +88,8 @@ void BikeStatsScreen::moveFocusUp() {
         case EditField::Mass: focusField = EditField::Back; break;
         case EditField::WheelCircumference: focusField = EditField::Mass; break;
         case EditField::Logger: focusField = EditField::WheelCircumference; break;
-        case EditField::Back: focusField = EditField::Logger; break;
+        case EditField::Back: focusField = EditField::AutoPause; break;
+        case EditField::AutoPause: focusField = EditField::Logger; break;
         case EditField::Save: focusField = EditField::Logger; break;
         default: break;
     }
@@ -91,7 +99,8 @@ void BikeStatsScreen::moveFocusDown() {
     switch (focusField) {
         case EditField::Mass: focusField = EditField::WheelCircumference; break;
         case EditField::WheelCircumference: focusField = EditField::Logger; break;
-        case EditField::Logger: focusField = EditField::Back; break;
+        case EditField::Logger: focusField = EditField::AutoPause; break;
+        case EditField::AutoPause: focusField = EditField::Back; break;
         case EditField::Back: focusField = EditField::Save; break;
         case EditField::Save: focusField = EditField::Mass; break;
         default: break;

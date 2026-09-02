@@ -2,6 +2,7 @@
 
 void CSVLogger::startLogging(const timeData& currentTime) {
     _startTime = currentTime;
+    _pauseAnchor = currentTime;
     _currentTime = currentTime;
     laps.clear();
     laps.push_back({currentTime, 0, 0, 0, 0, 0, 0});

@@ -14,6 +14,8 @@ enum class AppEventType {
     StartLogging,
     StopLogging,
     PauseLogging,
+    ResumeLogging,
+    NewLap,
     FactoryReset,
     ConnectBluetooth,
     DisconnectBluetooth,

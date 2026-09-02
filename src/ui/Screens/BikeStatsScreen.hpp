@@ -22,6 +22,9 @@ class BikeStatsScreen : public UIScreen {
             loggerLabel{5,59,"Logger:"},
             loggerWidget{loggerLabel.width() + 10,59,loggerToString(model.bike().get().logger)},
 
+            autoPauseLabel{5,86,"AutoPause:"},
+            autoPauseWidget{autoPauseLabel.width() + 10,86, model.bike().get().autoPause ? "On" : "Off"},
+
             backWidget{15,231,"Back",epd_bitmap_left},
             saveWidget{90,231,"Save",epd_bitmap_save} {
                 //register press event callback to send a change screen event
@@ -30,7 +33,7 @@ class BikeStatsScreen : public UIScreen {
                 });
                 //register the save press event callback to send a change screen and app save event
                 saveWidget.setOnPress([this] () {
-                    this->model.bike().update({(_mass),(_circumference),(_logger)});
+                    this->model.bike().update({(_mass),(_circumference),(_logger),(_autoPause)});
                     emitAppEvent({AppEventType::SaveBikeStats,0});
                     emitUIEvent(UIEventType::ChangeScreen, ScreenID::SettingsMenu);
                 });
@@ -41,16 +44,19 @@ class BikeStatsScreen : public UIScreen {
             _mass = (a.mass == 0 ? 130 : a.mass);
             _circumference = (a.wheelCircumference == 0 ? 2136 : a.wheelCircumference);
             _logger = a.logger;
+            _autoPause = a.autoPause;
         }
 
         void update(float dt) override {
             bikeMassWidget.setText(String(_mass/10.0f,1) + " kg");
             wheelCircWidget.setText(String(_circumference) + " mm");
             loggerWidget.setText(loggerToString(_logger));
+            autoPauseWidget.setText(_autoPause ? "On" : "Off");
 
             bikeMassWidget.setFocused(focusField == EditField::Mass);
             wheelCircWidget.setFocused(focusField == EditField::WheelCircumference);
             loggerWidget.setFocused(focusField == EditField::Logger);
+            autoPauseWidget.setFocused(focusField == EditField::AutoPause);
 
             backWidget.setFocused(focusField == EditField::Back);
             saveWidget.setFocused(focusField == EditField::Save);
@@ -68,12 +74,15 @@ class BikeStatsScreen : public UIScreen {
             loggerLabel.render();
             loggerWidget.render();
 
+            autoPauseLabel.render();
+            autoPauseWidget.render();
+
             backWidget.render();
             saveWidget.render();
         }
 
     private:
-        enum class EditField { Mass, WheelCircumference, Logger, Back, Save };
+        enum class EditField { Mass, WheelCircumference, Logger, AutoPause, Back, Save };
         EditField focusField = EditField::Mass;
 
         SelectableTextWidget bikeMassLabel;
@@ -85,6 +94,9 @@ class BikeStatsScreen : public UIScreen {
         SelectableTextWidget loggerLabel;
         SelectableTextWidget loggerWidget;
 
+        SelectableTextWidget autoPauseLabel;
+        SelectableTextWidget autoPauseWidget;
+
         SelectableTextIconWidget backWidget;
         SelectableTextIconWidget saveWidget;
         
@@ -92,6 +104,7 @@ class BikeStatsScreen : public UIScreen {
         uint16_t _circumference;
         uint16_t _repeatCount = 0;
         LoggerType _logger;
+        bool _autoPause = true;
 
         void moveFocusUp();
         void moveFocusDown();

@@ -76,6 +76,7 @@ FW_SRCS := \
   $(ROOT)/src/display/Display.cpp \
   $(ROOT)/src/Fusion/AltitudeFusion.cpp \
   $(ROOT)/src/Fusion/FitnessFusion.cpp \
+  $(ROOT)/src/Fusion/FtpEstimator.cpp \
   $(ROOT)/src/Fusion/Fusion.cpp \
   $(ROOT)/src/HAL/InputSystem.cpp \
   $(ROOT)/src/HAL/Sensors.cpp \

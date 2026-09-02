@@ -17,6 +17,8 @@ public:
 
         settingsIcon    (88,300,16,16,epd_bitmap_gear),
         playIcon        (112,300,16,16,epd_bitmap_play),
+        pauseIcon       (64,300,16,16,epd_bitmap_pause),
+        lapIcon         (88,300,16,16,epd_bitmap_loop),
         stopIcon        (136,300,16,16,epd_bitmap_stop),
         powerIcon       (136,300,16,16,epd_bitmap_power),
 
@@ -100,27 +102,33 @@ public:
 
         //show hide icons based on app state
         const auto& appState = model.app();
-        lapTime.setVisible(appState == AppState::LOGGING);
-        
-        stopIcon.setVisible(appState == AppState::LOGGING);
-        settingsIcon.setVisible(appState != AppState::LOGGING);
-        powerIcon.setVisible(appState != AppState::LOGGING);
+        const bool active = appState == AppState::LOGGING || appState == AppState::PAUSED;
+        lapTime.setVisible(active);
 
-        if (appState != AppState::LOGGING && appState_prev == AppState::LOGGING) {
-            playIcon.setIcon(epd_bitmap_play);
-        }else if (appState == AppState::LOGGING && appState_prev != AppState::LOGGING) {
-            playIcon.setIcon(epd_bitmap_loop);
-        }
+        stopIcon.setVisible(active);
+        pauseIcon.setVisible(appState == AppState::LOGGING);
+        lapIcon.setVisible(active);
+        playIcon.setVisible(appState == AppState::IDLE || appState == AppState::PAUSED);
+        settingsIcon.setVisible(appState == AppState::IDLE);
+        powerIcon.setVisible(appState == AppState::IDLE);
         appState_prev = appState;
     }
 
     void handleInput(physIO input) override {
         switch (model.app()) {
             case AppState::LOGGING:
+            case AppState::PAUSED:
                 if (input.Select.press) {
                     emitAppEvent({AppEventType::StopLogging,0});
-                } else if (input.Select.held) {
-                    emitAppEvent({AppEventType::PauseLogging,0});
+                } else if (input.Up.press) {
+                    // pause while logging, resume while paused
+                    if (model.app() == AppState::LOGGING) {
+                        emitAppEvent({AppEventType::PauseLogging,0});
+                    } else {
+                        emitAppEvent({AppEventType::ResumeLogging,0});
+                    }
+                } else if (input.Down.press) {
+                    emitAppEvent({AppEventType::NewLap,0});
                 }
                 break;
 
@@ -155,6 +163,8 @@ public:
         lapTime.render();
 
         settingsIcon.render();
+        pauseIcon.render();
+        lapIcon.render();
         playIcon.render();
         stopIcon.render();
         powerIcon.render();
@@ -165,6 +175,8 @@ private:
     IconWidget gpsIcon;
     IconWidget settingsIcon;
     IconWidget playIcon;
+    IconWidget pauseIcon;
+    IconWidget lapIcon;
     IconWidget stopIcon;
     IconWidget powerIcon;
     TimeWidget timeWidget;
