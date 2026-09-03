@@ -8,6 +8,28 @@
 #include "UI/Widgets/DurationWidget.hpp"
 #include "UI/GFX.h"
 
+// Icon layout: the icons sit on a drawn D-pad cross (a switch shape) in the
+// free band below the data grid, so the mapping to the physical 5-position
+// switch is explicit. Cross centre is (190,296); horizontal arm spans
+// x=160..220 at y=294..298, vertical arm x=188..192 at y=272..320. The
+// vertical arm reserves the currently unused UP/DOWN lanes - a future icon
+// drops straight into (182,272) or (182,304).
+//
+//   tip:       LEFT(x162)       CENTER(x182)                 RIGHT(x202)
+//   IDLE:      gear(settings)   play -> power while held     -
+//   LOGGING:   loop(new lap)    pause -> power while held    stop
+//   PAUSED:    loop(new lap)    play -> power while held     stop
+//
+// which matches the input mapping in handleInput():
+//   Left press       = settings (IDLE) / new lap (active)
+//   Select press     = start (IDLE) / pause (LOGGING) / resume (PAUSED)
+//   Select held      = sleep (icon flips to power while held, all states)
+//   Right press      = stop logging (active)
+//
+// NOTE on button semantics (see HAL/button.cpp): press fires on RELEASE of
+// any press longer than _nShortPressTime (50 ms), so a long center-hold also
+// emits a press when released. That is safe here: Sleep fires during the
+// hold and the device powers down before the release-press lands.
 class MainScreen : public UIScreen {
 public:
     MainScreen (DataModel& model) : 
@@ -15,12 +37,15 @@ public:
         batt(202,5),
         gpsIcon(5,5,16,16,epd_bitmap_antenna),
 
-        settingsIcon    (88,300,16,16,epd_bitmap_gear),
-        playIcon        (112,300,16,16,epd_bitmap_play),
-        pauseIcon       (64,300,16,16,epd_bitmap_pause),
-        lapIcon         (88,300,16,16,epd_bitmap_loop),
-        stopIcon        (136,300,16,16,epd_bitmap_stop),
-        powerIcon       (136,300,16,16,epd_bitmap_power),
+        leftIcon      (162,288,16,16,epd_bitmap_gear),   // Left:  settings (IDLE) / new lap (active)
+        centerIcon    (182,288,16,16,epd_bitmap_play),   // Select: start/pause/resume; power while held
+        rightIcon     (202,288,16,16,epd_bitmap_stop),   // Right: stop (active)
+
+        // Outward-pointing arrows flanking the tips: they say "this icon is
+        // that switch position". The right one only means something while a
+        // ride is active (the stop tip is empty in IDLE).
+        leftArrow     (146,288,16,16,epd_bitmap_left),
+        rightArrow    (218,288,16,16,epd_bitmap_right),
 
         timeWidget(30,5,model.time().get()),
         lapTime(5,280, model.logger().get().lapElapsed) {}
@@ -100,53 +125,76 @@ public:
         //get the current lap time
         lapTime.update(dt);
 
-        //show hide icons based on app state
+        // Bottom bar: one icon per switch position, always in the same slot.
+        // Only visibility, the glyph in the center slot (play/pause/stop/power)
+        // and the glyph in the left slot (gear/loop) ever change - positions
+        // are fixed, so nothing shifts between states.
         const auto& appState = model.app();
         const bool active = appState == AppState::LOGGING || appState == AppState::PAUSED;
         lapTime.setVisible(active);
 
-        stopIcon.setVisible(active);
-        pauseIcon.setVisible(appState == AppState::LOGGING);
-        lapIcon.setVisible(active);
-        playIcon.setVisible(appState == AppState::IDLE || appState == AppState::PAUSED);
-        settingsIcon.setVisible(appState == AppState::IDLE);
-        powerIcon.setVisible(appState == AppState::IDLE);
-        appState_prev = appState;
+        // Left: settings in IDLE, new lap while a ride is active.
+        leftIcon.setVisible(true);
+        leftIcon.setIcon(active ? epd_bitmap_loop : epd_bitmap_gear);
+
+        // Center: start (IDLE) / pause (LOGGING) / resume (PAUSED);
+        // power while the user is holding it (sleep gesture).
+        centerIcon.setVisible(true);
+        if (_centerHeld)
+            centerIcon.setIcon(epd_bitmap_power);
+        else if (appState == AppState::IDLE)
+            centerIcon.setIcon(epd_bitmap_play);
+        else if (appState == AppState::LOGGING)
+            centerIcon.setIcon(epd_bitmap_pause);
+        else
+            centerIcon.setIcon(epd_bitmap_play);
+
+        // Right: stop while a ride is active, nothing in IDLE.
+        rightIcon.setVisible(active);
+
+        leftArrow.setVisible(true);
+        rightArrow.setVisible(active);
     }
 
     void handleInput(physIO input) override {
+        // Capture the center-hold state for the icon feedback in update().
+        // handleInput runs every loop, so the flag tracks the gesture live.
+        _centerHeld = input.Select.held;
+
         switch (model.app()) {
             case AppState::LOGGING:
             case AppState::PAUSED:
-                if (input.Select.press) {
-                    emitAppEvent({AppEventType::StopLogging,0});
-                } else if (input.Up.press) {
+                if (input.Select.held) {
+                    emitAppEvent({AppEventType::Sleep,0});
+                } else if (input.Select.press) {
                     // pause while logging, resume while paused
                     if (model.app() == AppState::LOGGING) {
                         emitAppEvent({AppEventType::PauseLogging,0});
                     } else {
                         emitAppEvent({AppEventType::ResumeLogging,0});
                     }
-                } else if (input.Down.press) {
+                } else if (input.Right.press) {
+                    emitAppEvent({AppEventType::StopLogging,0});
+                } else if (input.Left.press) {
                     emitAppEvent({AppEventType::NewLap,0});
                 }
                 break;
 
             case AppState::IDLE:
-                if (input.Select.press) {
+                if (input.Select.held) {
+                    emitAppEvent({AppEventType::Sleep,0});
+                } else if (input.Select.press) {
                     emitAppEvent({AppEventType::StartLogging,0});
                 } else if (input.Left.press) {
                     emitUIEvent(UIEventType::ChangeScreen, ScreenID::SettingsMenu);
-                } else if (input.Right.held) {
-                    emitAppEvent({AppEventType::Sleep,0});
                 }
                 break;
 
             default:
-                if (input.Left.press) {
-                    emitUIEvent(UIEventType::ChangeScreen, ScreenID::SettingsMenu);
-                } else if (input.Right.held) {
+                if (input.Select.held) {
                     emitAppEvent({AppEventType::Sleep,0});
+                } else if (input.Left.press) {
+                    emitUIEvent(UIEventType::ChangeScreen, ScreenID::SettingsMenu);
                 }
         }
     }
@@ -162,23 +210,33 @@ public:
         timeWidget.render();
         lapTime.render();
 
-        settingsIcon.render();
-        pauseIcon.render();
-        lapIcon.render();
-        playIcon.render();
-        stopIcon.render();
-        powerIcon.render();
+        // D-pad cross behind the icons, mirroring the 5-pos switch. Drawn
+        // after the icons it would slice through their glyphs, so it goes
+        // first; the icon bitmaps have a transparent background, letting the
+        // arm show through. The vertical arm spans the full free band and
+        // reserves the unused UP/DOWN lanes: a future icon drops into
+        // (182,272) or (182,304).
+        Disp::fillRect(146, 294, 89,  5, CROSS_COLOR);  // horizontal arm (extended under the arrows)
+        Disp::fillRect(188, 272,  5, 49, CROSS_COLOR);  // vertical arm
+
+        leftArrow.render();
+        leftIcon.render();
+        centerIcon.render();
+        rightIcon.render();
+        rightArrow.render();
     }
     
 private:
     BatteryWidget batt;
     IconWidget gpsIcon;
-    IconWidget settingsIcon;
-    IconWidget playIcon;
-    IconWidget pauseIcon;
-    IconWidget lapIcon;
-    IconWidget stopIcon;
-    IconWidget powerIcon;
+
+    // Bottom bar, one widget per fixed switch-position slot (see class comment).
+    IconWidget leftIcon;
+    IconWidget centerIcon;
+    IconWidget rightIcon;
+    IconWidget leftArrow;
+    IconWidget rightArrow;
+
     TimeWidget timeWidget;
     DurationWidget lapTime;
 
@@ -187,5 +245,10 @@ private:
     uint8_t _rows = 2;
     uint8_t _cols = 2;
 
-    AppState appState_prev = AppState::IDLE;
+    // Live mirror of input.Select.held, captured in handleInput (which runs
+    // every loop) and consumed in update() for the power-icon feedback.
+    bool _centerHeld = false;
+
+    // Dim grey for the switch cross, same value as the grid edge lines.
+    static constexpr uint16_t CROSS_COLOR = 0x4208;
 };

@@ -70,6 +70,10 @@ void HAL::init(timeData* date) {
     HAL::inst().enableAuxRail();
     //turn the gps power supply on
     inputSystem.setOutput(GPIOB3, true);
+    inputSystem.setOutput(GPIOB7, false);
+    inputSystem.update(false);
+    delayMicroseconds(20);
+    inputSystem.setOutput(GPIOB7, true);
     inputSystem.update(false);
     _LC76G.i2c_wait();
 

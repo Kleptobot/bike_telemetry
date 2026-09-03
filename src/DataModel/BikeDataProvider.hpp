@@ -32,6 +32,9 @@ struct BikeData {
     LoggerType logger = LoggerType::FIT;
     // Auto-pause logging when the rider stops (speed-based with hysteresis).
     bool autoPause = true;
+    // Minutes of no user input before the device sleeps while idle.
+    // A stored 0 is clamped to the default at the point of use.
+    uint8_t idleSleepMinutes = 5;
 };
 
 class BikeDataProvider {

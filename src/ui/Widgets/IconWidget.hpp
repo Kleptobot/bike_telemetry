@@ -11,7 +11,10 @@ class IconWidget : public Widget {
 
         void render() override {
             if (!visible) {
-                Disp::fillRect(_x,_y,_width,_height,ST77XX_BLACK);
+                // No explicit erase: UIManager::render clears the whole canvas
+                // every frame, and a black fill here would punch a hole in any
+                // graphic drawn beneath this slot (e.g. the main-screen switch
+                // cross behind the hidden stop icon).
                 return;
             } 
             Disp::drawBitmap(_x,_y,_icon,_width,_height,ST77XX_WHITE);

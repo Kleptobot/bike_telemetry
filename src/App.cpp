@@ -63,9 +63,11 @@ void App::update() {
     }
 
     ui.update((float)(_millis - _last_millis) / 1000.0);
-    ui.handleInput(HAL::inst().inputs());
+    const physIO io = HAL::inst().inputs();
+    ui.handleInput(io);
 
     updateAutoPause(_millis);
+    updateIdleSleep(io, _millis);
     _last_millis = _millis;
 
     const bool gpsValid = bus.get<bool>(Topic::GpsValid);
@@ -402,6 +404,41 @@ void App::updateAutoPause(uint32_t now) {
     }
 }
 
+void App::updateIdleSleep(const physIO& io, uint32_t now) {
+    // Any button physically down counts as user activity - it covers short
+    // presses, long holds and the sleep gesture without edge-case misses.
+    const bool activity = io.Up.state || io.Down.state || io.Left.state ||
+                          io.Right.state || io.Select.state;
+    if (activity) {
+        _lastActivityMs = now;
+        return;
+    }
+
+    // Arm the countdown on IDLE entry, disarm when leaving it. Re-entering
+    // IDLE (e.g. after finishing a ride) restarts the countdown.
+    if (state == AppState::IDLE && !_idleActive) {
+        _idleActive = true;
+        _lastActivityMs = now;
+    } else if (state != AppState::IDLE) {
+        _idleActive = false;
+        return;
+    }
+
+    // A stored 0 is clamped so the setting can never mean instant sleep.
+    const uint8_t minutes = model.bike().get().idleSleepMinutes
+                                ? model.bike().get().idleSleepMinutes
+                                : IDLE_SLEEP_DEFAULT_MIN;
+    const uint32_t timeoutMs = (uint32_t)minutes * 60000UL;
+
+    if (now - _lastActivityMs > timeoutMs) {
+        Serial.println("[App] idle timeout, sleeping");
+        postAppEvent({AppEventType::Sleep,0});
+        // Keep _idleActive armed and _lastActivityMs old: until system-off
+        // actually happens, _lastActivityMs will only reset on new input, so
+        // this branch fires at most once more (harmless: sleep is idempotent).
+    }
+}
+
 void App::handleAppEvent(const AppEvent& e) {
     switch (e.type) {
         case AppEventType::SaveTime:
@@ -578,6 +615,7 @@ void App::saveBikeStats() {
     doc["wheelCircumference"] = a.wheelCircumference;
     doc["logger"] = loggerToString(a.logger);
     doc["autoPause"] = a.autoPause;
+    doc["idleSleepMinutes"] = a.idleSleepMinutes;
 
     if (_storage->exists("/bikeStats.txt"))
         _storage->remove("/bikeStats.txt");
@@ -622,6 +660,7 @@ void App::loadBikeStats() {
         // Default true: older bikeStats.txt files have no key, and auto-pause
         // should stay on rather than silently disappearing after an update.
         a.autoPause = jsonBuffer["autoPause"] | true;
+        a.idleSleepMinutes = jsonBuffer["idleSleepMinutes"] | 5;
 
         model.bike().update(a);
         dataFile.close();

@@ -87,6 +87,10 @@ private:
     uint32_t _stopSinceMs = 0;     // timestamp the speed first dropped below threshold
     uint32_t _moveSinceMs = 0;     // timestamp movement was first detected while auto-paused
 
+    // Idle auto-sleep state
+    uint32_t _lastActivityMs = 0;  // timestamp of the last button press/hold
+    bool _idleActive = false;      // true while in IDLE, re-arms the countdown on entry
+
     DataModel model;
     UIManager ui;
     FusionEngine _fusion;
@@ -109,7 +113,12 @@ private:
     static constexpr float AUTO_RESUME_CADENCE_RPM = 20.0f;
     static constexpr uint32_t AUTO_PAUSE_DELAY_MS  = 10000;
     static constexpr uint32_t AUTO_RESUME_DELAY_MS = 3000;
+
+    // Default idle-sleep timeout when the stored setting is 0 (see
+    // BikeData::idleSleepMinutes).
+    static constexpr uint8_t IDLE_SLEEP_DEFAULT_MIN = 5;
     void updateAutoPause(uint32_t now);
+    void updateIdleSleep(const physIO& io, uint32_t now);
 
     void saveLayout();
     void loadLayout();
