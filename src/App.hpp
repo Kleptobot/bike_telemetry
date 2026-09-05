@@ -97,6 +97,17 @@ private:
     FtpEstimator _ftpEstimator;
     uint32_t _millis, _last_millis, lastGPS;
 
+    // Beeper state (see buzz()/updateBuzzer()).
+    std::vector<uint16_t> _buzzSteps;
+    uint8_t _buzzStep = 0;
+    bool _buzzActive = false;
+    uint32_t _buzzStepEndMs = 0;
+
+    // Buzzer feedback: non-blocking pattern player. Patterns alternate
+    // on/off starting with ON; durations in ms. Driven from update().
+    void buzz(const uint16_t* patternMs, uint8_t len);
+    void updateBuzzer(uint32_t now);
+
     void saveBiometrics();
     void loadBiometrics();
 

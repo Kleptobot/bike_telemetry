@@ -13,6 +13,38 @@
 #include "UI/Screens/UnmountSDScreen.hpp"
 #include "UI/Screens/BikeStatsScreen.hpp"
 
+// ---- Buzzer feedback patterns (ms, alternating on/off starting with ON) ----
+// Distinct feel per event: start = one short chirp, pause = one long beep,
+// resume = double beep, stop = rising triple.
+static constexpr uint16_t BUZZ_START[]  = {120};
+static constexpr uint16_t BUZZ_PAUSE[]  = {350};
+static constexpr uint16_t BUZZ_RESUME[] = {100, 100, 100};
+static constexpr uint16_t BUZZ_STOP[]   = {100, 100, 100, 100, 300};
+
+void App::buzz(const uint16_t* patternMs, uint8_t len) {
+    if (len == 0) return;
+    _buzzSteps.assign(patternMs, patternMs + len);
+    _buzzStep = 0;
+    _buzzActive = true;
+    HAL::inst().buzzStart();
+    _buzzStepEndMs = millis() + _buzzSteps[0];
+}
+
+void App::updateBuzzer(uint32_t now) {
+    if (!_buzzActive) return;
+    if ((int32_t)(now - _buzzStepEndMs) < 0) return;
+
+    // Even steps are ON, odd steps are OFF.
+    if ((_buzzStep % 2) == 0) HAL::inst().buzzStop();
+    ++_buzzStep;
+    if (_buzzStep >= _buzzSteps.size()) {
+        _buzzActive = false;
+        return;
+    }
+    if ((_buzzStep % 2) == 0) HAL::inst().buzzStart();
+    _buzzStepEndMs = now + _buzzSteps[_buzzStep];
+}
+
 void App::begin(IStorage* storage) {
     _storage = storage;
 
@@ -68,6 +100,7 @@ void App::update() {
 
     updateAutoPause(_millis);
     updateIdleSleep(io, _millis);
+    updateBuzzer(_millis);
     _last_millis = _millis;
 
     const bool gpsValid = bus.get<bool>(Topic::GpsValid);
@@ -457,16 +490,19 @@ void App::handleAppEvent(const AppEvent& e) {
         case AppEventType::StartLogging:
             HAL::inst().bluetooth().setMode(E_Type_BT_Mode::idle);
             state = AppState::LOGGING;
+            buzz(BUZZ_START, sizeof(BUZZ_START) / sizeof(BUZZ_START[0]));
             break;
 
         case AppEventType::StopLogging:
             state = AppState::IDLE;
+            buzz(BUZZ_STOP, sizeof(BUZZ_STOP) / sizeof(BUZZ_STOP[0]));
             break;
 
         case AppEventType::PauseLogging:
             if (state == AppState::LOGGING && _logger) {
                 _logger->pause(model.time().get());
                 state = AppState::PAUSED;
+                buzz(BUZZ_PAUSE, sizeof(BUZZ_PAUSE) / sizeof(BUZZ_PAUSE[0]));
             }
             break;
 
@@ -474,6 +510,7 @@ void App::handleAppEvent(const AppEvent& e) {
             if (state == AppState::PAUSED) {
                 if (_logger) _logger->resume(model.time().get());
                 state = AppState::LOGGING;
+                buzz(BUZZ_RESUME, sizeof(BUZZ_RESUME) / sizeof(BUZZ_RESUME[0]));
             }
             break;
 
