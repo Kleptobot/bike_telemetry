@@ -6,6 +6,24 @@
 
 enum class LoggerType { FIT, TCX, CSV };
 
+// Auto-lap trigger source. One configured value serves both: kilometres when
+// Distance, minutes when Time.
+enum class AutoLapMode : uint8_t { Off = 0, Distance = 1, Time = 2 };
+
+inline String autoLapModeToString(AutoLapMode mode) {
+    switch (mode) {
+        case AutoLapMode::Distance: return "Dist";
+        case AutoLapMode::Time:     return "Time";
+        default:                    return "Off";
+    }
+}
+
+inline AutoLapMode autoLapModeFromString(const String& str) {
+    if (str == "Dist") return AutoLapMode::Distance;
+    if (str == "Time") return AutoLapMode::Time;
+    return AutoLapMode::Off;
+}
+
 inline String loggerToString(LoggerType type) {
     switch (type) {
         case LoggerType::FIT: return "FIT";
@@ -35,6 +53,10 @@ struct BikeData {
     // Minutes of no user input before the device sleeps while idle.
     // A stored 0 is clamped to the default at the point of use.
     uint8_t idleSleepMinutes = 5;
+    // Auto-lap: fire a lap every autoLapValue kilometres (Distance) or
+    // minutes (Time) of moving time. Off disables the trigger.
+    AutoLapMode autoLapMode = AutoLapMode::Off;
+    uint8_t autoLapValue = 10;
 };
 
 class BikeDataProvider {

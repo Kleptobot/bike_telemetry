@@ -25,6 +25,7 @@ public:
             {"Biometrics",  epd_bitmap_heart_large,         ScreenID::Biometrics},
             {"Bike Stats",  epd_bitmap_heart_large,         ScreenID::BikeStats},
             {"Display",     epd_bitmap_disp_edit,           ScreenID::DisplayEdit},
+            {"Logs",        epd_bitmap_icons8_micro_sd_32,  ScreenID::LogList},
             {"Unmount SD",  epd_bitmap_icons8_micro_sd_32,  ScreenID::UnmountSD},
             {"Back",        epd_bitmap_left_arrow_large,    ScreenID::MainMenu}
         };

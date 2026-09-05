@@ -117,6 +117,7 @@ void BiometricsScreen::moveFocusUp() {
         case EditField::Zone4Start: focusField = EditField::Zone3Start; break;
         case EditField::Zone5Start: focusField = EditField::Zone4Start; break;
         case EditField::Back: focusField = EditField::Zone5Start; break;
+        case EditField::Save: focusField = EditField::Zone5Start; break;
         default: break;
     }
 }
@@ -133,6 +134,7 @@ void BiometricsScreen::moveFocusDown() {
         case EditField::Zone4Start: focusField = EditField::Zone5Start; break;
         case EditField::Zone5Start: focusField = EditField::Back; break;
         case EditField::Back: focusField = EditField::Birthday; break;
+        case EditField::Save: focusField = EditField::Birthday; break;
         default: break;
     }
 }

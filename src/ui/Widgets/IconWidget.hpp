@@ -16,8 +16,8 @@ class IconWidget : public Widget {
                 // graphic drawn beneath this slot (e.g. the main-screen switch
                 // cross behind the hidden stop icon).
                 return;
-            } 
-            Disp::drawBitmap(_x,_y,_icon,_width,_height,ST77XX_WHITE);
+            }
+            Disp::drawBitmap(_x,_y,_icon,_width,_height,_color);
         }
 
         void setIcon(const uint8_t* icon) {
@@ -25,6 +25,12 @@ class IconWidget : public Widget {
             _icon = icon;
         }
 
+        void setColor(uint16_t color) {
+            if (_color != color) invalidate();
+            _color = color;
+        }
+
     private:
         const uint8_t* _icon;
+        uint16_t _color = ST77XX_WHITE;
 };

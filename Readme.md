@@ -79,12 +79,12 @@ The firmware depends on a number of Arduino and embedded libraries, including:
 
 - `Adafruit_GFX`
 - `Adafruit_ST7789`
-- `RTClib`
 - `MCP23017` support for the I/O expander
 - `LSM6DS3`
 - `XENSIV` pressure-sensor support
 - `ArduinoJson`
 - `TinyGPSPlus`
+- `teddokano/RTC_NXP_Arduino`
 
 ## Key files to inspect
 

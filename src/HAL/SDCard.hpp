@@ -18,6 +18,7 @@ public:
     File32 openFile(const char* path, oflag_t mode) override;
     bool remove(const char* path) override;
     bool exists(const char* path) override;
+    bool listFiles(const char* dir, StorageEntry* out, uint8_t max, uint8_t& count) override;
 
     bool isMounted() const { return mounted; }
     bool isBusy() const { return busy; }

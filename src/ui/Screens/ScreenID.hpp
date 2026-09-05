@@ -10,5 +10,7 @@ enum class ScreenID {
     TimeMenu,
     DisplayEdit,
     UnmountSD,
-    BikeStats
+    BikeStats,
+    LogList,
+    LogSummary
 };

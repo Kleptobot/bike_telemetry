@@ -243,9 +243,77 @@ void FusionEngine::update(const MeasurementFrame& f, uint16_t wheelCircumference
         _out.hrZone           = fit.hrZone;
         _out.powerZone        = fit.powerZone;
         _out.normalizedPowerW = fit.normalizedPowerW;
+        _out.avg3sPowerW      = fit.avg3sPowerW;
         _out.intensityFactor  = fit.intensityFactor;
         _out.tss              = fit.tss;
         for (int i = 0; i < 5; i++) _out.timeInZoneSec[i] = fit.timeInZoneSec[i];
+    }
+
+    // --- Stage 14c: watts per kg -------------------------------------------------
+    // Best available power over rider mass; 0 when neither source is live.
+    {
+        const float power = f.powerWatts.live ? f.powerWatts.value : _out.estPowerWatts;
+        const float riderMass = profile.riderMassKg;
+        _out.wattsPerKg = (power > 0.0f && riderMass > 0.0f) ? power / riderMass : 0.0f;
+    }
+
+    // --- Stage 14d: VAM (vertical ascent rate) ------------------------------------
+    // vario in m/s -> m/h. Gated on speed so stoplight vario noise doesn't
+    // read as climbing.
+    _out.vamMph = (_out.varioValid && _out.speedKmh > GRADE_MIN_SPEED_KMH)
+                  ? _out.varioMs * 3600.0f : 0.0f;
+
+    // --- Stage 14e: GNSS quality ---------------------------------------------------
+    // Asymmetric hysteresis: demoting needs several consecutive degraded
+    // samples, promotion is immediate (fail loud, recover fast).
+    {
+        uint8_t rawQ = 0;   // Good
+        if (!f.gpsPos.valid ||
+            (f.gpsHdop.valid && f.gpsHdop.value > GPS_POOR_HDOP) ||
+            (f.gpsSatsUsed.valid && f.gpsSatsUsed.value < GPS_POOR_SATS)) {
+            rawQ = 2;       // Poor
+        } else if ((f.gpsHdop.valid && f.gpsHdop.value > GPS_FAIR_HDOP) ||
+                   (f.gpsSatsUsed.valid && f.gpsSatsUsed.value < GPS_FAIR_SATS)) {
+            rawQ = 1;       // Fair
+        }
+
+        if (rawQ > _gpsQuality) {
+            if (++_gpsDegradeTicks >= GPS_DEGRADE_TICKS) {
+                _gpsQuality = rawQ;
+                _gpsDegradeTicks = 0;
+            }
+        } else {
+            _gpsQuality = rawQ;
+            _gpsDegradeTicks = 0;
+        }
+        _out.gpsQuality = _gpsQuality;
+    }
+
+    // --- Stage 14f: gear-shift detection -------------------------------------------
+    // A confirmed shift is a sustained gear-ratio step away from the tracked
+    // stable value (see GEAR_SHIFT_* constants). Tracks the stable ratio so
+    // each cassette/chainring position is a new reference, not a drift.
+    {
+        bool shifted = false;
+        if (_out.gearRatioValid) {
+            if (!_hasStableGear) {
+                _stableGear = _out.gearRatio;
+                _hasStableGear = true;
+                _shiftConfirmTicks = 0;
+            } else if (fabsf(_out.gearRatio - _stableGear) >= GEAR_SHIFT_DELTA) {
+                if (++_shiftConfirmTicks >= GEAR_SHIFT_CONFIRM_TICKS) {
+                    _stableGear = _out.gearRatio;
+                    _shiftConfirmTicks = 0;
+                    _shiftCount++;
+                    shifted = true;
+                }
+            } else {
+                _stableGear = _out.gearRatio;
+                _shiftConfirmTicks = 0;
+            }
+        }
+        _out.gearShifted = shifted;
+        _out.shiftCount = _shiftCount;
     }
 
     // --- Stage 15: distance (verbatim, see updateDistance) ---------------------

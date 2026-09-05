@@ -29,6 +29,12 @@ class BikeStatsScreen : public UIScreen {
             idleSleepLabel{5,113,"Idle Sleep:"},
             idleSleepWidget{idleSleepLabel.width() + 10,113, String(_idleSleepMin) + " min"},
 
+            autoLapModeLabel{5,140,"AutoLap:"},
+            autoLapModeWidget{autoLapModeLabel.width() + 10,140, autoLapModeToString(_autoLapMode)},
+
+            autoLapValueLabel{5,167,"Dist:"},
+            autoLapValueWidget{autoLapValueLabel.width() + 10,167, String(_autoLapValue)},
+
             backWidget{15,231,"Back",epd_bitmap_left},
             saveWidget{90,231,"Save",epd_bitmap_save} {
                 //register press event callback to send a change screen event
@@ -37,7 +43,7 @@ class BikeStatsScreen : public UIScreen {
                 });
                 //register the save press event callback to send a change screen and app save event
                 saveWidget.setOnPress([this] () {
-                    this->model.bike().update({(_mass),(_circumference),(_logger),(_autoPause),(_idleSleepMin)});
+                    this->model.bike().update({(_mass),(_circumference),(_logger),(_autoPause),(_idleSleepMin),(_autoLapMode),(_autoLapValue)});
                     emitAppEvent({AppEventType::SaveBikeStats,0});
                     emitUIEvent(UIEventType::ChangeScreen, ScreenID::SettingsMenu);
                 });
@@ -50,6 +56,8 @@ class BikeStatsScreen : public UIScreen {
             _logger = a.logger;
             _autoPause = a.autoPause;
             _idleSleepMin = (a.idleSleepMinutes == 0 ? 5 : a.idleSleepMinutes);
+            _autoLapMode = a.autoLapMode;
+            _autoLapValue = (a.autoLapValue == 0 ? 10 : a.autoLapValue);
             hints.setHint(0, epd_bitmap_left, "back");
             hints.setHint(1, nullptr, "edit");
             hints.setHint(2, epd_bitmap_save, "save");
@@ -67,7 +75,15 @@ class BikeStatsScreen : public UIScreen {
             loggerWidget.setFocused(focusField == EditField::Logger);
             autoPauseWidget.setFocused(focusField == EditField::AutoPause);
             idleSleepWidget.setFocused(focusField == EditField::IdleSleep);
+            autoLapModeWidget.setFocused(focusField == EditField::AutoLapMode);
+            autoLapValueWidget.setFocused(focusField == EditField::AutoLapValue);
             hints.setHint(1, nullptr, anySelected() ? "done" : "edit");
+
+            // Auto-lap row: label follows the mode, value label changes unit.
+            autoLapModeWidget.setText(autoLapModeToString(_autoLapMode));
+            autoLapValueLabel.setText(_autoLapMode == AutoLapMode::Distance ? "Dist:" : "Time:");
+            autoLapValueWidget.setText(String(_autoLapValue) +
+                (_autoLapMode == AutoLapMode::Distance ? " km" : " min"));
 
             backWidget.setFocused(focusField == EditField::Back);
             saveWidget.setFocused(focusField == EditField::Save);
@@ -91,6 +107,11 @@ class BikeStatsScreen : public UIScreen {
             idleSleepLabel.render();
             idleSleepWidget.render();
 
+            autoLapModeLabel.render();
+            autoLapModeWidget.render();
+            autoLapValueLabel.render();
+            autoLapValueWidget.render();
+
             hints.render();
 
             backWidget.render();
@@ -98,7 +119,7 @@ class BikeStatsScreen : public UIScreen {
         }
 
     private:
-        enum class EditField { Mass, WheelCircumference, Logger, AutoPause, IdleSleep, Back, Save };
+        enum class EditField { Mass, WheelCircumference, Logger, AutoPause, IdleSleep, AutoLapMode, AutoLapValue, Back, Save };
         EditField focusField = EditField::Mass;
 
         SelectableTextWidget bikeMassLabel;
@@ -126,6 +147,13 @@ class BikeStatsScreen : public UIScreen {
         bool _autoPause = true;
         InputHintsWidget hints{5, 298, 3};
         uint8_t _idleSleepMin = 5;
+        AutoLapMode _autoLapMode = AutoLapMode::Off;
+        uint8_t _autoLapValue = 10;
+
+        SelectableTextWidget autoLapModeLabel;
+        SelectableTextWidget autoLapModeWidget;
+        SelectableTextWidget autoLapValueLabel;
+        SelectableTextWidget autoLapValueWidget;
 
         void moveFocusUp();
         void moveFocusDown();
@@ -136,6 +164,8 @@ class BikeStatsScreen : public UIScreen {
                                     wheelCircWidget.isSelected() ||
                                     loggerWidget.isSelected() ||
                                     autoPauseWidget.isSelected() ||
-                                    idleSleepWidget.isSelected(); }
+                                    idleSleepWidget.isSelected() ||
+                                    autoLapModeWidget.isSelected() ||
+                                    autoLapValueWidget.isSelected(); }
 
 };

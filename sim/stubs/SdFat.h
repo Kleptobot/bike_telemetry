@@ -68,6 +68,15 @@ public:
     int  peek();
     void flush() { if (_fp) fflush(_fp); }
 
+    // Directory iteration is not backed by the host stub (opendir/readdir are
+    // non-portable to the bundled toolchain). These exist only so the real
+    // SDCardSystem::listFiles compiles; listFiles correctly reports "cannot
+    // enumerate" (open of a host directory fails -> false), so callers fall
+    // back to an empty list on the simulator.
+    bool isDirectory() const { return false; }
+    bool openNext(File32*, oflag_t = 0) { return false; }
+    bool getName(char*, size_t) const { return false; }
+
 private:
     FILE* _fp = nullptr;
 };

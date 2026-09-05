@@ -96,6 +96,44 @@ void BikeStatsScreen::handleInput(physIO input) {
             }
             break;
 
+        case EditField::AutoLapMode:
+            if (autoLapModeWidget.isSelected()) {
+                // Cycle Off -> Distance -> Time (Up forward, Down backward, wrapping).
+                if (input.Up.press) {
+                    _autoLapMode = (AutoLapMode)(((uint8_t)_autoLapMode + 1) % 3);
+                } else if (input.Down.press) {
+                    _autoLapMode = (AutoLapMode)(((uint8_t)_autoLapMode + 2) % 3);
+                }
+            }
+            if (input.Select.press) autoLapModeWidget.setSelected(!autoLapModeWidget.isSelected());
+            break;
+
+        case EditField::AutoLapValue:
+            if (autoLapValueWidget.isSelected()) {
+                const uint8_t maxVal = (_autoLapMode == AutoLapMode::Distance) ? 100 : 60;
+                if (input.Up.state && autoLapValueWidget.shouldRepeat(input.Up.heldTime)) {
+                    if (_repeatCount > 10) {
+                        if (_autoLapValue < maxVal) _autoLapValue = min((int)(_autoLapValue + 5), (int)maxVal);
+                    } else {
+                        if (_autoLapValue < maxVal) ++_autoLapValue;
+                    }
+                    _repeatCount ++;
+                } else if (input.Down.state && autoLapValueWidget.shouldRepeat(input.Down.heldTime)) {
+                    if (_repeatCount > 10) {
+                        if (_autoLapValue > 1) _autoLapValue = max((int)(_autoLapValue - 5), 1);
+                    } else {
+                        if (_autoLapValue > 1) --_autoLapValue;
+                    }
+                    _repeatCount ++;
+                } else if (input.Up.press) {
+                    if (_autoLapValue < maxVal) ++_autoLapValue;
+                } else if (input.Down.press) {
+                    if (_autoLapValue > 1) --_autoLapValue;
+                }
+            }
+            if (input.Select.press) autoLapValueWidget.setSelected(!autoLapValueWidget.isSelected());
+            break;
+
         case EditField::Back:
             backWidget.handleInput(input);
             break;
@@ -112,10 +150,12 @@ void BikeStatsScreen::moveFocusUp() {
         case EditField::Mass: focusField = EditField::Back; break;
         case EditField::WheelCircumference: focusField = EditField::Mass; break;
         case EditField::Logger: focusField = EditField::WheelCircumference; break;
-        case EditField::Back: focusField = EditField::IdleSleep; break;
+        case EditField::AutoLapValue: focusField = EditField::AutoLapMode; break;
+        case EditField::AutoLapMode: focusField = EditField::IdleSleep; break;
         case EditField::IdleSleep: focusField = EditField::AutoPause; break;
         case EditField::AutoPause: focusField = EditField::Logger; break;
-        case EditField::Save: focusField = EditField::Logger; break;
+        case EditField::Back: focusField = EditField::AutoLapValue; break;
+        case EditField::Save: focusField = EditField::AutoLapValue; break;
         default: break;
     }
 }
@@ -126,8 +166,10 @@ void BikeStatsScreen::moveFocusDown() {
         case EditField::WheelCircumference: focusField = EditField::Logger; break;
         case EditField::Logger: focusField = EditField::AutoPause; break;
         case EditField::AutoPause: focusField = EditField::IdleSleep; break;
-        case EditField::IdleSleep: focusField = EditField::Back; break;
-        case EditField::Back: focusField = EditField::Save; break;
+        case EditField::IdleSleep: focusField = EditField::AutoLapMode; break;
+        case EditField::AutoLapMode: focusField = EditField::AutoLapValue; break;
+        case EditField::AutoLapValue: focusField = EditField::Back; break;
+        case EditField::Back: focusField = EditField::Mass; break;
         case EditField::Save: focusField = EditField::Mass; break;
         default: break;
     }

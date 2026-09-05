@@ -12,6 +12,8 @@
 #include "UI/Screens/GPSScreen.hpp"
 #include "UI/Screens/UnmountSDScreen.hpp"
 #include "UI/Screens/BikeStatsScreen.hpp"
+#include "UI/Screens/LogListScreen.hpp"
+#include "UI/Screens/LogSummaryScreen.hpp"
 
 // ---- Buzzer feedback patterns (ms, alternating on/off starting with ON) ----
 // Distinct feel per event: start = one short chirp, pause = one long beep,
@@ -20,6 +22,9 @@ static constexpr uint16_t BUZZ_START[]  = {120};
 static constexpr uint16_t BUZZ_PAUSE[]  = {350};
 static constexpr uint16_t BUZZ_RESUME[] = {100, 100, 100};
 static constexpr uint16_t BUZZ_STOP[]   = {100, 100, 100, 100, 300};
+static constexpr uint16_t BUZZ_LAP[]      = {80, 80, 80};
+static constexpr uint16_t BUZZ_BATT_LOW[] = {300, 200, 300};
+static constexpr uint16_t BUZZ_SD_REMOVED[] = {250, 150, 250, 150, 250};
 
 void App::buzz(const uint16_t* patternMs, uint8_t len) {
     if (len == 0) return;
@@ -45,6 +50,122 @@ void App::updateBuzzer(uint32_t now) {
     _buzzStepEndMs = now + _buzzSteps[_buzzStep];
 }
 
+// ---------------------------------------------------------------------------
+// Ride timers: elapsed (logging active, pauses included) and moving
+// (LOGGING only, pauses excluded). Published to the bus every tick.
+// ---------------------------------------------------------------------------
+void App::updateRideTimers(float dt) {
+    if (dt > 0.0f && dt < 5.0f) {
+        if (state == AppState::LOGGING || state == AppState::PAUSED) {
+            _rideElapsedSec += dt;
+            if (state == AppState::LOGGING) _rideMovingSec += dt;
+        }
+    }
+    DataBus& bus = model.bus();
+    bus.publish(Topic::ElapsedSec, _rideElapsedSec);
+    bus.publish(Topic::MovingSec,  _rideMovingSec);
+}
+
+// ---------------------------------------------------------------------------
+// Battery alarm: debounced charging state published to the bus, plus a
+// one-shot low-battery beep (unlatches when charging or recharged).
+// ---------------------------------------------------------------------------
+uint8_t App::vbatToPct(float volts) {
+    // Li-ion open-circuit-voltage curve, piecewise linear. Only meaningful
+    // at rest; the caller suppresses it while charging.
+    static constexpr float OCV[][2] = {
+        {4.20f, 100.0f}, {4.10f, 90.0f}, {4.00f, 80.0f}, {3.90f, 65.0f},
+        {3.80f, 50.0f},  {3.70f, 30.0f}, {3.65f, 20.0f}, {3.55f, 10.0f},
+        {3.45f,  5.0f},  {3.30f,  0.0f},
+    };
+    constexpr size_t N = sizeof(OCV) / sizeof(OCV[0]);
+    if (volts <= 0.0f) return 0;
+    if (volts >= OCV[0][0]) return 100;
+    for (size_t i = 0; i + 1 < N; i++) {
+        if (volts >= OCV[i + 1][0]) {
+            const float frac = (volts - OCV[i][0]) / (OCV[i + 1][0] - OCV[i][0]);
+            return (uint8_t)constrain(OCV[i][1] + frac * (OCV[i + 1][1] - OCV[i][1]), 0.0f, 100.0f);
+        }
+    }
+    return 0;
+}
+
+void App::updateBatteryAlarm() {
+    const auto& f = HAL::inst().measurements();
+
+    // Debounce the charger flag: 2 consecutive agreeing samples commit.
+    const bool raw = f.charging.valid && f.charging.value;
+    if (raw != _chargingRaw) {
+        if (++_chargingDebounce >= 2) {
+            _chargingRaw = raw;
+            _chargingDebounce = 0;
+            if (_chargingState != _chargingRaw) {
+                _chargingState = _chargingRaw;
+                if (_chargingState) _battLowLatched = false;   // on charger: alarm off
+            }
+        }
+    } else {
+        _chargingDebounce = 0;
+    }
+    model.bus().publish(Topic::BatteryCharging, _chargingState);
+
+    const uint8_t pct = vbatToPct(f.vbatVolts.value);
+    if (!_battLowLatched && !_chargingState && pct > 0 && pct < 15) {
+        _battLowLatched = true;
+        Serial.println("[App] battery low");
+        buzz(BUZZ_BATT_LOW, sizeof(BUZZ_BATT_LOW) / sizeof(BUZZ_BATT_LOW[0]));
+    }
+    if (_battLowLatched && (_chargingState || pct > 25)) {
+        _battLowLatched = false;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// SD-card alarm: single beep pattern per removal while a ride is active.
+// Recovery/remount stays with the existing SD flow.
+// ---------------------------------------------------------------------------
+void App::updateSdAlarm() {
+    const bool present = HAL::inst().measurements().sdPresent;
+    if (!present) {
+        if (!_sdAlarmLatched &&
+            (state == AppState::LOGGING || state == AppState::PAUSED)) {
+            _sdAlarmLatched = true;
+            Serial.println("[App] SD card removed while logging!");
+            buzz(BUZZ_SD_REMOVED, sizeof(BUZZ_SD_REMOVED) / sizeof(BUZZ_SD_REMOVED[0]));
+        }
+    } else {
+        _sdAlarmLatched = false;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Auto-lap: fire NewLap when the configured distance or moving-time increment
+// has elapsed since the previous lap. Only while actively logging.
+// ---------------------------------------------------------------------------
+void App::updateAutoLap() {
+    const auto& bike = model.bike().get();
+    if (bike.autoLapMode == AutoLapMode::Off) return;
+    if (state != AppState::LOGGING) return;
+
+    bool fire = false;
+    if (bike.autoLapMode == AutoLapMode::Distance) {
+        if (bike.autoLapValue == 0) return;
+        const float dist = model.bus().get<float>(Topic::TotalDistanceM);
+        if (dist - _lastLapDistanceM >= (float)bike.autoLapValue * 1000.0f) fire = true;
+    } else {   // Time
+        if (bike.autoLapValue == 0) return;
+        if (_rideMovingSec - _lastLapMovingSec >= (float)bike.autoLapValue * 60.0f) fire = true;
+    }
+
+    if (fire) {
+        _lastLapDistanceM = model.bus().get<float>(Topic::TotalDistanceM);
+        _lastLapMovingSec = _rideMovingSec;
+        postAppEvent({AppEventType::NewLap, 0});
+        buzz(BUZZ_LAP, sizeof(BUZZ_LAP) / sizeof(BUZZ_LAP[0]));
+        Serial.println("[App] auto-lap fired");
+    }
+}
+
 void App::begin(IStorage* storage) {
     _storage = storage;
 
@@ -60,6 +181,8 @@ void App::begin(IStorage* storage) {
     ui.registerScreen<GPSScreen>(ScreenID::GPSSettings,App::instance().getModel());
     ui.registerScreen<UnmountSDScreen>(ScreenID::UnmountSD,App::instance().getModel());
     ui.registerScreen<BikeStatsScreen>(ScreenID::BikeStats,App::instance().getModel());
+    ui.registerScreen<LogListScreen>(ScreenID::LogList,App::instance().getModel());
+    ui.registerScreen<LogSummaryScreen>(ScreenID::LogSummary,App::instance().getModel());
 
     ui.begin(ScreenID::MainMenu);
 
@@ -101,6 +224,10 @@ void App::update() {
     updateAutoPause(_millis);
     updateIdleSleep(io, _millis);
     updateBuzzer(_millis);
+    updateRideTimers((float)(_millis - _last_millis) / 1000.0f);
+    updateBatteryAlarm();
+    updateSdAlarm();
+    updateAutoLap();
     _last_millis = _millis;
 
     const bool gpsValid = bus.get<bool>(Topic::GpsValid);
@@ -303,6 +430,12 @@ void App::updateTelemetry() {
     bus.publish(Topic::Tss, d.tss);
     bus.publish(Topic::HrZone, d.hrZone);
     bus.publish(Topic::PowerZone, d.powerZone);
+    bus.publish(Topic::Avg3sPower,  d.avg3sPowerW);
+    bus.publish(Topic::WattsPerKg,  d.wattsPerKg);
+    bus.publish(Topic::Vam,         d.vamMph);
+    bus.publish(Topic::GpsQuality,  d.gpsQuality);
+    bus.publish(Topic::ShiftCount,  d.shiftCount);
+    bus.publish(Topic::GearShifted, d.gearShifted);
 
     // --- Publish position/distance/system channels to the DataBus -------------
     // These replace the last duties of the Telemetry struct: the UI (battery
@@ -490,6 +623,12 @@ void App::handleAppEvent(const AppEvent& e) {
         case AppEventType::StartLogging:
             HAL::inst().bluetooth().setMode(E_Type_BT_Mode::idle);
             state = AppState::LOGGING;
+            // New ride: reset timers and auto-lap anchors (distance/fitness
+            // accumulators reset via FusionEngine::resetDistance() in update).
+            _rideElapsedSec = 0.0f;
+            _rideMovingSec  = 0.0f;
+            _lastLapDistanceM = 0.0f;
+            _lastLapMovingSec = 0.0f;
             buzz(BUZZ_START, sizeof(BUZZ_START) / sizeof(BUZZ_START[0]));
             break;
 
@@ -653,6 +792,8 @@ void App::saveBikeStats() {
     doc["logger"] = loggerToString(a.logger);
     doc["autoPause"] = a.autoPause;
     doc["idleSleepMinutes"] = a.idleSleepMinutes;
+    doc["autoLapMode"] = autoLapModeToString(a.autoLapMode);
+    doc["autoLapValue"] = a.autoLapValue;
 
     if (_storage->exists("/bikeStats.txt"))
         _storage->remove("/bikeStats.txt");
@@ -698,6 +839,9 @@ void App::loadBikeStats() {
         // should stay on rather than silently disappearing after an update.
         a.autoPause = jsonBuffer["autoPause"] | true;
         a.idleSleepMinutes = jsonBuffer["idleSleepMinutes"] | 5;
+        // Defaults (Off) keep older bikeStats.txt files loading unchanged.
+        a.autoLapMode = autoLapModeFromString(jsonBuffer["autoLapMode"] | String("Off"));
+        a.autoLapValue = jsonBuffer["autoLapValue"] | 10;
 
         model.bike().update(a);
         dataFile.close();
