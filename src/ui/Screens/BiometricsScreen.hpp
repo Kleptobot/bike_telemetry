@@ -6,6 +6,7 @@
 #include "UI/Widgets/TimeWidget.hpp"
 #include "HAL/InputInterface.hpp"
 #include "UI/Widgets/SelectableTextIcon.hpp"
+#include "UI/Widgets/InputHints.hpp"
 #include "UI/GFX.h"
 #include "Display/Display.hpp"
 
@@ -59,6 +60,9 @@ class BiometricsScreen : public UIScreen {
             _zone3Start = a.zone3Start;
             _zone4Start = a.zone4Start;
             _zone5Start = a.zone5Start;
+            hints.setHint(0, epd_bitmap_left, "back");
+            hints.setHint(1, nullptr, "edit");
+            hints.setHint(2, epd_bitmap_save, "save");
         }
 
         void update(float dt) override {
@@ -93,6 +97,7 @@ class BiometricsScreen : public UIScreen {
             zone5StartWidget.setFocused(focusField == EditField::Zone5Start);
             backWidget.setFocused(focusField == EditField::Back);
             saveWidget.setFocused(focusField == EditField::Save);
+            hints.setHint(1, nullptr, anySelected() ? "done" : "edit");
         }
 
         void handleInput(physIO input) override;
@@ -127,6 +132,7 @@ class BiometricsScreen : public UIScreen {
 
             backWidget.render();
             saveWidget.render();
+            hints.render();
         }
 
     private:
@@ -157,6 +163,7 @@ class BiometricsScreen : public UIScreen {
         SelectableTextIconWidget backWidget;
         SelectableTextIconWidget saveWidget;
         timeData _birthday;
+        InputHintsWidget hints{5, 298, 3};
         uint16_t _mass;
         CaloricProfile _caloricProfile;
         uint16_t _ftpWatts;

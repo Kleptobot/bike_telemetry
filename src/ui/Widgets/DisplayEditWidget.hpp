@@ -26,7 +26,7 @@ public:
             }
         }
 
-        uint16_t colour = ST77XX_BLUE;
+        uint16_t colour = ST77XX_WHITE;
         if ( _inMode || _menu) colour = ST77XX_GREEN;
 
         Disp::fillRect(_x, _y, _width, _height, ST77XX_BLACK);  // clear own area first

@@ -6,6 +6,7 @@
 #include "UI/Widgets/TimeWidget.hpp"
 #include "HAL/InputInterface.hpp"
 #include "UI/Widgets/SelectableTextIcon.hpp"
+#include "UI/Widgets/InputHints.hpp"
 #include "UI/GFX.h"
 #include "Display/Display.hpp"
 
@@ -49,6 +50,9 @@ class BikeStatsScreen : public UIScreen {
             _logger = a.logger;
             _autoPause = a.autoPause;
             _idleSleepMin = (a.idleSleepMinutes == 0 ? 5 : a.idleSleepMinutes);
+            hints.setHint(0, epd_bitmap_left, "back");
+            hints.setHint(1, nullptr, "edit");
+            hints.setHint(2, epd_bitmap_save, "save");
         }
 
         void update(float dt) override {
@@ -63,6 +67,7 @@ class BikeStatsScreen : public UIScreen {
             loggerWidget.setFocused(focusField == EditField::Logger);
             autoPauseWidget.setFocused(focusField == EditField::AutoPause);
             idleSleepWidget.setFocused(focusField == EditField::IdleSleep);
+            hints.setHint(1, nullptr, anySelected() ? "done" : "edit");
 
             backWidget.setFocused(focusField == EditField::Back);
             saveWidget.setFocused(focusField == EditField::Save);
@@ -85,6 +90,8 @@ class BikeStatsScreen : public UIScreen {
 
             idleSleepLabel.render();
             idleSleepWidget.render();
+
+            hints.render();
 
             backWidget.render();
             saveWidget.render();
@@ -117,6 +124,7 @@ class BikeStatsScreen : public UIScreen {
         uint16_t _repeatCount = 0;
         LoggerType _logger;
         bool _autoPause = true;
+        InputHintsWidget hints{5, 298, 3};
         uint8_t _idleSleepMin = 5;
 
         void moveFocusUp();

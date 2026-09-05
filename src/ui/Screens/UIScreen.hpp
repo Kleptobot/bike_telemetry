@@ -8,6 +8,17 @@
 #include "UIEventBus.hpp"
 #include "DataModel/DataModel.hpp"
 
+// ---------------------------------------------------------------------------
+// Shared input vocabulary (all screens):
+//   Up/Down press   = move focus / (when a field is selected) adjust value,
+//                     with hold-repeat for numeric fields
+//   Select press    = select/confirm the focused item; Select again = done
+//   Left/Right      = move focus horizontally (e.g. Back <-> Save buttons)
+//   Select HELD     = SLEEP -- MainScreen ONLY. Other screens must ignore a
+//                     held center; this is a deliberate main-screen gesture.
+// Available-input hints: use InputHintsWidget (UI/Widgets/InputHints.hpp),
+// call setHint() in onEnter(); keep labels consistent with the table above.
+// ---------------------------------------------------------------------------
 class UIScreen {
     public:
         explicit UIScreen(DataModel& model) : model(model) {}

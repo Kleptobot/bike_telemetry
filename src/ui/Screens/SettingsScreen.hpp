@@ -3,6 +3,7 @@
 #include "UI/Screens/UIScreen.hpp"
 #include "UI/Widgets/ListView.hpp"
 #include "UI/Widgets/SelectableTextIcon.hpp"
+#include "UI/Widgets/InputHints.hpp"
 #include "UI/GFX.h"
 
 struct SettingsMenuItem {
@@ -42,12 +43,15 @@ public:
 
     void onEnter() override {
         listView.setIndex(0);
+        hints.setHint(0, epd_bitmap_UP, "move");
+        hints.setHint(1, nullptr, "choose");
     }
 
     void update(float dt) override { listView.update(dt); }
 
     void render() override {
         listView.render();
+        hints.render();
     }
 
     void handleInput(physIO input) override {
@@ -59,6 +63,7 @@ public:
 
 private:
     ListView<SelectableTextIconWidget> listView;
+    InputHintsWidget hints{5, 300, 2};
     std::vector<SettingsMenuItem> _items;
     uint32_t _version = 0;
     int _lastIndex = 0;

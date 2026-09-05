@@ -3,6 +3,7 @@
 #include "UI/Screens/UIScreen.hpp"
 #include "UI/Widgets/DisplayEditWidget.hpp"
 #include "UI/Widgets/SelectableTextIcon.hpp"
+#include "UI/Widgets/InputHints.hpp"
 #include "UI/Widgets/GridOverlayWidget.hpp"
 #include "UI/Widgets/CursorWidget.hpp"
 
@@ -45,6 +46,10 @@ public:
     }
 
     void onEnter() override {
+        // Single-slot hint: the grid cursor is moved with the D-pad, the
+        // center button toggles the focused cell. Placed right of the
+        // Back/Save buttons, which occupy the bottom-left.
+        hints.setHint(0, nullptr, "toggle");
         const auto& l = model.layout().get();
         _rows = constrain(l.rows, 2, 5);
         _cols = constrain(l.cols, 2, 5);
@@ -103,9 +108,12 @@ public:
 
         backWidget.render();
         saveWidget.render();
+        hints.render();
     }
     
 private:
+    // Single-slot hint row (right of Back/Save, see onEnter).
+    InputHintsWidget hints{170, 288, 1};
     struct DisplayWidget : DisplayItem {
         DisplayEditWidget   widget;
 
