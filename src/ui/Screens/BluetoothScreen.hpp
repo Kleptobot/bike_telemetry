@@ -3,6 +3,7 @@
 #include "UI/Widgets/ListView.hpp"
 #include "UI/Widgets/BluttoothDeviceWidget.hpp"
 #include "UI/Widgets/SelectableTextIcon.hpp"
+#include "UI/Widgets/InputHints.hpp"
 #include "HAL/InputInterface.hpp"
 #include "UI/GFX.h"
 #include <memory>
@@ -32,6 +33,8 @@ public:
     }
 
     void onEnter() override {
+        hints.setHint(0, epd_bitmap_left, "back");
+        hints.setHint(1, nullptr, "select");
         refreshDevices();
         emitAppEvent({AppEventType::DiscoverBluetooth, 0});
         _selectedIndex = 0;
@@ -91,6 +94,7 @@ public:
 
         //render the back button after all the BT widgets
         backWidget.render(5, 10 + min(visibleDevices, deviceWidgets.size())*32);
+        hints.render();
     }
 
 private:
@@ -100,6 +104,7 @@ private:
     int totalHeight=0;
     std::vector<BluetoothDeviceWidget> deviceWidgets;
     SelectableTextIconWidget backWidget;
+    InputHintsWidget hints{5, 300, 2};
     std::vector<BluetoothDevice> _devices;
     uint32_t _version;
 

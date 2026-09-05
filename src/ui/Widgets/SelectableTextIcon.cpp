@@ -19,7 +19,6 @@ void SelectableTextIconWidget::render() {
         Disp::drawRect(_x - 2, _y - 2, w + _icon_height + 4, h + 4, ST77XX_WHITE);
         Disp::setTextColor(ST77XX_WHITE);
     } else {
-        Disp::drawRect(_x - 2, _y - 2, w + _icon_height + 4, h + 4, ST77XX_BLACK);
         Disp::setTextColor(ST77XX_WHITE);
     }
     

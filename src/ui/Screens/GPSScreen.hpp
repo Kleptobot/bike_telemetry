@@ -4,6 +4,7 @@
 #include "UI/Widgets/TimeWidget.hpp"
 #include "HAL/InputInterface.hpp"
 #include "UI/Widgets/SelectableTextIcon.hpp"
+#include "UI/Widgets/InputHints.hpp"
 #include "UI/GFX.h"
 
 class GPSScreen : public UIScreen {
@@ -56,6 +57,9 @@ class GPSScreen : public UIScreen {
         }
 
     void onEnter() override {
+        hints.setHint(0, epd_bitmap_left, "back");
+        hints.setHint(1, nullptr, "edit");
+        hints.setHint(2, epd_bitmap_save, "save");
     }
 
     void render() override {
@@ -71,6 +75,7 @@ class GPSScreen : public UIScreen {
         saveNVRAM.render();
         backWidget.render();
         saveWidget.render();
+        hints.render();
     }
 
     void update(float dt) override;
@@ -96,6 +101,7 @@ class GPSScreen : public UIScreen {
             save };
 
         EditField focusField = EditField::resetGPS;
+        InputHintsWidget hints{5, 298, 3};
         SelectableTextIconWidget restGPS;
         SelectableTextIconWidget restoreGPSDefaults;
 

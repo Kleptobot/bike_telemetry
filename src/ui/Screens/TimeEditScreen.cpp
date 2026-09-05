@@ -11,6 +11,10 @@ void TimeEditScreen::update(float dt) {
     backWidget.setFocused (focusField == EditField::Back);
     saveWidget.setFocused (focusField == EditField::Save);
 
+    // Hint label follows the edit state: "edit" when browsing, "done" when
+    // a field is selected.
+    hints.setHint(1, nullptr, anySelected() ? "done" : "edit");
+
 
 }
 

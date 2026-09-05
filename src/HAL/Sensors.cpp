@@ -1,11 +1,22 @@
 #include "Sensors.hpp"
 
-void SensorSystem::init_low() {
-    if (!_rtc.begin()) {
-        Serial.println("Couldn't find RTC");
-    } else {
-        Serial.println("RTC initialised");
+namespace {
+    // Observed interval between consecutive accepted samples, clamped into
+    // uint16 milliseconds. A 0 result means "not yet known" (first sample,
+    // or a clock that has not advanced since the previous one).
+    inline uint16_t observedDt(uint32_t nowMs, uint32_t prevMs) {
+        if (prevMs == 0 || nowMs <= prevMs) return 0;
+        const uint32_t dt = nowMs - prevMs;
+        return dt > 65000 ? 65000u : (uint16_t)dt;
     }
+}
+
+void SensorSystem::init_low() {
+    _rtc.begin();
+    _rtc.bit_op8(0x00, ~0x01, 0x01);
+
+    Serial.println("RTC initialised");
+    
     pinMode(VBAT_ENABLE, OUTPUT);
     pinMode(BAT_CHARGE_STATE, INPUT);
 
@@ -31,30 +42,46 @@ void SensorSystem::init() {
 bool SensorSystem::update(bool i2cBusy) {
     
     int16_t ret;
-    uint8_t pressureCount = 20;
+    // getContResults() drains the ENTIRE DPS FIFO and treats the count
+    // parameters as OUTPUTS only: the write bound is DPS__FIFO_SIZE (32),
+    // never the arrays passed in. Buffers smaller than that are a stack
+    // overflow waiting for a busy FIFO -- the previous 20-element buffers
+    // were already latent (32 > 20), and shrinking them to 5 caused
+    // hard-fault resets on every DPS pass. Size to what the library can
+    // actually write.
+    //
+    // The bus-time lever is the poll period, not the buffer: results
+    // accumulate at the DPS output rate, so a DPS_Read_Period of 5000 ms
+    // drains ~10 results (~20 transactions) per pass, and polling faster
+    // shrinks each pass further.
+    uint8_t pressureCount = DPS__FIFO_SIZE;
     float pressure[pressureCount];
-    uint8_t temperatureCount = 20;
+    uint8_t temperatureCount = DPS__FIFO_SIZE;
     float temperature[temperatureCount];
     bool update = false;
 
     if ((millis() - lastRTCTime > RTC_Read_Period) && !i2cBusy) {
         if (_setTime) {
             _setTime = false;
-            _rtc.adjust(_newDate);
+            _rtc.set(&_newDate);
         }
         #if DS3231
             _f32_RTC_Temp = _rtc.getTemperature();
         #endif
         dps_dat.f32_RTC_Temp = _f32_RTC_Temp;
-        _now = _rtc.now();
+        _now = _rtc.time(NULL);
 
-        lastRTCTime = millis();
+        const uint32_t nowMs = millis();
+        _rtcDtMs = observedDt(nowMs, lastRTCTime);
+        lastRTCTime = nowMs;
+        ++_rtcSeq;
         update = true;
-    } else if ((millis() - lastDSPTime > DPS_Read_Period) && !i2cBusy) {
+    }
+    if ((millis() - lastDSPTime > DPS_Read_Period) && !i2cBusy) {
 
         ret = _dps.getContResults(temperature, temperatureCount, pressure, pressureCount);
-        //Dps3xxPressureSensor.measureTempOnce(f32_DSP_Temp, 7);
-        //Dps3xxPressureSensor.measurePressureOnce(f32_DSP_Pa, 7);
+        //_dps.measureTempOnce(f32_DSP_Temp, 7);
+        //_dps.measurePressureOnce(f32_DSP_Pa, 7);
         if (ret != 0)
         {
             // Serial.print("FAIL! ret = ");
@@ -75,33 +102,52 @@ bool SensorSystem::update(bool i2cBusy) {
             dps_dat.f32_DSP_Pa+=pressure[i];
             }
             dps_dat.f32_DSP_Pa = dps_dat.f32_DSP_Pa/(float)pressureCount;
-
-            //estimate altitude from pressure and temperature
-            float Tb = 273.15+dps_dat.f32_DSP_Temp;
-            float P_Pb = pow(dps_dat.f32_DSP_Pa/101325.0,-0.1902663539);
-            float Lb = 0.0065;
-            dps_dat.f32_Alt = (Tb*P_Pb-Tb)/(Lb*P_Pb);
             _dpsValid = true;
-        }
-        if (dpsCallback) {
-            dpsCallback({dps_dat.f32_Alt, _dpsValid});
+
+            // Frame stamping: only successful fetches count as samples, so
+            // the interval is success-to-success rather than attempt-to-attempt.
+            const uint32_t nowMs = millis();
+            _dpsDtMs = observedDt(nowMs, _dpsOkTime);
+            _dpsOkTime = nowMs;
+            ++_dpsSeq;
         }
         dps_dat.dpsValid = _dpsValid;
+        if (dpsCallback) {
+            dpsCallback({dps_dat});
+        }
         update = true;
         lastDSPTime = millis();    
-    } else if ((millis() - lastIMUTime > IMU_Read_Period) && !i2cBusy) {
-        _imu.f32_acc_x = _myIMU->readFloatAccelX();
-        _imu.f32_acc_y = _myIMU->readFloatAccelY();
-        _imu.f32_acc_z = _myIMU->readFloatAccelZ();
-        _imu.f32_gyro_x = _myIMU->readFloatGyroX();
-        _imu.f32_gyro_y = _myIMU->readFloatGyroY();
-        _imu.f32_gyro_z = _myIMU->readFloatGyroZ();
-        lastIMUTime = millis();
-        update = true;
-        if (imuCallback) {
-            imuCallback({_imu.f32_acc_z,true});
+    }
+    if ((millis() - lastIMUTime > IMU_Read_Period) && !i2cBusy) {
+        // One 12-byte burst over the contiguous output registers
+        // (OUTX_L_G 0x22 .. OUTZ_H_XL 0x2D) replaces six separate per-axis
+        // reads: 2 bus transactions instead of 12, and all six axes carry a
+        // single sample instant, which is what the fusion engine wants.
+        // calc*() applies exactly the scaling readFloat*() used.
+        uint8_t raw[12];
+        if (_myIMU->readRegisterRegion(raw, LSM6DS3_ACC_GYRO_OUTX_L_G, sizeof(raw)) != IMU_SUCCESS) {
+            // Failed read: skip the sample entirely -- no stamping, no
+            // callback -- mirroring how a failed DPS fetch is handled.
+        } else {
+            // LSB-first 16-bit pairs: gyro block first, then accel block
+            // (the same layout readRawGyro*/readRawAccel* decode).
+            _imu.f32_gyro_x = _myIMU->calcGyro((int16_t)(raw[0]  | (raw[1]  << 8)));
+            _imu.f32_gyro_y = _myIMU->calcGyro((int16_t)(raw[2]  | (raw[3]  << 8)));
+            _imu.f32_gyro_z = _myIMU->calcGyro((int16_t)(raw[4]  | (raw[5]  << 8)));
+            _imu.f32_acc_x  = _myIMU->calcAccel((int16_t)(raw[6]  | (raw[7]  << 8)));
+            _imu.f32_acc_y  = _myIMU->calcAccel((int16_t)(raw[8]  | (raw[9]  << 8)));
+            _imu.f32_acc_z  = _myIMU->calcAccel((int16_t)(raw[10] | (raw[11] << 8)));
+            const uint32_t nowMs = millis();
+            _imuDtMs = observedDt(nowMs, lastIMUTime);
+            lastIMUTime = nowMs;
+            ++_imuSeq;
+            update = true;
+            if (imuCallback) {
+                imuCallback({_imu.f32_acc_z,true});
+            }
         }
-    } else if (millis() - lastBATTime > BAT_Read_Period) {
+    }
+    if (millis() - lastBATTime > BAT_Read_Period) {
         //get BAT data
         digitalWrite(VBAT_ENABLE, LOW);
 
@@ -127,12 +173,21 @@ bool SensorSystem::update(bool i2cBusy) {
         _nBattPercentage = (int)constrain((vBat - BAT_EMPTY_V) * 100.0f
                                               / (BAT_FULL_V - BAT_EMPTY_V),
                                           0.0f, 100.0f);
-        lastBATTime = millis();
+
+        // Measurement-frame stamping: the voltage is the actual measurement
+        // (the percentage above is derived from it), and the charge-state
+        // input is read alongside. BAT_CHARGE_STATE is LOW while charging.
+        _vBatVolts = vBat;
+        _charging  = (digitalRead(BAT_CHARGE_STATE) == LOW);
+        const uint32_t nowMs = millis();
+        _batDtMs = observedDt(nowMs, lastBATTime);
+        lastBATTime = nowMs;
+        ++_batSeq;
     }
     return update; 
 }
 
-void SensorSystem::setTime(DateTime date) {
+void SensorSystem::setTime(struct tm date) {
     _setTime = true;
     _newDate = date;
 }

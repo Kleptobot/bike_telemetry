@@ -3,6 +3,8 @@
 
 #include "UI/UIManager.hpp"
 #include "HAL/HAL.hpp"
+#include "Fusion/Fusion.hpp"
+#include "Fusion/FtpEstimator.hpp"
 #include "Loggers/TCXLogger.hpp"
 #include "Loggers/FITLogger.hpp"
 #include "Loggers/CSVLogger.hpp"
@@ -46,6 +48,12 @@ public:
 
     bool isLogging() const { return state == AppState::LOGGING; }
 
+    // FTP estimation from ride data. See FtpEstimator for the protocol
+    // (best 20-min avg x 0.95). Returns 0 if no qualifying window yet.
+    uint16_t suggestedFtp() const { return _ftpEstimator.suggestedFtp(); }
+    uint16_t best20MinAvg() const { return _ftpEstimator.best20MinAvg(); }
+    bool ftpHasQualifyingWindow() const { return _ftpEstimator.hasQualifyingWindow(); }
+
     void handleAppEvent(const AppEvent& e);
     
     const DataModel& getModel() const { return model; }
@@ -63,10 +71,6 @@ private:
     CSVLogger* csvLogger = nullptr;
 
     AppState state = AppState::BOOT, state_prev = AppState::BOOT;
-    TinyGPSLocation _lastLocation;
-    DateTime _gpsNow;
-    bool _gpsNowValid = false;
-    uint32_t _lastSeconds;
     uint32_t _lastRenderMillis = 0;
     int messageType = 0;
     uint32_t _messageSendMillis = 0;
@@ -74,18 +78,58 @@ private:
 
     bool _gpsEnableState = true;
     bool validLoc_prev = false;
+    bool _prevGpsPosValid = false;  // frame.gpsPos.valid from the previous tick (resync edge-detect)
 
     uint8_t lastSecond;
 
+    // Auto-pause state
+    bool _autoPaused = false;      // paused by us (vs manually) - only then auto-resume
+    uint32_t _stopSinceMs = 0;     // timestamp the speed first dropped below threshold
+    uint32_t _moveSinceMs = 0;     // timestamp movement was first detected while auto-paused
+
+    // Idle auto-sleep state
+    uint32_t _lastActivityMs = 0;  // timestamp of the last button press/hold
+    bool _idleActive = false;      // true while in IDLE, re-arms the countdown on entry
+
     DataModel model;
     UIManager ui;
+    FusionEngine _fusion;
+    FtpEstimator _ftpEstimator;
     uint32_t _millis, _last_millis, lastGPS;
+
+    // Beeper state (see buzz()/updateBuzzer()).
+    std::vector<uint16_t> _buzzSteps;
+    uint8_t _buzzStep = 0;
+    bool _buzzActive = false;
+    uint32_t _buzzStepEndMs = 0;
+
+    // Buzzer feedback: non-blocking pattern player. Patterns alternate
+    // on/off starting with ON; durations in ms. Driven from update().
+    void buzz(const uint16_t* patternMs, uint8_t len);
+    void updateBuzzer(uint32_t now);
 
     void saveBiometrics();
     void loadBiometrics();
 
     void saveBikeStats();
     void loadBikeStats();
+
+    // Auto-pause: stop logging automatically when the rider stops, resume
+    // when they get moving again. Speed-based with hysteresis (pause below
+    // 3 km/h, resume above 5 km/h) and time debounce so traffic lights do
+    // not trigger it but real stops do. Cadence confirms movement on resume
+    // (track-stand / rollout with no wheel-sensor speed yet).
+    static constexpr float AUTO_PAUSE_SPEED_KMH   = 3.0f;
+    static constexpr float AUTO_RESUME_SPEED_KMH  = 5.0f;
+    static constexpr float AUTO_RESUME_CADENCE_RPM = 20.0f;
+    static constexpr uint32_t AUTO_PAUSE_DELAY_MS  = 10000;
+    static constexpr uint32_t AUTO_RESUME_DELAY_MS = 3000;
+
+    // Default idle-sleep timeout when the stored setting is 0 (see
+    // BikeData::idleSleepMinutes).
+    static constexpr uint8_t IDLE_SLEEP_DEFAULT_MIN = 5;
+    void updateAutoPause(uint32_t now);
+    void updateIdleSleep(const physIO& io, uint32_t now);
 
     void saveLayout();
     void loadLayout();

@@ -3,7 +3,6 @@
 
 #include <Arduino.h>
 #include <variant>
-#include <RTClib.h>
 #include "HAL/BluetoothInterface.hpp"
 #include "DataModel/TimeDataProvider.hpp"
 
@@ -15,6 +14,8 @@ enum class AppEventType {
     StartLogging,
     StopLogging,
     PauseLogging,
+    ResumeLogging,
+    NewLap,
     FactoryReset,
     ConnectBluetooth,
     DisconnectBluetooth,

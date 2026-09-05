@@ -23,10 +23,7 @@ class TCXLogger : public ILogger {
 
     std::vector<Lap> laps;
 
-    char _filename[32];
-    timeData _startTime;
-    timeData _currentTime;
-    TimeSpan _elapsed_Total, _elapsed_Lap;
+    char _filename[32];  // _startTime/_currentTime inherited from ILogger
 
     int totalPoints=0;
 
@@ -38,7 +35,7 @@ class TCXLogger : public ILogger {
     explicit TCXLogger(IStorage* storage, DataModel& model) : _storage(storage), _model(model) {};
 
     void startLogging(const timeData& currentTime);
-    void addTrackpoint(const Telemetry& tp, const timeData& currentTime);
+    void addTrackpoint(const Trackpoint& tp, const timeData& currentTime);
     void newLap(const timeData& currentTime);
     bool finaliseLogging();
 

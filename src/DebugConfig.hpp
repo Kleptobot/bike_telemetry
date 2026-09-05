@@ -17,9 +17,14 @@
 #define DEBUG_BLUETOOTH 0
 #endif
 
+#ifndef DEBUG_I2C
+#define DEBUG_I2C 0
+#endif
+
 extern const bool ENABLE_INVALIDATE_DEBUG;
 extern const bool ENABLE_GPS_DEBUG;
 extern const bool ENABLE_INPUTS_DEBUG;
 extern const bool ENABLE_BLUETOOTH_DEBUG;
+extern const bool ENABLE_I2C_DEBUG;
 
 #endif /* DEBUGCONFIG_H */

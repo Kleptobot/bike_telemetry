@@ -18,11 +18,29 @@ public:
         }
 
         for (int x = 0; x <= _cols; x++ ) {
-            Disp::drawLine(x*_colPitch, _y, x*_colPitch, _y + _height - 1, ST77XX_WHITE);
+            // The pitch divides the widget size exactly, so the outermost
+            // line would land one pixel off-screen - clamp it inside.
+            int lx = _x + min(x * _colPitch, _width - 1);
+            Disp::drawLine(lx, _y, lx, gridBottom(), ST77XX_WHITE);
         }
         for (int y = 0; y <= _rows; y++) {
-            Disp::drawLine(_x, y*_rowPitch + _y, _x + _width - 1, y*_rowPitch+_y, ST77XX_WHITE);
+            int ly = _y + min(y * _rowPitch, _height - 1);
+            Disp::drawLine(_x, ly, gridRight(), ly, ST77XX_WHITE);
         }
+    }
+
+    // Draws the focus highlight for the outer frame. Called by the screen
+    // AFTER the cell widgets have rendered, because a tile sharing an edge
+    // with the grid repaints the border with its own white frame and would
+    // otherwise hide the highlight drawn in render().
+    void renderBorder() {
+        if (!visible || !focused) return;
+
+        int r = gridRight(), b = gridBottom();
+        Disp::drawLine(_x, _y, _x, b, ST77XX_GREEN);        // left
+        Disp::drawLine(r, _y, r, b, ST77XX_GREEN);          // right
+        Disp::drawLine(_x, _y, r, _y, ST77XX_GREEN);        // top
+        Disp::drawLine(_x, b, r, b, ST77XX_GREEN);          // bottom
     }
 
     using Widget::update;   // see BigDataWidget: avoids hiding update(float)
@@ -44,6 +62,12 @@ public:
     const int& rowPitch() { return _rowPitch; }
 
 private:
+    // Right/bottom edge of the grid in screen coordinates. The pitch divides
+    // the widget size exactly, so the raw edge would be one pixel off-screen;
+    // clamp it inside so the border is actually visible.
+    int gridRight() const { return _x + min(_cols * _colPitch, _width) - 1; }
+    int gridBottom() const { return _y + min(_rows * _rowPitch, _height) - 1; }
+
     uint8_t _rows = 2, _cols = 2;
     int _colPitch;
     int _rowPitch;

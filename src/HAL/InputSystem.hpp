@@ -11,7 +11,7 @@
 
 #define MCP23017_ADDR 0x20
 
-#define WAKEUP_PIN D1
+#define WAKEUP_PIN D3
 
 #define GPIOA0 0
 #define GPIOA1 1

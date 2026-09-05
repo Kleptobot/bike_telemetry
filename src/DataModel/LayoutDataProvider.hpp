@@ -2,7 +2,7 @@
 #define LAYOUTDATAPROVIDER_H
 
 #include <Arduino.h>
-#include "TelemetryDataProvider.hpp"
+#include "TelemetryType.hpp"
 
 enum class Edge {
     None,

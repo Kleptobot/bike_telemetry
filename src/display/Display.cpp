@@ -2,9 +2,9 @@
 #include "Display.hpp"
 #include <vector>
 
-  #define TFT_CS         D0
-  #define TFT_RST        -1
-  #define TFT_DC         D2
+#define TFT_CS         D0
+#define TFT_RST        -1
+#define TFT_DC         D2
 
 Adafruit_ST7789 Display = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
 GFXcanvas16 canvas(SCREEN_WIDTH, SCREEN_HEIGHT);

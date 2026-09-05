@@ -8,7 +8,7 @@
 #include "StorageInterface.hpp"
 #include "DataModel/TimeDataProvider.hpp"
 
-#define SD_CS D3
+#define SD_CS D1
 
 class SDCardSystem : public IStorage {
 public:

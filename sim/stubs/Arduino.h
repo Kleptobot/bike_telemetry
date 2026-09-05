@@ -89,6 +89,9 @@ enum : uint8_t {
 struct NRF_POWER_Type { uint32_t SYSTEMOFF; };
 extern NRF_POWER_Type* NRF_POWER;
 
+// CMSIS intrinsic used by main.cpp's loop(); a no-op on the host.
+inline void __NOP() {}
+
 // Heap introspection the firmware prints at boot.
 uint32_t dbgHeapTotal();
 uint32_t dbgHeapUsed();

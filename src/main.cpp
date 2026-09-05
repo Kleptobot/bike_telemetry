@@ -2,6 +2,7 @@
 #define DEBUG_GPS 0
 #define DEBUG_INPUTS 0
 #define DEBUG_BLUETOOTH 0
+#define DEBUG_I2C 1
 
 #include <Arduino.h>
 #include "DebugConfig.hpp"
@@ -12,6 +13,7 @@ const bool ENABLE_INVALIDATE_DEBUG = DEBUG_INVALIDATE;
 const bool ENABLE_GPS_DEBUG = DEBUG_GPS;
 const bool ENABLE_INPUTS_DEBUG = DEBUG_INPUTS;
 const bool ENABLE_BLUETOOTH_DEBUG = DEBUG_BLUETOOTH;
+const bool ENABLE_I2C_DEBUG = DEBUG_I2C;
 
 bool started = false;
 
@@ -22,9 +24,8 @@ void setup() {
 
 uint32_t gpsLastEnableTime = millis();
 void loop() {
-    //check if we need to run the higher level init functions (only once started)
+    __NOP();
     if (!started) {
-        digitalWrite(D6, true); //turn on the auxilary supply
         Serial.begin(115200);
         delay(500);
         
@@ -41,10 +42,9 @@ void loop() {
     HAL::inst().update();
     App::instance().update();
 
-    //read the state of the gps enable pin, if its low then sleep
+    // read the state of the gps enable pin, if its low then sleep
     if ( !App::instance().getGpsEnableState() ) {
         if ((millis() - gpsLastEnableTime) > 500) { //small debounce
-            digitalWrite(D6, false); //turn off the auxilary supply
             NRF_POWER->SYSTEMOFF = 1;
         }
     } else {

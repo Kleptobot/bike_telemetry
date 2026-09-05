@@ -30,6 +30,21 @@ void loop();
 static const int SCR_W = 240;
 static const int SCR_H = 320;
 
+// Screen name for --screen; keeps the headless runner decoupled from the UI
+// internals while still exercising the real event path (postUIEvent).
+static ScreenID parseScreen(const char* name) {
+    const struct { const char* n; ScreenID id; } k[] = {
+        {"MainMenu",  ScreenID::MainMenu},  {"Settings", ScreenID::SettingsMenu},
+        {"Bluetooth", ScreenID::Bluetooth}, {"Biometrics", ScreenID::Biometrics},
+        {"BikeStats", ScreenID::BikeStats}, {"GPS",      ScreenID::GPSSettings},
+        {"Time",      ScreenID::TimeMenu},  {"Display",  ScreenID::DisplayEdit},
+        {"UnmountSD", ScreenID::UnmountSD},
+    };
+    for (const auto& e : k)
+        if (strcmp(name, e.n) == 0) return e.id;
+    return ScreenID::None;
+}
+
 // ---------------------------------------------------------------------------
 // Frame output
 // ---------------------------------------------------------------------------
@@ -59,16 +74,59 @@ static void writePPM(const char* path, const uint16_t* fb) {
 // Headless
 // ---------------------------------------------------------------------------
 
-static int runHeadless(int frames, int stepMs, const char* outDir) {
+static int runHeadless(int frames, int stepMs, const char* outDir,
+                       int lastFrames, bool stats, ScreenID screen, bool autoLog) {
     setup();
+    bool screenShown = (screen == ScreenID::None);
+    bool logRequested = !autoLog;
     for (int i = 0; i < frames; ++i) {
         loop();
+        // Drive a real UI navigation event once boot has finished, so a
+        // headless run can end on the screen of interest.
+        if (!screenShown && App::instance().getState() == AppState::IDLE) {
+            App::instance().postUIEvent(UIEvent{UIEventType::ChangeScreen, screen});
+            screenShown = true;
+        }
+        // --log: start logging once booted, so ride-scoped accumulators
+        // (calories, TSS, time-in-zone, distance) actually accumulate.
+        if (!logRequested && App::instance().getState() == AppState::IDLE) {
+            App::instance().postAppEvent({AppEventType::StartLogging, 0});
+            logRequested = true;
+        }
         if (systemOffRequested()) { printf("[sim] SYSTEMOFF requested; stopping\n"); break; }
         simAdvanceMillis(stepMs);
-        if (outDir) {
+        // --last N throttles frame dumps to the tail of the run, so a long
+        // convergence run does not produce thousands of PPMs.
+        if (outDir && (lastFrames <= 0 || i >= frames - lastFrames)) {
             char path[256];
             snprintf(path, sizeof(path), "%s/frame_%04d.ppm", outDir, i);
             writePPM(path, Adafruit_ST7789::panelBuffer());
+        }
+        // --stats prints the published telemetry periodically, giving a
+        // run a numeric trace of what the app actually derived. Reads the
+        // DataBus -- the same source the UI tiles and loggers use.
+        if (stats && (i % 250) == 0) {
+            const DataBus& bus = App::instance().getModel().bus();
+            printf("[stats] t=%4us spd=%5.1f cad=%5.1f pwr=%5.0f hr=%5.0f "
+                   "alt=%6.1f tmp=%5.1f dist=%7.1f grd=%5.1f "
+                   "kcal=%6.0f np=%5.0f if=%4.2f tss=%5.1f z=%u/%u bat=%3d\n",
+                   millis() / 1000u,
+                   bus.get<float>(Topic::SelectedSpeed),
+                   bus.get<float>(Topic::Cadence),
+                   bus.get<float>(Topic::PowerMeter),
+                   bus.get<float>(Topic::HeartRate),
+                   bus.get<float>(Topic::FusedAltitude),
+                   bus.get<float>(Topic::Temperature),
+                   bus.get<float>(Topic::TotalDistanceM),
+                   bus.get<float>(Topic::SmoothedGrade),
+                   bus.get<float>(Topic::Calories),
+                   bus.get<float>(Topic::NormalizedPower),
+                   bus.get<float>(Topic::IntensityFactor),
+                   bus.get<float>(Topic::Tss),
+                   bus.get<uint8_t>(Topic::HrZone),
+                   bus.get<uint8_t>(Topic::PowerZone),
+                   bus.get<int16_t>(Topic::Battery));
+            fflush(stdout);
         }
     }
     printf("[sim] headless run complete: %d frames, t=%ums\n", frames, millis());
@@ -156,7 +214,11 @@ static int runSdl(int scale) {
 
 int main(int argc, char** argv) {
     bool headless = false;
-    int frames = 200, stepMs = 20;
+    bool sensorsDemo = false;
+    bool stats = false;
+    bool autoLog = false;
+    int frames = 200, stepMs = 20, lastFrames = 0;
+    const char* screenName = nullptr;
     [[maybe_unused]] int scale = 2;   // SDL frontend only
     const char* outDir = nullptr;
 
@@ -168,6 +230,11 @@ int main(int argc, char** argv) {
         else if (a == "--out"    && i + 1 < argc) outDir = argv[++i];
         else if (a == "--scale"  && i + 1 < argc) scale = atoi(argv[++i]);
         else if (a == "--sd"     && i + 1 < argc) simSetSdRoot(argv[++i]);
+        else if (a == "--sensors") sensorsDemo = true;
+        else if (a == "--stats")   stats = true;
+        else if (a == "--log")     autoLog = true;
+        else if (a == "--last"   && i + 1 < argc) lastFrames = atoi(argv[++i]);
+        else if (a == "--screen" && i + 1 < argc) screenName = argv[++i];
         else if (a == "--help") {
             printf("OBike simulator\n"
                    "  --headless          run without a window\n"
@@ -175,9 +242,29 @@ int main(int argc, char** argv) {
                    "  --step MS           simulated ms per frame (default 20)\n"
                    "  --out DIR           write PPM frames to DIR\n"
                    "  --scale N           SDL window scale (default 2)\n"
-                   "  --sd DIR            SD card root (default ./sdcard)\n");
+                   "  --sd DIR            SD card root (default ./sdcard)\n"
+                   "  --sensors           start with paired CSC/CPS/HRM sensors\n"
+                   "                      live at riding values\n"
+                   "  --stats             print published telemetry every 250 frames\n"
+                   "  --log               start logging once booted (exercises ride\n"
+                   "                      accumulators: calories, TSS, zones, distance)\n"
+                   "  --last N            with --out, dump only the final N frames\n"
+                   "  --screen NAME       switch to NAME once booted (BikeStats,\n"
+                   "                      Settings, Bluetooth, Biometrics, GPS, ...)\n");
             return 0;
         }
+    }
+
+    if (sensorsDemo) {
+        // Riding scenario with all three sensors paired. The wheel RPM uses
+        // the same 7.9 rpm-per-km/h ratio as the interactive ] key, so wheel
+        // and GPS speed stay consistent.
+        Sim::state().wheelRPMLive = true;
+        Sim::state().gpsSpeedKmh  = 24.0f;
+        Sim::state().wheelRPM     = 24.0f * 7.9f;
+        Sim::state().cadence      = 85.0f;
+        Sim::state().power        = 180.0f;
+        Sim::state().heartRate    = 132.0f;
     }
 
 #ifdef SIM_USE_SDL
@@ -187,5 +274,10 @@ int main(int argc, char** argv) {
         printf("[sim] built without SDL; running headless. Use --out DIR for frames.\n");
     }
 #endif
-    return runHeadless(frames, stepMs, outDir);
+    const ScreenID screen = screenName ? parseScreen(screenName) : ScreenID::None;
+    if (screenName && screen == ScreenID::None) {
+        printf("[sim] unknown screen '%s'\n", screenName);
+        return 1;
+    }
+    return runHeadless(frames, stepMs, outDir, lastFrames, stats, screen, autoLog);
 }

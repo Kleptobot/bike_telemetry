@@ -13,6 +13,38 @@
 #include "UI/Screens/UnmountSDScreen.hpp"
 #include "UI/Screens/BikeStatsScreen.hpp"
 
+// ---- Buzzer feedback patterns (ms, alternating on/off starting with ON) ----
+// Distinct feel per event: start = one short chirp, pause = one long beep,
+// resume = double beep, stop = rising triple.
+static constexpr uint16_t BUZZ_START[]  = {120};
+static constexpr uint16_t BUZZ_PAUSE[]  = {350};
+static constexpr uint16_t BUZZ_RESUME[] = {100, 100, 100};
+static constexpr uint16_t BUZZ_STOP[]   = {100, 100, 100, 100, 300};
+
+void App::buzz(const uint16_t* patternMs, uint8_t len) {
+    if (len == 0) return;
+    _buzzSteps.assign(patternMs, patternMs + len);
+    _buzzStep = 0;
+    _buzzActive = true;
+    HAL::inst().buzzStart();
+    _buzzStepEndMs = millis() + _buzzSteps[0];
+}
+
+void App::updateBuzzer(uint32_t now) {
+    if (!_buzzActive) return;
+    if ((int32_t)(now - _buzzStepEndMs) < 0) return;
+
+    // Even steps are ON, odd steps are OFF.
+    if ((_buzzStep % 2) == 0) HAL::inst().buzzStop();
+    ++_buzzStep;
+    if (_buzzStep >= _buzzSteps.size()) {
+        _buzzActive = false;
+        return;
+    }
+    if ((_buzzStep % 2) == 0) HAL::inst().buzzStart();
+    _buzzStepEndMs = now + _buzzSteps[_buzzStep];
+}
+
 void App::begin(IStorage* storage) {
     _storage = storage;
 
@@ -45,8 +77,8 @@ void App::begin(IStorage* storage) {
 void App::update() {
     updateTelemetry();
     // Any periodic application-level behavior here
-    Telemetry tel = model.telemetry().get();
     const timeData& currentTime = model.time().get();
+    const DataBus& bus = model.bus();
 
     model.SD().update ({HAL::inst().SDMounted(),!HAL::inst().inputs().SD_Det.state});
 
@@ -63,14 +95,20 @@ void App::update() {
     }
 
     ui.update((float)(_millis - _last_millis) / 1000.0);
-    ui.handleInput(HAL::inst().inputs());
+    const physIO io = HAL::inst().inputs();
+    ui.handleInput(io);
+
+    updateAutoPause(_millis);
+    updateIdleSleep(io, _millis);
+    updateBuzzer(_millis);
     _last_millis = _millis;
 
-    if (tel.validLocation && ! validLoc_prev){
+    const bool gpsValid = bus.get<bool>(Topic::GpsValid);
+    if (gpsValid && ! validLoc_prev){
         startMessageConfig = true;
 
     }
-    validLoc_prev = tel.validLocation;
+    validLoc_prev = gpsValid;
     if (startMessageConfig){
         switch (messageType)
         {
@@ -125,11 +163,26 @@ void App::update() {
                 HAL::inst().bluetooth().setMode(E_Type_BT_Mode::connect);
             else
                 HAL::inst().bluetooth().setMode(E_Type_BT_Mode::idle);
-            if (state_prev == AppState::LOGGING && _logger) {
+            if ((state_prev == AppState::LOGGING || state_prev == AppState::PAUSED) && _logger) {
                 Serial.println("[App] Finalizing logger.");
                 _logger->finaliseLogging();
+
+                // Passive FTP update: if this ride produced a qualifying
+                // 20-minute window and beat the stored FTP, auto-save the
+                // new max to biometrics. User can always override manually.
+                if (_ftpEstimator.hasQualifyingWindow()) {
+                    uint16_t rideFtp = _ftpEstimator.suggestedFtp();
+                    if (rideFtp > model.bio().get().ftpWatts) {
+                        BioData updated = model.bio().get();
+                        updated.ftpWatts = rideFtp;
+                        model.bio().update(updated);
+                        saveBiometrics();
+                        Serial.print("[App] FTP PB updated to ");
+                        Serial.println(rideFtp);
+                    }
+                }
             }
-            model.telemetry().resetDistance();
+            _fusion.resetDistance();
 
             //on SD card detection go back to boot
             if (HAL::inst().inputs().SD_Det.FE) {
@@ -148,16 +201,44 @@ void App::update() {
         case AppState::LOGGING:
             HAL::inst().bluetooth().setMode(E_Type_BT_Mode::idle);
 
-            if(state != state_prev) {
+            if (state_prev != AppState::LOGGING && state_prev != AppState::PAUSED) {
                 _logger->startLogging(currentTime);
-                model.telemetry().resetDistance();
+                _fusion.resetDistance();
+                _ftpEstimator.reset();
             }
 
             model.logger().update({_logger->elapsed_Total(),_logger->elapsed_Lap()});
             
             //check if seconds has changed for logging tick
             if (currentTime.second() != lastSecond) {
-                _logger->addTrackpoint(tel, currentTime);
+                // Assemble the trackpoint from the bus -- the same published
+                // channels the UI tiles show, so logs can never disagree with
+                // the display. (Was a Telemetry struct copy.)
+                const location_data& loc = bus.get<location_data>(Topic::Location);
+                Trackpoint tp;
+                                tp.latitude  = loc.latitude;
+                tp.longitude = loc.longitude;
+                tp.altitude  = bus.get<float>(Topic::FusedAltitude);
+                tp.speed     = bus.get<float>(Topic::SelectedSpeed);
+                tp.heartrate = bus.get<float>(Topic::HeartRate);
+                tp.power     = bus.get<float>(Topic::PowerMeter);
+                tp.cadence   = bus.get<float>(Topic::Cadence);
+                tp.distance  = bus.get<float>(Topic::TotalDistanceM);
+                // Fitness channels (Phase B: wire live FitnessFusion values into the trackpoint)
+                tp.calories          = bus.get<float>(Topic::Calories);
+                tp.normalizedPower   = bus.get<float>(Topic::NormalizedPower);
+                tp.intensityFactor   = bus.get<float>(Topic::IntensityFactor);
+                tp.tss               = bus.get<float>(Topic::Tss);
+                tp.hrZone            = bus.get<uint8_t>(Topic::HrZone);
+                tp.powerZone         = bus.get<uint8_t>(Topic::PowerZone);
+                _logger->addTrackpoint(tp, currentTime);
+
+                // Feed the FTP estimator: best available power source (meter
+                // if live, otherwise the physics estimate) at 1 Hz.
+                const float powerWatts = bus.get<float>(Topic::PowerMeter) > 0.0f
+                    ? bus.get<float>(Topic::PowerMeter)
+                    : bus.get<float>(Topic::EstimatedPower);
+                _ftpEstimator.addSample((uint16_t)(powerWatts > 0.0f ? powerWatts + 0.5f : 0.0f));
             }
             break;
         
@@ -174,105 +255,130 @@ void App::update() {
 }
 
 void App::updateTelemetry() {
-    float distance = 0;
+    // Run the fusion pipeline over this tick's acquisition frame. All the
+    // derivation that used to live here (Haversine distance, speed-source
+    // selection, grade) and inside HAL (baro/GPS/IMU altitude fusion) is now
+    // in one place, fed by timestamped samples.
+    const MeasurementFrame& frame = HAL::inst().measurements();
 
-    // /Haversine formula
-    auto gpsLoc = HAL::inst().getGPSLocation();
-    auto gpsNow = HAL::inst().getGPSTime();
-    auto rtcNow = HAL::inst().getRTCtime();
+    // Snapshot the rider/bike settings into the profile the fusion pipeline
+    // consumes. Cheap value semantics; the source of truth stays in DataModel.
+    const auto& bio  = model.bio().get();
+    const auto& bike = model.bike().get();
+    FitnessProfile profile;
+    profile.riderMassKg      = (float)bio.mass;
+    profile.bikeMassKg       = bike.mass / 10.0f;      // stored in tenths of kg
+    profile.ageYears         = timeDuration(model.time().get() - bio.birthday).years();
+    profile.caloricProfile   = bio.caloricProfile;
+    profile.zoneStartsBpm[0] = (float)bio.zone1Start;
+    profile.zoneStartsBpm[1] = (float)bio.zone2Start;
+    profile.zoneStartsBpm[2] = (float)bio.zone3Start;
+    profile.zoneStartsBpm[3] = (float)bio.zone4Start;
+    profile.zoneStartsBpm[4] = (float)bio.zone5Start;
+    profile.ftpWatts         = bio.ftpWatts;
 
-    if (rtcNow.secondstime() != _lastSeconds) {
-        if ( gpsLoc.isValid() && _lastLocation.isValid()) {
-            double deg2rad = M_PI/180.0;
-            double theta1 = _lastLocation.lat()*deg2rad;
-            double theta2 = gpsLoc.lat()*deg2rad;
-            double phi1 = _lastLocation.lng()*deg2rad;
-            double phi2 = gpsLoc.lng()*deg2rad;
+    _fusion.update(frame, bike.wheelCircumference, profile);
+    const DerivedChannels& d = _fusion.out();
 
-            double s1 = sin((theta2 - theta1)/2.0);
-            s1 = s1*s1;
-            double c1 = cos(theta1) * cos(theta2);
-            double s2 = sin((phi2-phi1)/2.0);
-            s2 = s2*s2;
+    // --- Publish fusion outputs to the DataBus -------------------------------
+    // Subscribers (loggers, UI widgets, analytics) are notified synchronously.
+    // Polling access is also available via model.bus().get<T>(Topic::X).
+    DataBus& bus = model.bus();
+    bus.publish(Topic::FusedAltitude, d.altitudeM);
+    bus.publish(Topic::BaroAlt, d.baroAltitudeM);
+    bus.publish(Topic::Vario, d.varioMs);
+    bus.publish(Topic::SelectedSpeed, d.speedKmh);
+    bus.publish(Topic::SmoothedGrade, d.gradePct);
+    bus.publish(Topic::Cadence, d.cadenceRpm);
+    bus.publish(Topic::GearRatio, d.gearRatio);
+    bus.publish(Topic::Energy, d.energyKj);
+    bus.publish(Topic::Acceleration, d.accelMs2);
+    bus.publish(Topic::EstimatedPower, d.estPowerWatts);
+    bus.publish(Topic::TotalAscent, d.totalAscentM);
+    bus.publish(Topic::TotalDescent, d.totalDescentM);
+    bus.publish(Topic::Coasting, d.coasting);
+    bus.publish(Topic::Calories, d.caloriesKcal);
+    bus.publish(Topic::NormalizedPower, d.normalizedPowerW);
+    bus.publish(Topic::IntensityFactor, d.intensityFactor);
+    bus.publish(Topic::Tss, d.tss);
+    bus.publish(Topic::HrZone, d.hrZone);
+    bus.publish(Topic::PowerZone, d.powerZone);
 
-            distance = 2.0*6371000.0*asin(sqrt(s1+c1*s2)); //distance in m
-        }
-        _lastLocation = gpsLoc;
-        _lastSeconds = rtcNow.secondstime();
+    // --- Publish position/distance/system channels to the DataBus -------------
+    // These replace the last duties of the Telemetry struct: the UI (battery
+    // icon, GPS icon, Location/Distance tiles) and the loggers' Trackpoint
+    // all read from the bus now. imu/dps raw blocks are not published -- no
+    // consumer ever read them from Telemetry.
+    const int16_t batteryPct = frame.batteryPct;
+    location_data loc;
+    loc.valid     = frame.gpsPos.valid;
+    loc.longitude = frame.gpsPos.lng;
+    loc.latitude  = frame.gpsPos.lat;
+
+    bus.publish(Topic::GpsValid,       frame.gpsPos.valid);
+    bus.publish(Topic::Location,       loc);
+    bus.publish(Topic::DistanceDeltaM, d.distanceDeltaM);
+    bus.publish(Topic::TotalDistanceM, d.totalDistanceM);
+    bus.publish(Topic::Battery,        batteryPct);
+
+    // BLE channels carry data_record (value + live). Publish the value when
+    // the sensor is live, zero otherwise.
+    bus.publish(Topic::HeartRate,  frame.heartRateBpm.live      ? frame.heartRateBpm.value      : 0.0f);
+    bus.publish(Topic::PowerMeter, frame.powerWatts.live         ? frame.powerWatts.value         : 0.0f);
+    bus.publish(Topic::Temperature, d.temperatureC);
+
+    // --- Publish remaining measured channels ---------------------------------
+    // GPS doubles narrow to float here: display precision, and it keeps the
+    // bus uniform for the widget's float-based subscription callback.
+    bus.publish(Topic::GpsSpeed,    frame.gpsSpeedKmh.valid ? (float)frame.gpsSpeedKmh.value : 0.0f);
+    bus.publish(Topic::GpsAltitude, frame.gpsAltM.valid     ? (float)frame.gpsAltM.value     : 0.0f);
+    bus.publish(Topic::GpsCourse,   frame.gpsCourseDeg.valid ? (float)frame.gpsCourseDeg.value : 0.0f);
+    bus.publish(Topic::GpsSats,     frame.gpsSatsUsed.value);
+    bus.publish(Topic::GpsHdop,     frame.gpsHdop.valid     ? (float)frame.gpsHdop.value     : 0.0f);
+
+    // CPS decodes torque/balance/force but they were dropped at the frame
+    // boundary until now; balance and torque are worth a tile.
+    bus.publish(Topic::TorqueNm,     frame.torqueNm.live       ? frame.torqueNm.value       : 0.0f);
+    bus.publish(Topic::PedalBalance, frame.pedalBalancePct.live ? frame.pedalBalancePct.value : 0.0f);
+
+    bus.publish(Topic::BatteryVolts, frame.vbatVolts.value);
+
+    // Breadcrumb trail for the map widget. The store decimates to 1 Hz and
+    // rejects duplicate positions internally, so feeding every tick is fine.
+    if (frame.gpsPos.valid) {
+        model.gpsTrack().append(frame.gpsPos.lat, frame.gpsPos.lng, millis());
     }
 
-    auto wheelRPM = HAL::inst().getWheelRPM();
-    auto gpsSpeed = HAL::inst().getGPSSpeed();
-    auto altVelocity = HAL::inst().altVelocity();
-
-    float speed = 0;
-    float circumference = model.bike().get().wheelCircumference;
-
-    // Treat a zero circumference as "no wheel data" rather than computing a
-    // speed of zero from it. Without this, an unconfigured circumference
-    // silently suppressed the GPS fallback: wheelRPM.live is true whenever a
-    // CSC sensor is connected, so the first branch was taken and produced 0.
-    if (wheelRPM.live && circumference > 0) {
-        speed = wheelRPM.value * circumference * 0.00006;
-    } else if (gpsSpeed.live) {
-        speed = gpsSpeed.value;
-    }
-
-    float grade = 0;
-    if (speed >0 && altVelocity.live)
-    {
-        //rise in m/s * 3.6 to convert to km/h, then divide by speed in km/h to get grade as a percentage
-        grade = altVelocity.value*3.6f*100.0f/speed;
-    }
-
-    model.telemetry().update({  HAL::inst().getIMUData(),
-                                HAL::inst().getDPSData(),
-                                HAL::inst().getBatteryPercentage(),
-                                speed,
-                                HAL::inst().getCadence(),
-                                HAL::inst().getTemperature(),
-                                HAL::inst().getAltitude(),
-                                HAL::inst().getHeartRate(),
-                                HAL::inst().getPower(),
-                                gpsLoc.isValid(),
-                                gpsLoc.lng(),
-                                gpsLoc.lat(),
-                                distance,
-                                grade});
-
-    //when gps time goes valid, check if the RTC time needs to be re-synced
+    // --- GPS → RTC resync -----------------------------------------------------
+    // Trigger on each fresh GPS position commit: frame.gpsPos.seq advancing
+    // means a new fix has been parsed. The edge-detector (_prevGpsPosValid)
+    // fires once per transition from no-fix-to-fix, matching the original
+    // behaviour that tracked gpsLoc.isValid() across ticks.
     int UTCoffset = model.time().get().offset();
-    if (gpsLoc.isValid() && !_gpsNowValid && gpsNow.isValid()) {
-        // GPS reports UTC, and the RTC stores UTC, so no offset conversion
-        // belongs here at all.
-        //
-        // The previous expression was
-        //     (uint8_t)((int)gpsNow.hour() + UTCoffset*60)
-        // which is wrong twice over. timeData::_offset is in MINUTES (see
-        // TimeDataProvider.hpp, and TimeEditScreen which steps it by 30), so
-        // multiplying by 60 scales it by 3600x; and the result was then
-        // truncated to uint8_t. For UTC+10 that is hour + 36000 -> 172. Any
-        // non-zero offset produced an hour above 23, i.e. an invalid DateTime,
-        // and the +/-30s check below then all but guaranteed it was written to
-        // the RTC. Only UTC+0 ever synced correctly.
-        //
-        // Building the date from the GPS date as well as the GPS time also
-        // fixes a second problem: pairing the GPS hour with the RTC's date
-        // broke across midnight, and across any interval where the RTC date
-        // was already wrong -- which is exactly when a resync is needed.
-        TinyGPSDate gpsDate = HAL::inst().getGPSDate();
-        if (gpsDate.isValid()) {
-            _gpsNow = DateTime(gpsDate.year(), gpsDate.month(), gpsDate.day(),
-                               gpsNow.hour(), gpsNow.minute(), gpsNow.second());
+    const bool newFix = frame.gpsPos.valid && !_prevGpsPosValid;
+    if (newFix && frame.gpsUtcTimeHMS.valid && frame.gpsUtcDateYMD.valid) {
+        // Decode the frame's HHMMSS / YYYYMMDD encodings into a struct tm.
+        const uint32_t hms = frame.gpsUtcTimeHMS.value;
+        const uint32_t ymd = frame.gpsUtcDateYMD.value;
+        struct tm gpsNow;
+        gpsNow.tm_year = (ymd / 10000) - 1900;
+        gpsNow.tm_mon  = ((ymd / 100) % 100) - 1;
+        gpsNow.tm_mday =  ymd % 100;
+        gpsNow.tm_hour =  hms / 10000;
+        gpsNow.tm_min  = (hms / 100) % 100;
+        gpsNow.tm_sec  =  hms % 100;
+        gpsNow.tm_isdst = 0;
 
-            TimeSpan ts = _gpsNow - rtcNow;
-            if (ts.totalseconds() > 30 || ts.totalseconds() < -30)
-                HAL::inst().setTime(_gpsNow);
+        time_t gpsEpoch = mktime(&gpsNow);
+        time_t rtcEpoch = frame.rtcNow.value;
+        time_t diff = difftime(gpsEpoch, rtcEpoch);
+        if (diff < -30 || diff > 30) {
+            HAL::inst().setTime(gpsNow);
         }
     }
-    _gpsNowValid = gpsLoc.isValid();
-    
-    model.time().update({rtcNow, UTCoffset});
+    _prevGpsPosValid = frame.gpsPos.valid;
+
+    model.time().update({frame.rtcNow.value, UTCoffset});
 }
 
 void App::updateBluetooth(std::vector<BluetoothDevice> devices) {
@@ -281,6 +387,89 @@ void App::updateBluetooth(std::vector<BluetoothDevice> devices) {
 
 void App::updateGpsEnable(bool state) {
     _gpsEnableState = state;
+}
+
+void App::updateAutoPause(uint32_t now) {
+    if (!model.bike().get().autoPause) return;
+
+    const float speedKmh = model.bus().get<float>(Topic::SelectedSpeed);
+    const float cadence  = model.bus().get<float>(Topic::Cadence);
+    const bool gpsValid  = model.bus().get<bool>(Topic::GpsValid);
+
+    // No wheel sensor speed and no GPS fix means we have no trustworthy
+    // speed source: never pause on absence of data.
+    const bool speedUsable = gpsValid || speedKmh > 0.0f || cadence > 0.0f;
+    if (!speedUsable) { _stopSinceMs = 0; _moveSinceMs = 0; return; }
+
+    if (state == AppState::LOGGING && !_autoPaused) {
+        if (speedKmh < AUTO_PAUSE_SPEED_KMH) {
+            if (_stopSinceMs == 0) {
+                _stopSinceMs = now;
+            } else if (now - _stopSinceMs > AUTO_PAUSE_DELAY_MS) {
+                _autoPaused = true;
+                _stopSinceMs = 0;
+                postAppEvent({AppEventType::PauseLogging,0});
+                Serial.println("[App] auto-paused (stopped)");
+            }
+        } else {
+            _stopSinceMs = 0;
+        }
+    } else if (state == AppState::PAUSED && _autoPaused) {
+        if (speedKmh > AUTO_RESUME_SPEED_KMH || cadence > AUTO_RESUME_CADENCE_RPM) {
+            if (_moveSinceMs == 0) {
+                _moveSinceMs = now;
+            } else if (now - _moveSinceMs > AUTO_RESUME_DELAY_MS) {
+                _autoPaused = false;
+                _moveSinceMs = 0;
+                postAppEvent({AppEventType::ResumeLogging,0});
+                Serial.println("[App] auto-resumed (moving)");
+            }
+        } else {
+            _moveSinceMs = 0;
+        }
+    } else {
+        // Manual pause/resume happened (or we are not logging): reset the
+        // debounce timers. Manual resume leaves state==LOGGING with
+        // _autoPaused still set - clear it so only auto-pauses auto-resume.
+        _stopSinceMs = 0;
+        _moveSinceMs = 0;
+        if (state == AppState::LOGGING) _autoPaused = false;
+    }
+}
+
+void App::updateIdleSleep(const physIO& io, uint32_t now) {
+    // Any button physically down counts as user activity - it covers short
+    // presses, long holds and the sleep gesture without edge-case misses.
+    const bool activity = io.Up.state || io.Down.state || io.Left.state ||
+                          io.Right.state || io.Select.state;
+    if (activity) {
+        _lastActivityMs = now;
+        return;
+    }
+
+    // Arm the countdown on IDLE entry, disarm when leaving it. Re-entering
+    // IDLE (e.g. after finishing a ride) restarts the countdown.
+    if (state == AppState::IDLE && !_idleActive) {
+        _idleActive = true;
+        _lastActivityMs = now;
+    } else if (state != AppState::IDLE) {
+        _idleActive = false;
+        return;
+    }
+
+    // A stored 0 is clamped so the setting can never mean instant sleep.
+    const uint8_t minutes = model.bike().get().idleSleepMinutes
+                                ? model.bike().get().idleSleepMinutes
+                                : IDLE_SLEEP_DEFAULT_MIN;
+    const uint32_t timeoutMs = (uint32_t)minutes * 60000UL;
+
+    if (now - _lastActivityMs > timeoutMs) {
+        Serial.println("[App] idle timeout, sleeping");
+        postAppEvent({AppEventType::Sleep,0});
+        // Keep _idleActive armed and _lastActivityMs old: until system-off
+        // actually happens, _lastActivityMs will only reset on new input, so
+        // this branch fires at most once more (harmless: sleep is idempotent).
+    }
 }
 
 void App::handleAppEvent(const AppEvent& e) {
@@ -301,10 +490,35 @@ void App::handleAppEvent(const AppEvent& e) {
         case AppEventType::StartLogging:
             HAL::inst().bluetooth().setMode(E_Type_BT_Mode::idle);
             state = AppState::LOGGING;
+            buzz(BUZZ_START, sizeof(BUZZ_START) / sizeof(BUZZ_START[0]));
             break;
 
         case AppEventType::StopLogging:
             state = AppState::IDLE;
+            buzz(BUZZ_STOP, sizeof(BUZZ_STOP) / sizeof(BUZZ_STOP[0]));
+            break;
+
+        case AppEventType::PauseLogging:
+            if (state == AppState::LOGGING && _logger) {
+                _logger->pause(model.time().get());
+                state = AppState::PAUSED;
+                buzz(BUZZ_PAUSE, sizeof(BUZZ_PAUSE) / sizeof(BUZZ_PAUSE[0]));
+            }
+            break;
+
+        case AppEventType::ResumeLogging:
+            if (state == AppState::PAUSED) {
+                if (_logger) _logger->resume(model.time().get());
+                state = AppState::LOGGING;
+                buzz(BUZZ_RESUME, sizeof(BUZZ_RESUME) / sizeof(BUZZ_RESUME[0]));
+            }
+            break;
+
+        case AppEventType::NewLap:
+            if (_logger && (state == AppState::LOGGING || state == AppState::PAUSED)) {
+                _logger->newLap(model.time().get());
+                Serial.println("[App] New lap.");
+            }
             break;
 
         case AppEventType::ConnectBluetooth:
@@ -368,6 +582,7 @@ void App::saveBiometrics() {
     doc["birthday"] = a.birthday.unixtime();
     doc["mass"] = a.mass;
     doc["caloricProfile"] = toString(a.caloricProfile);
+    doc["ftp"] = a.ftpWatts;
     doc["zone1Start"] = a.zone1Start;
     doc["zone2Start"] = a.zone2Start;
     doc["zone3Start"] = a.zone3Start;
@@ -416,6 +631,7 @@ void App::loadBiometrics() {
         a.birthday = bd;
         a.mass = jsonBuffer["mass"];
         a.caloricProfile = fromString(jsonBuffer["caloricProfile"]);
+        a.ftpWatts = jsonBuffer["ftp"] | 200;   // fallback keeps old biometrics.txt files working
         a.zone1Start = jsonBuffer["zone1Start"];
         a.zone2Start = jsonBuffer["zone2Start"];
         a.zone3Start = jsonBuffer["zone3Start"];
@@ -435,6 +651,8 @@ void App::saveBikeStats() {
     doc["mass"] = a.mass;
     doc["wheelCircumference"] = a.wheelCircumference;
     doc["logger"] = loggerToString(a.logger);
+    doc["autoPause"] = a.autoPause;
+    doc["idleSleepMinutes"] = a.idleSleepMinutes;
 
     if (_storage->exists("/bikeStats.txt"))
         _storage->remove("/bikeStats.txt");
@@ -476,6 +694,10 @@ void App::loadBikeStats() {
         a.mass = jsonBuffer["mass"];
         a.wheelCircumference = jsonBuffer["wheelCircumference"];
         a.logger = loggerFromString(jsonBuffer["logger"]);
+        // Default true: older bikeStats.txt files have no key, and auto-pause
+        // should stay on rather than silently disappearing after an update.
+        a.autoPause = jsonBuffer["autoPause"] | true;
+        a.idleSleepMinutes = jsonBuffer["idleSleepMinutes"] | 5;
 
         model.bike().update(a);
         dataFile.close();

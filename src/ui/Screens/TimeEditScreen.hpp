@@ -4,6 +4,7 @@
 #include "UI/Widgets/TimeWidget.hpp"
 #include "HAL/InputInterface.hpp"
 #include "UI/Widgets/SelectableTextIcon.hpp"
+#include "UI/Widgets/InputHints.hpp"
 #include "UI/GFX.h"
 
 class TimeEditScreen : public UIScreen {
@@ -30,6 +31,9 @@ class TimeEditScreen : public UIScreen {
             }
         void onEnter() override {
             _date = model.time().get();
+            hints.setHint(0, epd_bitmap_left, "back");
+            hints.setHint(1, nullptr, "edit");
+            hints.setHint(2, epd_bitmap_save, "save");
         }
 
         void update(float dt) override;
@@ -43,6 +47,7 @@ class TimeEditScreen : public UIScreen {
             UTCOffsetDisp.render();
             backWidget.render();
             saveWidget.render();
+            hints.render();
         }
 
     private:
@@ -55,6 +60,7 @@ class TimeEditScreen : public UIScreen {
         SelectableTextIconWidget backWidget;
         SelectableTextIconWidget saveWidget;
         timeData _date;
+        InputHintsWidget hints{5, 298, 3};
 
         void moveFocusUp();
         void moveFocusDown();

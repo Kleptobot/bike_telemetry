@@ -3,6 +3,7 @@
 
 void TCXLogger::startLogging(const timeData& currentTime) {
     _startTime = currentTime;
+    _pauseAnchor = currentTime;
     _currentTime = currentTime;
     laps.clear();
     laps.push_back({currentTime, 0, 0, 0, 0, 0, 0});
@@ -39,8 +40,11 @@ void TCXLogger::writeLapHeader(uint16_t lapIndex, File32 *file) {
         ts = elapsed_Lap();
     }
 
-    auto& a = _model.bio().get();
-    float age = timeDuration(_currentTime - a.birthday).years();
+        // Live calories from FitnessFusion (cumulative; subtract lap-start to
+    // get this lap's delta). Replaces the retrospective Key-et-al formula.
+    float lapCalories = lp.totalCalories;
+    if (lapIndex > 0) lapCalories -= laps[lapIndex - 1].totalCalories;
+    if (lapCalories < 0) lapCalories = 0;
 
     float avgHRM = 0;
     if (ts._totalSeconds > 0) {
@@ -48,34 +52,13 @@ void TCXLogger::writeLapHeader(uint16_t lapIndex, File32 *file) {
     }
     float avgCAD = lp.totalCadence / ts._totalSeconds;
 
-    int f = ((age * 0.074) - (float(a.mass) * 0.1265672342) + (avgHRM * 0.4472) - 20.4022) * float(_elapsed_Lap.totalseconds()) / 251.1;
-    int m = ((age * 0.2017) - (float(a.mass) * 0.1992094632) + (avgHRM * 0.6309) - 55.0969) * float(_elapsed_Lap.totalseconds()) / 251.1;
-
-    int32_t Calories;
-    switch(a.caloricProfile) {
-        case CaloricProfile::Female: 
-        Calories = f;
-        break;
-        case CaloricProfile::Male:
-        Calories = m;
-        break;
-        case CaloricProfile::Other:
-        Calories = (m + f) /2;
-        break;
-        default:
-        Calories = 0;
-    }
-    
-    if(Calories<0)
-        Calories=0;
-
     sprintf(time, "%d-%02d-%02dT%02d:%02d:%02d", lp.startTime.year(), lp.startTime.month(), lp.startTime.day(), lp.startTime.hour(), lp.startTime.minute(), lp.startTime.second());
     file->print("      <Lap StartTime=\"");file->print(time);file->println("\">");
     // Initialize total time, distance, etc. 
     file->print("        <TotalTimeSeconds>");file->print(ts._totalSeconds);file->print("</TotalTimeSeconds>\n");
     file->print("        <DistanceMeters>");file->print(lp.totalDistance);file->print("</DistanceMeters>\n");
     file->print("        <MaximumSpeed>");file->print(kmhToMs(lp.maxSpeed),2)   /* m/s */;file->print("</MaximumSpeed>\n");
-    file->print("        <Calories>");file->print(Calories);file->print("</Calories>\n");
+    file->print("        <Calories>");file->print((int32_t)lapCalories);file->print("</Calories>\n");
     file->print("        <AverageHeartRateBpm>\n");
     file->print("          <Value>");file->print(avgHRM,2);file->print("</Value>\n"); // Set to at least 1
     file->print("        </AverageHeartRateBpm>\n");
@@ -84,11 +67,19 @@ void TCXLogger::writeLapHeader(uint16_t lapIndex, File32 *file) {
     file->print("        </MaximumHeartRateBpm>\n");
     file->print("        <Intensity>Active</Intensity>\n"); // Add intensity element
     file->print("        <Cadence>");file->print(avgCAD,2);file->print("</Cadence>\n"); // Placeholder value
-    file->print("        <TriggerMethod>Manual</TriggerMethod>\n");
+        file->print("        <TriggerMethod>Manual</TriggerMethod>\n");
+    // Fitness extensions: NP, IF, TSS per lap (Garmin ActivityExtension v2)
+    file->println("        <Extensions>\n");
+    file->println("          <LX xmlns=\"http://www.garmin.com/xmlschemas/ActivityExtension/v2\">\n");
+    file->print("            <AvgNormalizedPower>");file->print(lp.lastNormalizedPower);file->print("</AvgNormalizedPower>\n");
+    file->print("            <IntensityFactor>");file->print(lp.lastIntensityFactor,3);file->print("</IntensityFactor>\n");
+    file->print("            <TCXTrainingMetrics_TSS>");file->print(lp.totalTss);file->print("</TCXTrainingMetrics_TSS>\n");
+    file->println("          </LX>\n");
+    file->println("        </Extensions>\n");
     file->println("        <Track>");
 };
 
-void TCXLogger::addTrackpoint(const Telemetry& tp, const timeData& currentTime) {
+void TCXLogger::addTrackpoint(const Trackpoint& tp, const timeData& currentTime) {
 
     char time[32];
     sprintf(time, "%d-%02d-%02dT%02d:%02d:%02d", currentTime.year(), currentTime.month(), currentTime.day(), currentTime.hour(), currentTime.minute(), currentTime.second());
@@ -101,6 +92,7 @@ void TCXLogger::addTrackpoint(const Telemetry& tp, const timeData& currentTime) 
     file.println("            </Position>");
     file.print("            <AltitudeMeters>");file.print(tp.altitude);file.println("</AltitudeMeters>");
     file.print("            <DistanceMeters>");file.print(tp.distance);file.println("</DistanceMeters>");
+    file.print("            <Calories>");file.print(tp.calories);file.println("</Calories>");
 
     if (tp.heartrate > 0) { // Optional heart rate
         file.println("            <HeartRateBpm>");
@@ -153,6 +145,11 @@ void TCXLogger::addTrackpoint(const Telemetry& tp, const timeData& currentTime) 
         laps.back().maxHRM=tp.heartrate;
 
     laps.back().totalDistance = tp.distance;
+    // Fitness accumulators: store cumulative-from-FitnessFusion values
+    laps.back().totalCalories = tp.calories;
+    laps.back().totalTss = tp.tss;
+    laps.back().lastNormalizedPower = tp.normalizedPower;
+    laps.back().lastIntensityFactor = tp.intensityFactor;
 };
 
 void TCXLogger::resetTotals() { totalPoints = 0; };

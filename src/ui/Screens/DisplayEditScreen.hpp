@@ -3,6 +3,7 @@
 #include "UI/Screens/UIScreen.hpp"
 #include "UI/Widgets/DisplayEditWidget.hpp"
 #include "UI/Widgets/SelectableTextIcon.hpp"
+#include "UI/Widgets/InputHints.hpp"
 #include "UI/Widgets/GridOverlayWidget.hpp"
 #include "UI/Widgets/CursorWidget.hpp"
 
@@ -45,6 +46,10 @@ public:
     }
 
     void onEnter() override {
+        // Single-slot hint: the grid cursor is moved with the D-pad, the
+        // center button toggles the focused cell. Placed right of the
+        // Back/Save buttons, which occupy the bottom-left.
+        hints.setHint(0, nullptr, "toggle");
         const auto& l = model.layout().get();
         _rows = constrain(l.rows, 2, 5);
         _cols = constrain(l.cols, 2, 5);
@@ -81,6 +86,7 @@ public:
 
         gridWidth.setFocused(focusField == FocusField::Cols);
         gridHeight.setFocused(focusField == FocusField::Rows);
+        grid.setFocused(focusField == FocusField::Grid);
         cursor.setVisible(focusField == FocusField::Grid && mode == WidgetEditMode::FOCUS);
         backWidget.setFocused(focusField == FocusField::Back);
         saveWidget.setFocused(focusField == FocusField::Save);
@@ -99,13 +105,20 @@ public:
             disp.widget.render();
         }
 
+        // Redraw the focus highlight over the tiles: a tile sharing an edge
+        // with the grid repaints the border with its own white frame.
+        grid.renderBorder();
+
         cursor.render();
 
         backWidget.render();
         saveWidget.render();
+        hints.render();
     }
     
 private:
+    // Single-slot hint row (right of Back/Save, see onEnter).
+    InputHintsWidget hints{170, 288, 1};
     struct DisplayWidget : DisplayItem {
         DisplayEditWidget   widget;
 

@@ -25,14 +25,14 @@ void MapWidget::update(float dt) {
     // when the user is on the telemetry screen.
     if (!visible) return;
 
-    const auto& telem = _model.telemetry();
-    if (telem.version() == _lastVersion) return;
-    _lastVersion = telem.version();
+    const GpsTrack& track = _model.gpsTrack();
+    if (track.version() == _lastVersion) return;
+    _lastVersion = track.version();
 
-    const auto& t = telem.get();
-    if (t.validLocation) {
-        _centerLat = t.latitude;
-        _centerLon = t.longitude;
+    const location_data& loc = _model.bus().get<location_data>(Topic::Location);
+    if (loc.valid) {
+        _centerLat = loc.latitude;
+        _centerLon = loc.longitude;
     }
 
     // Recompute zoom (cheap, only recalculates when _metersPerPixel changes).
@@ -252,7 +252,7 @@ void MapWidget::renderFromCache() {
 // ---------------------------------------------------------------------------
 
 void MapWidget::renderTrack() {
-    const auto& track = _model.telemetry().recentTrack();
+    const auto& track = _model.gpsTrack().points();
     if (track.empty()) {
         if (!_tilesCached) {
             // Nothing to show at all — display a message.

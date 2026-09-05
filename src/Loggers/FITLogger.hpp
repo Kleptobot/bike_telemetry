@@ -28,7 +28,7 @@ public:
     explicit FITLogger(IStorage* storage) : _writer(storage) {}
  
     void startLogging(const timeData& currentTime) override;
-    void addTrackpoint(const Telemetry& tp, const timeData& currentTime) override;
+    void addTrackpoint(const Trackpoint& tp, const timeData& currentTime) override;
     void newLap(const timeData& currentTime) override;
     bool finaliseLogging() override;
  
@@ -42,14 +42,15 @@ public:
     }
  
 private:
-    FitWriter _writer;
-    timeData _startTime;
-    timeData _currentTime;
+    FitWriter _writer;   // _startTime/_currentTime inherited from ILogger
  
     double _lastDistanceM = 0;   // most recent cumulative distance seen (from Trackpoint::distance)
     double _lapStartDistanceM = 0; // cumulative distance at the start of the current lap,
                                     // used to derive this lap's totalDistance on rollover
  
+    double _lastCalories = 0;        // most recent cumulative calories (from Trackpoint::calories)
+    double _lapStartCalories = 0;    // cumulative calories at the start of the current lap
+
     bool _definitionsWritten = false;
     bool _open = false;   // did the .fit file actually open?
     void writeDefinitionsOnce();

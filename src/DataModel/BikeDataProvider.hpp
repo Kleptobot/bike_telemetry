@@ -2,7 +2,6 @@
 #define BIKEDATAPROVIDER_H
 
 #include <Arduino.h>
-#include "TelemetryDataProvider.hpp"
 
 
 enum class LoggerType { FIT, TCX, CSV };
@@ -31,6 +30,11 @@ struct BikeData {
     // sensor, with no indication why.
     uint16_t wheelCircumference = 2105;
     LoggerType logger = LoggerType::FIT;
+    // Auto-pause logging when the rider stops (speed-based with hysteresis).
+    bool autoPause = true;
+    // Minutes of no user input before the device sleeps while idle.
+    // A stored 0 is clamped to the default at the point of use.
+    uint8_t idleSleepMinutes = 5;
 };
 
 class BikeDataProvider {

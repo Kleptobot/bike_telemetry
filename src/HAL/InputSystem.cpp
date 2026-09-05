@@ -15,24 +15,28 @@ void InputSystem::init() {
   }
 
   _mcp.setupInterrupts(true, false, HIGH);  //configure interrupts
+  
   _mcp.pinMode(GPIOA2, INPUT_PULLUP);
   _mcp.pinMode(GPIOA3, INPUT_PULLUP);
   _mcp.pinMode(GPIOA4, INPUT_PULLUP);
   _mcp.pinMode(GPIOA5, INPUT_PULLUP);
   _mcp.pinMode(GPIOA6, INPUT_PULLUP);
   _mcp.pinMode(GPIOA7, INPUT_PULLUP);
+
+  _mcp.pinMode(GPIOB2, OUTPUT);
   _mcp.pinMode(GPIOB3, OUTPUT);
   _mcp.pinMode(GPIOB4, OUTPUT);
   _mcp.pinMode(GPIOB5, OUTPUT);
   _mcp.pinMode(GPIOB6, OUTPUT);
   _mcp.pinMode(GPIOB7, OUTPUT);
-  _mcp.setupInterruptPin(GPIOA5, HIGH);
 
+  _mcp.setupInterruptPin(GPIOA5, HIGH);
+ 
   _mcp.digitalWrite(GPIOB3, false);   //turn the gps backup supply off
   _mcp.digitalWrite(GPIOB4, true);    //turn the gps enable supply on
   
   _mcp.digitalWrite(GPIOB5, true);    //set the reset pin of the gps
-  _mcp.digitalWrite(GPIOB6, false);   //turn the display off
+  _mcp.digitalWrite(GPIOB6, true);   //turn the display off
   _mcp.digitalWrite(GPIOB7, true);    //set the reset pin of the display
 
 }

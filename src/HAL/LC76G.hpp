@@ -229,6 +229,28 @@ class LC76G
     // Check if I2C bus is busy
     bool isBusy() const { return (_state != STATE_IDLE) && (_state != STATE_ERROR); }
 
+    // --- I2C bus instrumentation (consumed by HAL's per-second summary) ------
+    // Monotonic raw counters: HAL computes the deltas, so there is no reset
+    // call to get wrong. dbgMaxDrainGapMs is the worst-case wait between
+    // completed buffer drains -- the number the sensor sampling budget has to
+    // keep bounded, or the module's internal buffer backs up and NMEA
+    // corrupts (the empirical "faster sensors broke the GPS" failure).
+    uint32_t dbgTxCount()       const { return _dbgTxCount; }      // every Wire read/write
+    uint32_t dbgDrainCycles()   const { return _dbgDrainCycles; }  // buffer reads with len > 0
+    uint32_t dbgBytesDrained()  const { return _dbgBytesDrained; }
+    uint32_t dbgZeroLenPolls()  const { return _dbgZeroLenPolls; }   // probes that found nothing
+    uint32_t dbgMaxDrainGapMs() const { return _dbgMaxDrainGapMs; }
+    uint8_t  dbgErrorCount()    const { return _errorCount; }
+
+    // Milliseconds since the state machine last STARTED a bus cycle (any
+    // cycle, including a zero-length probe). Feeds the arbiter's backpressure
+    // rule (see HAL/I2CArbiter.hpp): starts are the signal that the GNSS is
+    // getting its turns, independent of whether the module currently has
+    // data to drain. 0 = no cycle yet this power cycle.
+    uint32_t msSinceLastCycleStart() const {
+        return _lastCycleStartMs == 0 ? 0 : millis() - _lastCycleStartMs;
+    }
+
     //tell class that another device just performed i2c
     void i2c_wait() {_lastI2cAction = millis();};
     void sendCommand(CmdId cmdId, ResponseCallback cb, void* userCtx, const void* payload);
@@ -257,7 +279,18 @@ class LC76G
     static const uint16_t REG_RX_LEN = 0x04;
     static const uint16_t REG_RX_BUF = 0x1000;
     
-    static const uint16_t MAX_BUFFER = 64;
+    // One NMEA read is issued as a single Wire transaction, so MAX_BUFFER is
+    // bounded by three things at once:
+    //   1. nRF52 TWIM RXD.MAXCNT is an 8-bit register (<= 255).
+    //   2. TwoWire::requestFrom returns uint8_t (<= 255).
+    //   3. The core DMAs the received bytes into its SERIAL_BUFFER_SIZE
+    //      RingBuffer array -- reads beyond that corrupt adjacent RAM. The
+    //      build raises it to 256 (platformio.ini), which this must stay under.
+    // 128 doubles the drain throughput ceiling (fewer cycles per byte for the
+    // same ~50 ms cycle cost) while staying well inside all three bounds.
+    static const uint16_t MAX_BUFFER = 128;
+    static_assert(MAX_BUFFER <= 255,
+                  "TWIM RXD.MAXCNT is 8-bit and requestFrom() returns uint8_t");
 
     static const uint8_t i2c_DELAY = 10;
 
@@ -296,6 +329,11 @@ class LC76G
     uint8_t _cmdBuffer[CMD_LENGTH];
     uint16_t _transactionLength;
     uint8_t _errorCount = 0;
+
+    // Bus instrumentation accumulators (see the dbg* getters above).
+    uint32_t _dbgTxCount = 0, _dbgDrainCycles = 0, _dbgBytesDrained = 0;
+    uint32_t _dbgZeroLenPolls = 0, _dbgMaxDrainGapMs = 0, _lastDrainOkMs = 0;
+    uint32_t _lastCycleStartMs = 0;   // arbiter backpressure signal (see above)
 
     bool _CR = false;
     bool _$found = false;

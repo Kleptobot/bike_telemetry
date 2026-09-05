@@ -67,6 +67,17 @@ class csc : public BT_Device {
     uint32_t exp_next_spd_evt= 0, exp_next_cad_evt=0;
     uint32_t u32_WheelCount_delta = 0;
     uint16_t u16_CrankCount_delta = 0, u16_speed_delta = 0, u16_crank_delta = 0;
+
+    // Cumulative revolution totals and last-received native event times,
+    // maintained for the measurement frame (see HAL/Measurements.hpp).
+    // Bookkeeping only -- no existing behaviour reads them. In-class
+    // initialisers: csc objects are heap-allocated (see comment above).
+    uint32_t u32_WheelCount_Total = 0, u32_CrankCount_Total = 0;
+    uint16_t u16_SpeedEvt_Last = 0, u16_CrankEvt_Last = 0;
+    // True until the first packet after construction/discover/reconnect has
+    // baselined the Prev counters, so the sensor's whole lifetime count is
+    // not injected into the totals.
+    bool _wheelResync = true, _crankResync = true;
     
     csc(){
       this->bt_type = E_Type_BT_Device::bt_csc;
@@ -101,6 +112,20 @@ class csc : public BT_Device {
 
     static data_record getSpeed();
     static data_record getCadence();
+
+    // --- Measurement-frame surface (see HAL/Measurements.hpp) ----------------
+    uint32_t wheelRevTotal() const { return u32_WheelCount_Total; }
+    uint32_t crankRevTotal() const { return u32_CrankCount_Total; }
+    uint16_t lastWheelEvt1024() const { return u16_SpeedEvt_Last; }
+    uint16_t lastCrankEvt1024() const { return u16_CrankEvt_Last; }
+    uint32_t wheelEvtMillis() const { return millis_at_spd_evt; }
+    uint32_t crankEvtMillis() const { return millis_at_cad_evt; }
+
+    // The speed/cadence-capable device whose most recent event is freshest --
+    // the natural "primary" when several CSC sensors are connected. Returns
+    // nullptr when none has ever reported.
+    static const csc* latestWheelSource();
+    static const csc* latestCrankSource();
 
     void begin();
 

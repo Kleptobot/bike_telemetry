@@ -31,7 +31,7 @@ struct State {
     int16_t battery     = 78;       // percent
 
     // GNSS
-    bool   gpsValid     = false;
+    bool   gpsValid     = true;
     double latitude     = 51.5007;  // somewhere to start
     double longitude    = -0.1246;
     float  gpsSpeedKmh  = 0.0f;

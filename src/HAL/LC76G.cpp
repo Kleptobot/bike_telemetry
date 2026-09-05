@@ -108,6 +108,7 @@ LC76G::State LC76G::stateMachine() {
                 _txQueue.pop();
                 _mode = MODE_TRANSMIT;
             }
+            _lastCycleStartMs = millis();
             _state=STATE_STEP1A_SEND;
         }
         break;
@@ -138,6 +139,7 @@ LC76G::State LC76G::stateMachine() {
             
             if (_mode == MODE_RECEIVE) {
                 if (length == 0) {
+                    ++_dbgZeroLenPolls;
                     _state=STATE_IDLE;
                     break;      // break, not return: the _stateEntry bookkeeping
                                 // at the bottom of this function must still run
@@ -193,6 +195,16 @@ LC76G::State LC76G::stateMachine() {
         if (_mode == MODE_RECEIVE) {
             memset(_rxBuffer, 0, sizeof(_rxBuffer));
             if (readResponse(_rxBuffer, _transactionLength)) {
+                // Drain-health instrumentation: the gap between completed
+                // buffer reads is the module's worst-case wait.
+                ++_dbgDrainCycles;
+                _dbgBytesDrained += _transactionLength;
+                const uint32_t nowMs = millis();
+                if (_lastDrainOkMs != 0) {
+                    const uint32_t gap = nowMs - _lastDrainOkMs;
+                    if (gap > _dbgMaxDrainGapMs) _dbgMaxDrainGapMs = gap;
+                }
+                _lastDrainOkMs = nowMs;
                 _state=STATE_PROCESS_RECEIVE;
             } else {
                 _state=STATE_ERROR;
@@ -288,12 +300,14 @@ bool LC76G::queueCommand(const uint8_t* data, uint16_t length) {
 }
 
 bool LC76G::i2cWrite(uint8_t addr, const uint8_t* data, uint16_t length) {
+    ++_dbgTxCount;
     _wire->beginTransmission(addr);
     _wire->write(data, length);
     return (_wire->endTransmission() == 0);
 }
 
 bool LC76G::i2cRead(uint8_t addr, uint8_t* data, uint16_t length) {
+    ++_dbgTxCount;
     uint16_t received = _wire->requestFrom(addr, length);
     if (received != length) {
         return false;

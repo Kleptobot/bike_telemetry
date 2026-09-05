@@ -29,8 +29,11 @@ void TileLoader::latLonToTilePixel(double lat, double lon, int zoom, int& pixelX
 
 static String tilePath(int z, uint32_t x, uint32_t y) {
     // path: /tiles/{z}/{x}/{y}.raw
+    // %u rather than PRIu32: uint32_t is unsigned int on both the ARM newlib
+    // target and the MinGW host, and this MinGW's inttypes.h does not reliably
+    // deliver PRIu32 to C++ translation units.
     char buf[128];
-    snprintf(buf, sizeof(buf), "/tiles/%d/%" PRIu32 "/%" PRIu32 ".raw", z, x, y);
+    snprintf(buf, sizeof(buf), "/tiles/%d/%u/%u.raw", z, x, y);
     return String(buf);
 }
 
@@ -50,7 +53,7 @@ static bool loadRawTileImpl(int z, uint32_t x, uint32_t y,
     if (!storage) return false;
  
     char buf[128];
-    snprintf(buf, sizeof(buf), "/tiles/%d/%" PRIu32 "/%" PRIu32 ".raw", z, x, y);
+    snprintf(buf, sizeof(buf), "/tiles/%d/%u/%u.raw", z, x, y);
  
     if (!storage->exists(buf)) return false;
  

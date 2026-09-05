@@ -1,7 +1,6 @@
 #ifndef DATAMDOEL_H
 #define DATAMDOEL_H
 
-#include "TelemetryDataProvider.hpp"
 #include "BluetoothDataProvider.hpp"
 #include "TimeDataProvider.hpp"
 #include "BioDataProvider.hpp"
@@ -9,6 +8,8 @@
 #include "LoggerDataProvider.hpp"
 #include "SDStateProvider.hpp"
 #include "BikeDataProvider.hpp"
+#include "DataBus.hpp"
+#include "GpsTrack.hpp"
 
 enum class AppState {
     BOOT,
@@ -20,7 +21,6 @@ enum class AppState {
 
 class DataModel {
 public:
-    TelemetryDataProvider& telemetry() { return _telemetry; }
     BluetoothDataProvider& bluetooth() { return _bluetooth; }
     TimeDataProvider& time() { return _time; }
     BioDataProvider& bio() { return _bio; }
@@ -31,7 +31,15 @@ public:
     AppState& app() { return _appState; }
     void setAppState( AppState new_) { _appState = new_; }
 
-    const TelemetryDataProvider& telemetry() const { return _telemetry; }
+    // DataBus for pub/sub access to derived signals.
+    DataBus& bus() { return _bus; }
+    const DataBus& bus() const { return _bus; }
+
+    // Recent-position breadcrumb store for the map widget. App appends on
+    // each valid GPS fix; the store decimates to 1 Hz internally.
+    GpsTrack& gpsTrack() { return _gpsTrack; }
+    const GpsTrack& gpsTrack() const { return _gpsTrack; }
+
     const BluetoothDataProvider& bluetooth() const { return _bluetooth; }
     const TimeDataProvider& time() const { return _time; }
     const BioDataProvider& bio() const { return _bio; }
@@ -42,7 +50,6 @@ public:
     const AppState& app() const { return _appState; }
 
 private:
-    TelemetryDataProvider _telemetry;
     BluetoothDataProvider _bluetooth;
     TimeDataProvider _time;
     BioDataProvider _bio;
@@ -51,6 +58,8 @@ private:
     LoggerDataProvider _logger;
     SDStateProvider _SD;
     AppState _appState;
+    DataBus _bus;
+    GpsTrack _gpsTrack;
 };
 
 #endif

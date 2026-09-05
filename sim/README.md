@@ -15,9 +15,11 @@ Only **two** firmware translation units are replaced:
 
 Everything else is compiled from the real source and runs unmodified:
 
-- all of `App`, `DataModel`, `Loggers`, `Map` and `ui`
+- all of `App`, `DataModel`, `Loggers`, `Map`, `Fusion` and `ui`
 - `InputSystem` — including the real `button` edge/hold/repeat logic
-- `Sensors`, `SDCard`, `AltitudeFusion`
+- `Sensors`, `SDCard`, and the whole `Fusion` layer (altitude fusion, speed
+  selection, grade, distance) — the simulated barometer is driven from the
+  scenario altitude, so the real estimator computes what the tiles show
 - the entire Bluetooth stack, **including the CSC/CPS/HRM measurement parsers**
 
 The vendored libraries (`Adafruit_GFX`, `ArduinoJson`, `TinyGPSPlus`) are linked
@@ -150,6 +152,48 @@ That is a considerably stronger check on the logger than any assertion.
 `Sim::buildCpsMeasurement()` and friends construct spec-shaped payloads;
 `Sim::injectCpsNotification()` hands them to the real parser. Useful for
 checking power/cadence decoding without a sensor.
+
+## Simulated sensors
+
+The sim can run the whole sensor story -- pairing, discovery, notification
+decoding, baselining and the RPM smoothing filters -- with no radio:
+
+- At init the card is seeded with a `devices.txt` fixture (three sensors:
+  wheel, power, heart rate) unless one is already present, so the firmware's
+  real `loadDevices()` path creates the parser devices at App BOOT.
+- ~1.5 s of simulated time in, each device's real `discover()` runs against
+  the stub radio and the stub connection handles are aligned.
+- `HAL::update()` then feeds spec-shaped notifications into the parsers at
+  the ~1 Hz cadence real sensors use, whenever the scenario says a sensor is
+  present (`wheelRPMLive`, `power > 0`, `heartRate > 0`).
+
+`--sensors` starts a headless run with all three sensors live at riding
+values (24 km/h, 85 rpm, 180 W, 132 bpm). Interactively, `]` brings the
+wheel sensor up as before. Values reaching the UI, the fusion engine and the
+loggers have been decoded by the unmodified firmware parsers.
+
+Note the ramp-in: the CSC parsers low-pass their revolution-derived estimates
+with a ~1000-update time constant, so wheel speed and cadence climb toward
+the scenario values over roughly 20-30 s of simulated time -- the same
+behaviour you see on hardware after pairing. Power and heart rate decode
+immediately. For a converged headless run use a longer frame count, e.g.
+`--headless --sensors --frames 4000`.
+
+## Headless navigation and telemetry
+
+Headless runs can also navigate the UI and report what the app published:
+
+```
+./build/obike-sim --headless --sensors --stats --frames 1200 --last 2 \
+                  --screen BikeStats --out out
+```
+
+- `--sensors` starts the run with all three sensors paired and live
+- `--stats` prints the published telemetry every 250 frames -- a numeric
+  trace of exactly what the app derived from the injected data
+- `--screen NAME` navigates once boot completes (BikeStats, Settings,
+  Bluetooth, Biometrics, GPS, Time, Display, UnmountSD, MainMenu)
+- `--last N` writes only the final N PPM frames of the run
 
 ## Relationship to unit tests
 

@@ -11,7 +11,7 @@ public:
     explicit CSVLogger(IStorage* storage) : _storage(storage) {}
 
     void startLogging(const timeData& currentTime) override;
-    void addTrackpoint(const Telemetry& tp, const timeData& currentTime) override;
+    void addTrackpoint(const Trackpoint& tp, const timeData& currentTime) override;
     void newLap(const timeData& currentTime) override;
     bool finaliseLogging() override;
 
@@ -24,9 +24,7 @@ public:
 private:
     IStorage* _storage;
     File32 file;
-    char _filename[64];
-    timeData _startTime;
-    timeData _currentTime;
+    char _filename[64];  // _startTime/_currentTime inherited from ILogger
 
     void writeHeader();
 };

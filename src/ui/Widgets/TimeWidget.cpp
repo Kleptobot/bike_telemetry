@@ -99,10 +99,18 @@ void TimeWidget::render() {
         return;
     }
 
+    // Separators first, at full text size, so the fields (their highlight
+    // borders and opaque text background) render on top and the colon never
+    // blocks a selected/focused field's border.
+    Disp::setTextSize(2);
+    Disp::setTextColor(ST77XX_WHITE);
+    Disp::setCursor(hourText.getX() + hourText.width(), _y);
+    Disp::print(":");
+    Disp::setCursor(minuteText.getX() + minuteText.width(), _y);
+    Disp::print(":");
+
     // draw them
     hourText.render();
-    Disp::print(":");
     minuteText.render();
-    Disp::print(":");
     secondText.render();
 }
