@@ -31,14 +31,31 @@ void LogSummaryScreen::onEnter() {
 }
 
 void LogSummaryScreen::update(float dt) {
+    backWidget.setFocused(focusField == FocusField::Back);
+    deleteWidget.setFocused(focusField == FocusField::Delete);
+
+    subtitleWidget.setText(_parsing ? "Reading..." : (_ok ? "Done" : "Error"));
+    dateWidget.setText(_file.length() >= 8 ? _file.substring(0, 8) : _file);
+
+
     if (!_parsing) return;
     for (int i = 0; _parsing && i < 16; i++) {
         _parsing = _parser->step();
     }
     _ok = !_parsing && _parser->done() && _parser->stats().valid;
-
-    backWidget.setFocused(focusField == FocusField::Back);
-    deleteWidget.setFocused(focusField == FocusField::Delete);
+    durationWidget.setText(fmtRow("Duration", fmtDuration(_parser->stats().durationSec)));
+    distanceWidget.setText(fmtRow("Distance", fmtDistance(_parser->stats().distanceM)));
+    lapsWidget.setText(fmtRow("Laps", String(_parser->stats().lapCount)));
+    avgSpeedWidget.setText(fmtRow("Avg Speed", fmt1(_parser->stats().avgSpeedKmh) + " km/h"));
+    maxSpeedWidget.setText(fmtRow("Max Speed", fmt1(_parser->stats().maxSpeedKmh) + " km/h"));
+    avgHrWidget.setText(fmtRow("Avg HR", fmt0(_parser->stats().avgHr)));
+    maxHrWidget.setText(fmtRow("Max HR", fmt0(_parser->stats().maxHr)));
+    avgPwrWidget.setText(fmtRow("Avg Power", fmt0(_parser->stats().avgPower) + " W"));
+    maxPwrWidget.setText(fmtRow("Max Power", fmt0(_parser->stats().maxPower) + " W"));
+    avgCadWidget.setText(fmtRow("Avg Cadence", fmt0(_parser->stats().avgCadence)));
+    caloriesWidget.setText(fmtRow("Calories", fmt0(_parser->stats().calories) + " kcal"));
+    npWidget.setText(fmtRow("NP", fmt0(_parser->stats().np) + " W"));
+    tssWidget.setText(fmtRow("TSS", fmt0(_parser->stats().tss) + " "));
 }
 
 void LogSummaryScreen::handleInput(const physIO input) {
@@ -54,6 +71,21 @@ void LogSummaryScreen::handleInput(const physIO input) {
             break;
         default: break;
     }
+}
+
+String LogSummaryScreen::fmtRow(const String& label, const String& value) {
+    //make sure the second string is 130 px after the start of the first string, so the two columns are aligned
+    //then return the whole string with padding so it can be given to a widget
+    int16_t x1,y1;
+    uint16_t w,h;
+    Disp::setTextSize(1);
+    String paddedValue = label;
+    Disp::getTextBounds(paddedValue, 0, 0, &x1, &y1, &w, &h);
+    while (w < 130) {
+        paddedValue += " ";
+        Disp::getTextBounds(paddedValue, 0, 0, &x1, &y1, &w, &h);
+    }
+    return paddedValue + value;
 }
 
 String LogSummaryScreen::fmtDuration(uint32_t sec) {
@@ -85,48 +117,25 @@ String LogSummaryScreen::fmt0(float v) {
     return String(b);
 }
 
-void LogSummaryScreen::drawRow(int y, const String& label, const String& value) {
-    Disp::setTextSize(1);
-    Disp::setTextColor(ST77XX_WHITE);
-    Disp::setCursor(6, y);
-    Disp::print(label);
-    Disp::setCursor(130, y);
-    Disp::print(value);
-}
-
 void LogSummaryScreen::render() {
-    Disp::setTextSize(2);
-    Disp::setTextColor(ST77XX_WHITE);
-    Disp::setCursor(6, 6);
-    String date = _file.length() >= 8 ? _file.substring(0, 8) : _file;
-    Disp::print(date);
+    titleWidget.render();
+    subtitleWidget.render();
 
-    if (!_ok) {
-        Disp::setTextSize(1);
-        Disp::setCursor(6, 28);
-        Disp::print("Reading...");
-        backWidget.render();
-        deleteWidget.render();
-        hints.render();
-        return;
-    }
-
-        const RideStats& s = _parser->stats();
-    int y = 26;
-    drawRow(y, "Duration", fmtDuration(s.durationSec));        y += 12;
-    drawRow(y, "Distance", fmtDistance(s.distanceM));          y += 12;
-    drawRow(y, "Laps",     String(s.lapCount));                y += 12;
-    drawRow(y, "AvgSpeed", fmt1(s.avgSpeedKmh) + " km/h");     y += 12;
-    drawRow(y, "MaxSpeed", fmt1(s.maxSpeedKmh) + " km/h");     y += 12;
-    drawRow(y, "AvgHR",    fmt0(s.avgHr));                     y += 12;
-    drawRow(y, "MaxHR",    fmt0(s.maxHr));                     y += 12;
-    drawRow(y, "AvgPwr",   fmt0(s.avgPower) + " W");           y += 12;
-    drawRow(y, "MaxPwr",   fmt0(s.maxPower) + " W");           y += 12;
-    drawRow(y, "AvgCad",   fmt0(s.avgCadence));                y += 12;
-    drawRow(y, "Calories", fmt0(s.calories) + " kcal");        y += 12;
-    drawRow(y, "NP",       fmt0(s.np) + " W");                 y += 12;
-    drawRow(y, "TSS",      fmt1(s.tss));                       y += 12;
-
+    dateWidget.render();
+    durationWidget.render();
+    distanceWidget.render();
+    lapsWidget.render();
+    avgSpeedWidget.render();
+    maxSpeedWidget.render();
+    avgHrWidget.render();
+    maxHrWidget.render();
+    avgPwrWidget.render();
+    maxPwrWidget.render();
+    avgCadWidget.render();
+    caloriesWidget.render();
+    npWidget.render();
+    tssWidget.render();
+    
     backWidget.render();
     deleteWidget.render();
     hints.render();
