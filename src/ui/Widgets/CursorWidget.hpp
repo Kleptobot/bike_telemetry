@@ -40,9 +40,18 @@ public:
         }
     }
 
+    // The 3px outline extends 1px beyond the widget rect on all sides, so
+    // dirty-rect marking must cover that ring or moving leaves ghost pixels.
+    void invalidate() override {
+        Disp::markDirty(_x - 1, _y - 1, width() + 2, height() + 2);
+    }
+
     void render() {
         if (!visible) return;
-        Disp::drawRect(_x, _y, _width, _height, ST77XX_ORANGE);
+        // 3px thick outline: nested rects 1px apart around the cell.
+        Disp::drawRect(_x - 1, _y - 1, _width + 2, _height + 2, ST77XX_ORANGE);
+        Disp::drawRect(_x,     _y,     _width,     _height,     ST77XX_ORANGE);
+        Disp::drawRect(_x + 1, _y + 1, _width - 2, _height - 2, ST77XX_ORANGE);
     }
 
     const int& CX() const { return _cx; }

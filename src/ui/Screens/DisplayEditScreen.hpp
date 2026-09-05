@@ -86,6 +86,7 @@ public:
 
         gridWidth.setFocused(focusField == FocusField::Cols);
         gridHeight.setFocused(focusField == FocusField::Rows);
+        grid.setFocused(focusField == FocusField::Grid);
         cursor.setVisible(focusField == FocusField::Grid && mode == WidgetEditMode::FOCUS);
         backWidget.setFocused(focusField == FocusField::Back);
         saveWidget.setFocused(focusField == FocusField::Save);
@@ -103,6 +104,10 @@ public:
         for (auto& disp : _displays) {
             disp.widget.render();
         }
+
+        // Redraw the focus highlight over the tiles: a tile sharing an edge
+        // with the grid repaints the border with its own white frame.
+        grid.renderBorder();
 
         cursor.render();
 

@@ -75,6 +75,9 @@ void DisplayEditScreen::handleInput(physIO input) {
                 switch (subMode) {
                     case WidgetSubMode::DONE:
                         _displays[selectedIdx].widget.setMenu(false);
+                        // setMode(DONE) changed the label to "Done" - reset
+                        // the mode so the tile shows its signal name again.
+                        _displays[selectedIdx].widget.setMode(WidgetSubMode::CHANGE_TYPE);
                         selectedIdx = -1;
                         subMode = WidgetSubMode::CHANGE_TYPE;
                         mode = WidgetEditMode::FOCUS;
@@ -237,10 +240,24 @@ void DisplayEditScreen::moveFocusRight() {
 // ---- cursor movement, now living directly against _displays ----
 
 void DisplayEditScreen::updateCursorPixelPos() {
-    cursor.setSize(grid.colPitch(), grid.rowPitch());
+    // Match the footprint of the DisplayEditWidget under the cursor so the
+    // outline hugs the tile; over empty grid, fall back to a single cell.
+    int idx = itemAt(_cursorX, _cursorY);
+    int x0 = _cursorX, y0 = _cursorY;
+    int cellsW = 1, cellsH = 1;
+    if (idx >= 0) {
+        x0 = _displays[idx].x0;
+        y0 = _displays[idx].y0;
+        cellsW = _displays[idx].x1 - x0;
+        cellsH = _displays[idx].y1 - y0;
+    }
+
+    int w = cellsW * grid.colPitch();
+    int h = cellsH * grid.rowPitch();
+    cursor.setSize(w, h);
     cursor.setPosition(
-        grid.getX() + _cursorX * grid.colPitch() + grid.colPitch() / 2,
-        grid.getY() + _cursorY * grid.rowPitch() + grid.rowPitch() / 2
+        grid.getX() + x0 * grid.colPitch() + w / 2,
+        grid.getY() + y0 * grid.rowPitch() + h / 2
     );
 }
 

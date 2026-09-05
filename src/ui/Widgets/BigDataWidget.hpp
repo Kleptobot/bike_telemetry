@@ -125,10 +125,15 @@ public:
         Disp::print(unitStr);
 
         if (_drawRightEdge) {
-            Disp::drawLine(_x + _width - 1, _y, _x + _width - 1, _y + _height - 1, EDGE_LINE_COLOR);
+            // 3px thick edge, kept inside the widget bounds
+            for (int i = 1; i <= 3; i++) {
+                Disp::drawLine(_x + _width - i, _y, _x + _width - i, _y + _height - 1, EDGE_LINE_COLOR);
+            }
         }
         if (_drawBottomEdge) {
-            Disp::drawLine(_x, _y + _height - 1, _x + _width - 1, _y + _height - 1, EDGE_LINE_COLOR);
+            for (int i = 1; i <= 3; i++) {
+                Disp::drawLine(_x, _y + _height - i, _x + _width - 1, _y + _height - i, EDGE_LINE_COLOR);
+            }
         }
 
         if (ENABLE_INVALIDATE_DEBUG) {
