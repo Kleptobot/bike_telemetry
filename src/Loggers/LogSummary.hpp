@@ -10,7 +10,11 @@ struct RideStats {
     bool     valid       = false;
     uint32_t durationSec = 0;
     float    distanceM   = 0;
-    uint16_t lapCount    = 1;
+    // Number of lap records actually parsed. Starts at 0: both the FIT and the
+    // TCX parser increment it per lap, so defaulting to 1 made every summary
+    // report one lap more than the ride really had (and made the TCX parser's
+    // "valid = lapCount > 0" test vacuously true).
+    uint16_t lapCount    = 0;
     float    maxSpeedKmh = 0;
     float    avgSpeedKmh = 0;
     float    maxHr       = 0;
@@ -127,8 +131,11 @@ private:
     };
     LocalDef _defs[16];        // local types 0..15
 
-    uint8_t _partialBuf[32];
-    uint8_t _partialLen;
+    // Persistent carry buffer: records straddle the chunked reads, so the
+    // parser must keep unconsumed bytes across step() calls. Max record is a
+    // definition (1 + 5 + 32*3 = 102 B) or a data message (1 + <=64 B).
+    uint8_t _carry[192];
+    uint16_t _carryLen;
 
     void resetLocal();
     void clearDefs();

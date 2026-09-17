@@ -34,7 +34,7 @@ public:
           tssWidget(6, 216, "TSS",1),
 
           backWidget(5, 280, "Back", epd_bitmap_left),
-          deleteWidget(130, 280, "Del", epd_bitmap_left) {
+          deleteWidget(130, 280, "Del", epd_bitmap_bin_16) {
         backWidget.setOnPress([this]() {
             emitUIEvent(UIEventType::ChangeScreen, ScreenID::LogList);
         });
@@ -46,6 +46,10 @@ public:
     }
 
     void onEnter() override;
+
+    // Close the log file: an open File32 across screens keeps SdFat cache
+    // state alive while the host may rewrite the card over USB MSC.
+    void onExit() override;
     void update(float dt) override;
     void render() override;
     void handleInput(const physIO input) override;

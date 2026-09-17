@@ -21,12 +21,28 @@ public:
     bool listFiles(const char* dir, StorageEntry* out, uint8_t max, uint8_t& count) override;
 
     bool isMounted() const { return mounted; }
+
+    // Discard all cached filesystem state and re-read it from the card.
+    // Mandatory after the host has written to the card via USB MSC: SdFat
+    // trusts its caches, so stale cached FAT/directory sectors would be
+    // traversed against the card's real (new) contents and crash the MCU.
+    // All firmware file handles must be closed before calling this.
+    bool remount() {
+        if (!mounted) return false;
+        sd.end();
+        mounted = false;
+        return init(_date);
+    }
     bool isBusy() const { return busy; }
     void unMount() {
         sd.end();
         mounted = false;
     }
-    
+
+    // Block-device access for USB MSC. Returns the underlying SdCard so
+    // callers can do raw sector reads/writes without going through the
+    // filesystem. Valid only while mounted.
+    SdCard* card() { return mounted ? sd.card() : nullptr; }
 
 private:
     SdFat32 sd;              // the only filesystem instance

@@ -1,5 +1,6 @@
 #include <Wire.h>
 #include "Display.hpp"
+#include "../HAL/SpiBusLock.hpp"
 #include <vector>
 
 #define TFT_CS         D0
@@ -65,7 +66,11 @@ namespace Disp {
         dirtyRects.clear();
     }
 
-    void flush() {        
+    void flush() {
+        // The display shares its SPI bus with the SD card, whose MSC block
+        // I/O runs on the USB task (guarded by the same lock). Hold the lock
+        // across the whole flush so USB reads cannot interleave mid-frame.
+        SpiBusLock::take();
         for (size_t i = 0; i < dirtyRects.size(); i++) {
             auto& r = dirtyRects[i];
 
@@ -94,6 +99,7 @@ namespace Disp {
         }
 
         dirtyRects.clear(); // reset the list after every frame
+        SpiBusLock::give();
     }
 
     void setTextSize(uint8_t s) { canvas.setTextSize(s); }

@@ -5,6 +5,7 @@
 #define DEBUG_I2C 1
 
 #include <Arduino.h>
+#include <Adafruit_TinyUSB.h>
 #include "DebugConfig.hpp"
 #include "HAL/HAL.hpp"
 #include "App.hpp"
@@ -24,23 +25,22 @@ void setup() {
 
 uint32_t gpsLastEnableTime = millis();
 void loop() {
-    __NOP();
     if (!started) {
         Serial.begin(115200);
         delay(500);
-        
+
         HAL::inst().init(&App::instance().getModel().time().get());
         App::instance().begin(HAL::inst().SD());
         started = true;
         Serial.println("App started");
         Serial.printf("Free heap: %d bytes\n", dbgHeapTotal() - dbgHeapUsed());
         Serial.println("SD card det state: " + String(HAL::inst().inputs().SD_Det.state));
-        
     }
 
     //update the HAL and App
     HAL::inst().update();
     App::instance().update();
+
 
     // read the state of the gps enable pin, if its low then sleep
     if ( !App::instance().getGpsEnableState() ) {

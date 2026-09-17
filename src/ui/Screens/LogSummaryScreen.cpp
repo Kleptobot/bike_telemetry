@@ -30,6 +30,16 @@ void LogSummaryScreen::onEnter() {
     hints.setHint(0, epd_bitmap_left, "list");
 }
 
+void LogSummaryScreen::onExit() {
+    // Close the log file. Leaving the File32 open across screens keeps
+    // SdFat's cached FAT/directory state alive; if the host then rewrites
+    // the card over USB MSC, the firmware would later traverse stale cache
+    // contents and crash. reset() closes the file.
+    _parser.reset();
+    _parsing = false;
+    _ok = false;
+}
+
 void LogSummaryScreen::update(float dt) {
     backWidget.setFocused(focusField == FocusField::Back);
     deleteWidget.setFocused(focusField == FocusField::Delete);

@@ -81,6 +81,7 @@ FW_SRCS := \
   $(ROOT)/src/HAL/InputSystem.cpp \
   $(ROOT)/src/HAL/Sensors.cpp \
   $(ROOT)/src/HAL/SDCard.cpp \
+  $(ROOT)/src/HAL/USBMSC.cpp \
   $(ROOT)/src/HAL/button.cpp \
   $(ROOT)/src/HAL/Bluetooth/BluetoothSystem.cpp \
   $(ROOT)/src/HAL/Bluetooth/BT_Device.cpp \
@@ -91,12 +92,15 @@ FW_SRCS := \
   $(ROOT)/src/Loggers/FITWriter.cpp \
   $(ROOT)/src/Loggers/TCXLogger.cpp \
   $(ROOT)/src/Loggers/CSVLogger.cpp \
+  $(ROOT)/src/Loggers/LogSummary.cpp \
   $(ROOT)/src/Map/TileLoader.cpp \
   $(ROOT)/src/ui/UIManager.cpp \
   $(ROOT)/src/ui/Screens/BikeStatsScreen.cpp \
   $(ROOT)/src/ui/Screens/BiometricsScreen.cpp \
   $(ROOT)/src/ui/Screens/DisplayEditScreen.cpp \
   $(ROOT)/src/ui/Screens/GPSScreen.cpp \
+  $(ROOT)/src/ui/Screens/LogListScreen.cpp \
+  $(ROOT)/src/ui/Screens/LogSummaryScreen.cpp \
   $(ROOT)/src/ui/Screens/TimeEditScreen.cpp \
   $(ROOT)/src/ui/Widgets/DateWidget.cpp \
   $(ROOT)/src/ui/Widgets/DurationWidget.cpp \

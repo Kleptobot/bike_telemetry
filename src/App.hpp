@@ -11,6 +11,11 @@
 #include "AppEvents.hpp"
 #include "DataModel/DataModel.hpp"
 #include "HAL/BluetoothInterface.hpp"
+#include "HAL/USBMSC.hpp"
+#include "DataModel/Settings/BiometricsSettings.hpp"
+#include "DataModel/Settings/BikeSettings.hpp"
+#include "DataModel/Settings/LayoutSettings.hpp"
+#include "DataModel/Settings/TimeSettings.hpp"
 
 // Application-level states
 
@@ -70,6 +75,9 @@ private:
     FITLogger* fitLogger = nullptr;
     CSVLogger* csvLogger = nullptr;
 
+    // USB mass storage: exposes the SD card to a host PC while IDLE.
+    USBMSC _usbMsc;
+
     AppState state = AppState::BOOT, state_prev = AppState::BOOT;
     uint32_t _lastRenderMillis = 0;
     int messageType = 0;
@@ -110,6 +118,12 @@ private:
 
     DataModel model;
     UIManager ui;
+
+    // Settings persistence helpers (each wraps a DataProvider)
+    BiometricsSettings _biometrics{model.bio()};
+    BikeSettings _bike{model.bike()};
+    LayoutSettings _layout{model.layout()};
+    TimeSettings _time{model.time()};
     FusionEngine _fusion;
     FtpEstimator _ftpEstimator;
     uint32_t _millis, _last_millis, lastGPS;
@@ -124,12 +138,6 @@ private:
     // on/off starting with ON; durations in ms. Driven from update().
     void buzz(const uint16_t* patternMs, uint8_t len);
     void updateBuzzer(uint32_t now);
-
-    void saveBiometrics();
-    void loadBiometrics();
-
-    void saveBikeStats();
-    void loadBikeStats();
 
     // Auto-pause: stop logging automatically when the rider stops, resume
     // when they get moving again. Speed-based with hysteresis (pause below
@@ -155,11 +163,17 @@ private:
     void updateAutoLap();
     static uint8_t vbatToPct(float volts);
 
-    void saveLayout();
-    void loadLayout();
+    void saveLayout() { _layout.save(_storage); }
+    void loadLayout() { _layout.load(_storage); }
 
-    void saveTime();
-    void loadTime();
+    void saveTime() { _time.save(_storage); }
+    void loadTime() { _time.load(_storage); }
+
+    void saveBiometrics() { _biometrics.save(_storage); }
+    void loadBiometrics() { _biometrics.load(_storage); }
+
+    void saveBikeStats() { _bike.save(_storage); }
+    void loadBikeStats() { _bike.load(_storage); }
 
     void updateLoggerInstance() {
             const LoggerType selectedLogger = model.bike().get().logger;

@@ -150,6 +150,7 @@ void FitLogParser::clearDefs() {
 void FitLogParser::reset() {
     resetLocal();
     clearDefs();
+    _carryLen = 0;
     if (_file.isOpen()) _file.close();
 }
 
@@ -186,54 +187,101 @@ void FitLogParser::close() {
 
 bool FitLogParser::step() {
     if (_done) return false;
-    uint8_t chunk[96];
-    int n = _file.read(chunk, sizeof(chunk));
-    if (n <= 0) {
+
+    // Top up the persistent carry buffer. Records straddle the chunked file
+    // reads all the time (RECORD messages are ~27 B, reads are small), so
+    // parsing MUST run over carried bytes -- the previous per-chunk parser
+    // dropped any record spanning a chunk boundary and then resumed mid
+    // record, desynchronizing the stream (LAP/SESSION values were lost or
+    // garbage, so .fit summaries showed wrong/zero numbers).
+    bool eof = false;
+    if (_carryLen < sizeof(_carry)) {
+        const uint16_t want = (uint16_t)(sizeof(_carry) - _carryLen);
+        int n = _file.read(_carry + _carryLen, want);
+        if (n <= 0) {
+            eof = true;
+        } else {
+            _carryLen += (uint16_t)n;
+            if ((uint16_t)n < want) eof = true;  // short read: EOF
+        }
+    }
+
+    size_t off = 0;
+    while (off < _carryLen) {
+        const size_t remaining = _carryLen - off;
+        const uint8_t recHdr       = _carry[off];
+        const bool isDefinition    = (recHdr & 0x40) != 0;
+        const bool isTimestamped   = (recHdr & 0x80) != 0; // 1 extra byte (our writer never sets it)
+        const uint8_t localType    = recHdr & 0x0F;
+
+        if (isDefinition) {
+            // hdr(1) + reserved(1) + arch(1) + global(2) + numFields(1)
+            if (remaining < 6) break;
+            const uint8_t numFields = _carry[off + 5];
+            if (remaining < 6 + (size_t)numFields * 3) break;
+
+            // Architecture: 0 = little-endian (our writer), 1 = big-endian.
+            uint16_t globalNum;
+            if (_carry[off + 2] == 1)
+                globalNum = (uint16_t)(_carry[off + 4] | (_carry[off + 3] << 8));
+            else
+                globalNum = (uint16_t)(_carry[off + 3] | (_carry[off + 4] << 8));
+
+            LocalDef& ld = _defs[localType];
+            ld.used = true;
+            ld.globalNum = globalNum;
+            // Clamped so the payload-size walk below can never index past
+            // fields[32]; anything wider is malformed (or not FIT) means.
+            ld.numFields = numFields > 32 ? 32 : numFields;
+            for (uint8_t fi = 0; fi < numFields && fi < 32; fi++) {
+                const uint8_t* f = &_carry[off + 6 + (size_t)fi * 3];
+                ld.fields[fi].num  = f[0];
+                ld.fields[fi].size = f[1];
+            }
+            off += 6 + (size_t)numFields * 3;
+        } else {
+            const LocalDef& ld = _defs[localType];
+            if (!ld.used) {
+                // Data record for an undefined local type: its length is
+                // unknowable. Our writer always defines before use, so this
+                // means desync -- skip one byte to resynchronize.
+                off += 1;
+                continue;
+            }
+            uint16_t payloadSize = 0;
+            for (uint8_t fi = 0; fi < ld.numFields; fi++)
+                payloadSize += ld.fields[fi].size;
+            const size_t need = 1 + (size_t)payloadSize + (isTimestamped ? 1 : 0);
+            if (remaining < need) break;  // incomplete: keep bytes for next step
+            applyDataRecord(recHdr, &_carry[off + 1], payloadSize);
+            off += need;
+        }
+    }
+
+    // Drop the consumed prefix, keeping any partial record for the next call.
+    if (off) {
+        memmove(_carry, _carry + off, _carryLen - off);
+        _carryLen -= (uint16_t)off;
+    }
+
+    // Finish once the file is exhausted. Whatever is still held can never be
+    // completed -- there is no more input. The usual leftover is the 2-byte
+    // trailing FIT CRC, which is not a record at all: the previous test
+    // (eof && _carryLen == 0) could never become true for it, so step() kept
+    // answering "more to come" forever. On the summary screen that meant
+    // _parsing never cleared: the .fit stayed on "Reading..." and its numbers
+    // were never shown (CSV/TCX were unaffected -- they are line based).
+    //
+    // The second condition is the same stall reached with a full buffer: a
+    // record larger than _carry makes no progress while there is no room to
+    // read more, so stop instead of spinning.
+    if (eof || (off == 0 && _carryLen == sizeof(_carry))) {
+        _carryLen = 0;
         _done = true;
         _stats.valid = true;
         return false;
     }
-
-    size_t off = 0;
-    while (off < (size_t)n) {
-        uint8_t recHdr = chunk[off++];
-        bool isDefinition = (recHdr & 0x40) != 0;
-        bool hasTimestamp = (recHdr & 0x80) != 0;
-        if (hasTimestamp) { if (off < (size_t)n) off++; else break; }
-        uint8_t localType = recHdr & 0x0F;
-
-        if (isDefinition) {
-            if (off + 5 > (size_t)n) break;
-            uint8_t arch = chunk[off + 1];
-            uint16_t globalNum = arch == 1
-                ? (uint16_t)(chunk[off + 2] | (chunk[off + 3] << 8))
-                : (uint16_t)(chunk[off + 3] | (chunk[off + 2] << 8));
-            uint8_t numFields = chunk[off + 4];
-            off += 5;
-            if (off + numFields * 3 > (size_t)n) break;
-            LocalDef& ld = _defs[localType];
-            ld.used = true;
-            ld.globalNum = globalNum;
-            ld.numFields = numFields;
-            for (uint8_t fi = 0; fi < numFields && fi < 32; fi++) {
-                ld.fields[fi].num  = chunk[off];
-                ld.fields[fi].size = chunk[off + 1];
-                off += 3;
-            }
-            _pos += 1 + 5 + numFields * 3;
-        } else {
-            uint8_t localType = recHdr & 0x0F;
-            const LocalDef& ld = _defs[localType];
-            if (!ld.used) break;
-            uint16_t payloadSize = 0;
-            for (uint8_t fi = 0; fi < ld.numFields; fi++) payloadSize += ld.fields[fi].size;
-            if (off + 1 + payloadSize > (size_t)n) break;
-            applyDataRecord(recHdr, &chunk[off], payloadSize);
-            off += 1 + payloadSize;
-            _pos += 1 + payloadSize;
-        }
-    }
-    return n > 0;
+    return true;
 }
 
 void FitLogParser::applyDataRecord(uint8_t recHdr, const uint8_t* p, size_t /*avail*/) {

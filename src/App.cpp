@@ -3,6 +3,8 @@
 #include <cmath>
 #include "App.hpp"
 
+#include "HAL/SDCard.hpp"
+
 #include "UI/Screens/MainScreen.hpp"
 #include "UI/Screens/BluetoothScreen.hpp"
 #include "UI/Screens/TimeEditScreen.hpp"
@@ -169,6 +171,10 @@ void App::updateAutoLap() {
 void App::begin(IStorage* storage) {
     _storage = storage;
 
+    // The storage interface *is* the SDCardSystem -- wire it up for USB MSC.
+    // Safe to static_cast: HAL::inst().SD() returns the SDCardSystem instance.
+    _usbMsc.setSDCardSystem(static_cast<SDCardSystem*>(storage));
+
     state = AppState::BOOT;
     Disp::init();
 
@@ -220,6 +226,17 @@ void App::update() {
     ui.update((float)(_millis - _last_millis) / 1000.0);
     const physIO io = HAL::inst().inputs();
     ui.handleInput(io);
+
+    // USB MSC must never run concurrently with the firmware's own filesystem
+    // access: the Logs/LogSummary screens call SdFat on the main thread while
+    // the USB task would be doing raw block I/O on the same card. Menu
+    // navigation does not change AppState (it stays IDLE), so gate on the
+    // active screen: MSC runs only while the idle home screen is shown.
+    if (state == AppState::IDLE && ui.currentScreen() == ScreenID::MainMenu) {
+        if (!_usbMsc.isEnabled()) _usbMsc.resume();
+    } else if (_usbMsc.isEnabled()) {
+        _usbMsc.pause();
+    }
 
     updateAutoPause(_millis);
     updateIdleSleep(io, _millis);
@@ -286,6 +303,11 @@ void App::update() {
             break;
 
         case AppState::IDLE:
+            // Expose the SD card as a USB mass storage device so the host
+            // can read/write log files. Only safe here: no logger is active,
+            // so the filesystem is not being mutated by the firmware.
+            _usbMsc.begin();
+
             if (!HAL::inst().bluetooth().all_devices_discovered())
                 HAL::inst().bluetooth().setMode(E_Type_BT_Mode::connect);
             else
@@ -322,10 +344,12 @@ void App::update() {
             break;
 
         case AppState::CONFIG:
+            _usbMsc.end();
             HAL::inst().bluetooth().setMode(E_Type_BT_Mode::scan);
             break;
 
         case AppState::LOGGING:
+            _usbMsc.end();
             HAL::inst().bluetooth().setMode(E_Type_BT_Mode::idle);
 
             if (state_prev != AppState::LOGGING && state_prev != AppState::PAUSED) {
@@ -370,9 +394,11 @@ void App::update() {
             break;
         
         case AppState::PAUSED:
+            _usbMsc.end();
             break;
         
         default:
+            _usbMsc.end();
             break;
 
     }
@@ -710,264 +736,5 @@ void App::handleAppEvent(const AppEvent& e) {
 
         default:
             break;
-    }
-}
-
-void App::saveBiometrics() {
-    JsonDocument doc;
-
-    auto& a = model.bio().get();
-    
-    doc["birthday"] = a.birthday.unixtime();
-    doc["mass"] = a.mass;
-    doc["caloricProfile"] = toString(a.caloricProfile);
-    doc["ftp"] = a.ftpWatts;
-    doc["zone1Start"] = a.zone1Start;
-    doc["zone2Start"] = a.zone2Start;
-    doc["zone3Start"] = a.zone3Start;
-    doc["zone4Start"] = a.zone4Start;
-    doc["zone5Start"] = a.zone5Start;
-
-    if (_storage->exists("/biometrics.txt"))
-        _storage->remove("/biometrics.txt");
-
-    File32 dataFile = _storage->openFile("/biometrics.txt", FILE_WRITE);
-    if (!dataFile) {
-        Serial.println("[App] failed to open /biometrics.txt for writing");
-        return;
-    }
-
-    serializeJson(doc, dataFile);
-    dataFile.close();
-}
-
-void App::loadBiometrics() {
-    
-    if (_storage->exists("/biometrics.txt")) {
-        Serial.println("Found biometrics.txt");
-        // Open file for reading
-        File32 dataFile = _storage->openFile("/biometrics.txt", FILE_READ);
-        if (!dataFile) {
-            Serial.println("[App] failed to open /biometrics.txt for reading");
-            return;
-        }
-        // Allocate the memory pool on the stack.
-        JsonDocument jsonBuffer;
-        // Parse the root object
-
-        DeserializationError error = deserializeJson(jsonBuffer, dataFile);
-
-        if (error) {
-            Serial.print("[App] deserializeJson() failed for /biometrics.txt: ");
-            Serial.println(error.c_str());
-            dataFile.close();
-            return;
-        }
-
-        BioData a;
-        long long unix = jsonBuffer["birthday"];
-        timeData bd(unix, 0);
-        a.birthday = bd;
-        a.mass = jsonBuffer["mass"];
-        a.caloricProfile = fromString(jsonBuffer["caloricProfile"]);
-        a.ftpWatts = jsonBuffer["ftp"] | 200;   // fallback keeps old biometrics.txt files working
-        a.zone1Start = jsonBuffer["zone1Start"];
-        a.zone2Start = jsonBuffer["zone2Start"];
-        a.zone3Start = jsonBuffer["zone3Start"];
-        a.zone4Start = jsonBuffer["zone4Start"];
-        a.zone5Start = jsonBuffer["zone5Start"];
-
-        model.bio().update(a);
-        dataFile.close();
-    }
-}
-
-void App::saveBikeStats() {
-    JsonDocument doc;
-
-    auto& a = model.bike().get();
-    
-    doc["mass"] = a.mass;
-    doc["wheelCircumference"] = a.wheelCircumference;
-    doc["logger"] = loggerToString(a.logger);
-    doc["autoPause"] = a.autoPause;
-    doc["idleSleepMinutes"] = a.idleSleepMinutes;
-    doc["autoLapMode"] = autoLapModeToString(a.autoLapMode);
-    doc["autoLapValue"] = a.autoLapValue;
-
-    if (_storage->exists("/bikeStats.txt"))
-        _storage->remove("/bikeStats.txt");
-
-    File32 dataFile = _storage->openFile("/bikeStats.txt", FILE_WRITE);
-    if (!dataFile) {
-        Serial.println("[App] failed to open /bikeStats.txt for writing");
-        return;
-    }
-
-    serializeJson(doc, dataFile);
-    dataFile.close();
-}
-
-void App::loadBikeStats() {
-    
-    if (_storage->exists("/bikeStats.txt")) {
-        Serial.println("Found bikeStats.txt");
-        // Open file for reading
-        File32 dataFile = _storage->openFile("/bikeStats.txt", FILE_READ);
-        if (!dataFile) {
-            Serial.println("[App] failed to open /bikeStats.txt for reading");
-            return;
-        }
-        // Allocate the memory pool on the stack.
-        JsonDocument jsonBuffer;
-        // Parse the root object
-
-        DeserializationError error = deserializeJson(jsonBuffer, dataFile);
-
-        if (error) {
-            Serial.print("[App] deserializeJson() failed for /bikeStats.txt: ");
-            Serial.println(error.c_str());
-            dataFile.close();
-            return;
-        }
-
-        BikeData a;
-        a.mass = jsonBuffer["mass"];
-        a.wheelCircumference = jsonBuffer["wheelCircumference"];
-        a.logger = loggerFromString(jsonBuffer["logger"]);
-        // Default true: older bikeStats.txt files have no key, and auto-pause
-        // should stay on rather than silently disappearing after an update.
-        a.autoPause = jsonBuffer["autoPause"] | true;
-        a.idleSleepMinutes = jsonBuffer["idleSleepMinutes"] | 5;
-        // Defaults (Off) keep older bikeStats.txt files loading unchanged.
-        a.autoLapMode = autoLapModeFromString(jsonBuffer["autoLapMode"] | String("Off"));
-        a.autoLapValue = jsonBuffer["autoLapValue"] | 10;
-
-        model.bike().update(a);
-        dataFile.close();
-    }
-}
-
-void App::saveLayout() {
-    JsonDocument doc;
-
-    auto& l = model.layout().get();
-
-    JsonArray d = doc["displays"].to<JsonArray>();
-    doc["rows"] = l.rows;
-    doc["cols"] = l.cols;
-
-    for (size_t j = 0; j < l.displays.size(); j++) {
-        d[j]["x0"] = l.displays[j].x0;
-        d[j]["y0"] = l.displays[j].y0;
-        d[j]["x1"] = l.displays[j].x1;
-        d[j]["y1"] = l.displays[j].y1;
-        d[j]["type"] = toString(l.displays[j].type);
-    }
-
-    if (_storage->exists("/layout.txt"))
-        _storage->remove("/layout.txt");
-
-    File32 dataFile = _storage->openFile("/layout.txt", FILE_WRITE);
-    if (!dataFile) {
-        Serial.println("[App] failed to open /layout.txt for writing");
-        return;
-    }
-
-    serializeJson(doc, dataFile);
-    dataFile.close();
-}
-
-void App::loadLayout() {
-    if (_storage->exists("/layout.txt")) {
-        Serial.println("Found layout.txt");
-        // Open file for reading
-        File32 dataFile = _storage->openFile("/layout.txt", FILE_READ);
-        if (!dataFile) {
-            Serial.println("[App] failed to open /layout.txt for reading");
-            return;
-        }
-        // Allocate the memory pool on the stack.
-        JsonDocument jsonBuffer;
-        // Parse the root object
-
-        DeserializationError error = deserializeJson(jsonBuffer, dataFile);
-
-        if (error) {
-            Serial.print("[App] deserializeJson() failed for /layout.txt: ");
-            Serial.println(error.c_str());
-            dataFile.close();
-            return;
-        }
-
-        std::vector<DisplayItem> displays;
-        JsonArray d = jsonBuffer["displays"];
-        for (const auto& member : d) {
-            DisplayItem disp;
-            disp.type = TelemetryTypefromString(member["type"]);
-            disp.x0 = member["x0"];
-            disp.y0 = member["y0"];
-            disp.x1 = member["x1"];
-            disp.y1 = member["y1"];
-            displays.push_back(disp);
-        }
-
-        // Clamp on load rather than making every consumer defend itself.
-        // ArduinoJson yields 0 for a missing or unparseable key, and
-        // MainScreen::onEnter divides by both of these to compute its grid
-        // pitch -- so a truncated layout.txt was a divide by zero on the
-        // main screen. DisplayEditScreen already clamped to 2..5; this makes
-        // the guarantee hold at the point the data enters the model.
-        uint8_t rows = constrain((int)(jsonBuffer["rows"] | 0), LAYOUT_MIN_ROWS, LAYOUT_MAX_ROWS);
-        uint8_t cols = constrain((int)(jsonBuffer["cols"] | 0), LAYOUT_MIN_COLS, LAYOUT_MAX_COLS);
-
-        model.layout().update({displays, rows, cols});
-        dataFile.close();
-    }
-}
-
-void App::saveTime() {
-    JsonDocument doc;
-
-    int utcOffset = model.time().get().offset();
-    doc["UTCOffset"] = utcOffset;
-
-    if (_storage->exists("/time.txt"))
-        _storage->remove("/time.txt");
-
-    File32 dataFile = _storage->openFile("/time.txt", FILE_WRITE);
-    if (!dataFile) {
-        Serial.println("[App] failed to open /time.txt for writing");
-        return;
-    }
-
-    serializeJson(doc, dataFile);
-    dataFile.close();
-
-}
-
-void App::loadTime() {
-    if (_storage->exists("/time.txt")) {
-        Serial.println("Found time.txt");
-        // Open file for reading
-        File32 dataFile = _storage->openFile("/time.txt", FILE_READ);
-        if (!dataFile) {
-            Serial.println("[App] failed to open /time.txt for reading");
-            return;
-        }
-        // Allocate the memory pool on the stack.
-        JsonDocument jsonBuffer;
-        // Parse the root object
-
-        DeserializationError error = deserializeJson(jsonBuffer, dataFile);
-
-        if (error) {
-            Serial.print("[App] deserializeJson() failed for /time.txt: ");
-            Serial.println(error.c_str());
-            dataFile.close();
-            return;
-        }
-        int UTCOffset = jsonBuffer["UTCOffset"];
-        model.time().setUTCOffset(UTCOffset);
     }
 }

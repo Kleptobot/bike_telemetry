@@ -22,10 +22,13 @@ public:
         screens[id]->setEventBus(&eventBus);
     }
 
+    ScreenID currentScreen() const { return currentId; }
+
     void begin(ScreenID startScreen) {
         auto it = screens.find(startScreen);
         if (it != screens.end()) {
             activeScreen = it->second.get();
+            currentId = startScreen;
             activeScreen->onEnter();
         } else {
             // Fallback or debug message
@@ -51,6 +54,7 @@ public:
             activeScreen->onExit();
 
         activeScreen = it->second.get();
+        currentId = id;
         Disp::clear();
         Disp::markDirty(0,0,240,320);
         activeScreen->onEnter();
@@ -83,5 +87,6 @@ public:
 private:
     std::unordered_map<ScreenID, std::unique_ptr<UIScreen>> screens;
     UIScreen* activeScreen = nullptr;
+    ScreenID currentId = ScreenID::None;
     UIEventBus& eventBus;
 };

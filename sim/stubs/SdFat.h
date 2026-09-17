@@ -81,6 +81,39 @@ private:
     FILE* _fp = nullptr;
 };
 
+/** Raw logical-block access used by the USB-MSC wrapper (SD card volume). */
+class SdCard {
+public:
+    static SdCard* instance() {
+        static SdCard inst;
+        return &inst;
+    }
+
+    static constexpr uint32_t SECTORS = 2048;  // 1 MB simulated volume
+
+    uint32_t sectorCount() const { return SECTORS; }
+
+    bool readSectors(uint32_t sector, uint8_t* dst, size_t ns) {
+        if ((size_t)sector + ns > SECTORS) return false;
+        FILE* fp = fopen(simSdRoot(), "rb");
+        if (!fp) return false;
+        fseek(fp, (long)sector * 512L, SEEK_SET);
+        bool ok = fread(dst, 512, ns, fp) == ns;
+        fclose(fp);
+        return ok;
+    }
+
+    bool writeSectors(uint32_t sector, const uint8_t* src, size_t ns) {
+        if ((size_t)sector + ns > SECTORS) return false;
+        FILE* fp = fopen(simSdRoot(), "r+b");
+        if (!fp) return false;
+        fseek(fp, (long)sector * 512L, SEEK_SET);
+        bool ok = fwrite(src, 512, ns, fp) == ns;
+        fclose(fp);
+        return ok;
+    }
+};
+
 class SdFat32 {
 public:
     bool begin(uint8_t csPin = 0);
@@ -88,6 +121,12 @@ public:
     bool exists(const char* path);
     bool remove(const char* path);
     bool mkdir(const char* path, bool pFlag = true);
+
+    // Raw block access, used by the USB-MSC wrapper. Backed by a single-file
+    // "card image" so block reads/writes behave like a real SD volume: the
+    // first MB of every mounted volume is the mount point. Shared so firmware
+    // file I/O and USB-MSC block I/O target the same bytes.
+    SdCard* card() { return SdCard::instance(); }
 
 private:
     bool _mounted = false;
