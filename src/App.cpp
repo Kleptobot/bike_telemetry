@@ -171,10 +171,6 @@ void App::updateAutoLap() {
 void App::begin(IStorage* storage) {
     _storage = storage;
 
-    // The storage interface *is* the SDCardSystem -- wire it up for USB MSC.
-    // Safe to static_cast: HAL::inst().SD() returns the SDCardSystem instance.
-    _usbMsc.setSDCardSystem(static_cast<SDCardSystem*>(storage));
-
     state = AppState::BOOT;
     Disp::init();
 
@@ -226,17 +222,6 @@ void App::update() {
     ui.update((float)(_millis - _last_millis) / 1000.0);
     const physIO io = HAL::inst().inputs();
     ui.handleInput(io);
-
-    // USB MSC must never run concurrently with the firmware's own filesystem
-    // access: the Logs/LogSummary screens call SdFat on the main thread while
-    // the USB task would be doing raw block I/O on the same card. Menu
-    // navigation does not change AppState (it stays IDLE), so gate on the
-    // active screen: MSC runs only while the idle home screen is shown.
-    if (state == AppState::IDLE && ui.currentScreen() == ScreenID::MainMenu) {
-        if (!_usbMsc.isEnabled()) _usbMsc.resume();
-    } else if (_usbMsc.isEnabled()) {
-        _usbMsc.pause();
-    }
 
     updateAutoPause(_millis);
     updateIdleSleep(io, _millis);
@@ -303,11 +288,6 @@ void App::update() {
             break;
 
         case AppState::IDLE:
-            // Expose the SD card as a USB mass storage device so the host
-            // can read/write log files. Only safe here: no logger is active,
-            // so the filesystem is not being mutated by the firmware.
-            _usbMsc.begin();
-
             if (!HAL::inst().bluetooth().all_devices_discovered())
                 HAL::inst().bluetooth().setMode(E_Type_BT_Mode::connect);
             else
@@ -344,12 +324,10 @@ void App::update() {
             break;
 
         case AppState::CONFIG:
-            _usbMsc.end();
             HAL::inst().bluetooth().setMode(E_Type_BT_Mode::scan);
             break;
 
         case AppState::LOGGING:
-            _usbMsc.end();
             HAL::inst().bluetooth().setMode(E_Type_BT_Mode::idle);
 
             if (state_prev != AppState::LOGGING && state_prev != AppState::PAUSED) {
@@ -394,11 +372,9 @@ void App::update() {
             break;
         
         case AppState::PAUSED:
-            _usbMsc.end();
             break;
         
         default:
-            _usbMsc.end();
             break;
 
     }

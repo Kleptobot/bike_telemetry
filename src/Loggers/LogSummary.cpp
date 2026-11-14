@@ -310,17 +310,21 @@ void FitLogParser::handleLapRecord(const LocalDef& def, const uint8_t* p) {
         switch (fm.num) {
             case 7:  totalElapsedTime = fitReadU(base, fm.size); break;
             case 9:  totalDistance    = fitReadU(base, fm.size); break;
-            case 13: maxSpeed         = (uint16_t)fitReadU(base, fm.size); break;
+            // 14 = max_speed, 11 = total_calories (kcal, scale 1). These were
+            // 13 and 32, which are avg_speed and num_lengths (a swim field) --
+            // the writer had them wrong too, so the two agreed with each other
+            // and disagreed with every other FIT implementation.
+            case 14: maxSpeed         = (uint16_t)fitReadU(base, fm.size); break;
+            case 11: totalCalories    = fitReadU(base, fm.size); break;
             case 15: avgHr            = (uint8_t)fitReadU(base, fm.size); break;
             case 16: maxHr            = (uint8_t)fitReadU(base, fm.size); break;
             case 17: avgCadence       = (uint8_t)fitReadU(base, fm.size); break;
-            case 32: totalCalories    = fitReadU(base, fm.size); break;
         }
         base += fm.size;
     }
 
     _stats.distanceM += (float)totalDistance / 100.0f;
-    _stats.calories  += (float)totalCalories / 10.0f;
+    _stats.calories  += (float)totalCalories;   // kcal, scale 1
     uint32_t lapSec = totalElapsedTime / 1000;
     if (lapSec > _stats.durationSec) _stats.durationSec = lapSec;
 
@@ -364,6 +368,7 @@ void TcxLogParser::reset() {
     _cadN = 0;
     _stats = RideStats{};
     _hrExpect = HrExpect::None;
+    _inTrack = false;
     if (_file.isOpen()) _file.close();
 }
 
@@ -420,6 +425,20 @@ float TcxLogParser::extractBetween(const char* line, const char* open, const cha
 void TcxLogParser::processLine(const char* line) {
     float v;
 
+    // <Track> ... </Track> holds the per-second trackpoints of the CURRENT lap.
+    // The TCXLogger writes <DistanceMeters>, <Calories> and <Cadence> on the
+    // trackpoints as well (cumulative trip distance, per-sample calories,
+    // instantaneous cadence) -- summing those the same way as the <Lap>
+    // aggregates double-counted them, and the summary showed absurd numbers
+    // (distance orders of magnitude too large on a real ride). Outside
+    // <Track> those three elements only occur at lap level. Every lap-level
+    // element the summary uses is written before <Track> by writeLapHeader().
+    if (strstr(line, "</Track>")) {
+        _inTrack = false;
+    } else if (strstr(line, "<Track>")) {
+        _inTrack = true;
+    }
+
     if (strstr(line, "<Lap ")) {
         _stats.lapCount++;
     }
@@ -427,24 +446,33 @@ void TcxLogParser::processLine(const char* line) {
     if ((v = extractBetween(line, "<TotalTimeSeconds>", "</TotalTimeSeconds>")) >= 0) {
         _stats.durationSec += (uint32_t)v;
     }
-    if ((v = extractBetween(line, "<DistanceMeters>", "</DistanceMeters>")) >= 0) {
+    if (!_inTrack &&
+        (v = extractBetween(line, "<DistanceMeters>", "</DistanceMeters>")) >= 0) {
         _stats.distanceM += v;
     }
     if ((v = extractBetween(line, "<MaximumSpeed>", "</MaximumSpeed>")) >= 0) {
         float kmh = v * 3.6f;  // TCX stores m/s
         if (kmh > _stats.maxSpeedKmh) _stats.maxSpeedKmh = kmh;
     }
-    if ((v = extractBetween(line, "<Calories>", "</Calories>")) >= 0) {
+    if (!_inTrack &&
+        (v = extractBetween(line, "<Calories>", "</Calories>")) >= 0) {
         _stats.calories += v;
     }
-    if ((v = extractBetween(line, "<Cadence>", "</Cadence>")) >= 0) {
+    if (!_inTrack &&
+        (v = extractBetween(line, "<Cadence>", "</Cadence>")) >= 0) {
         _sumCadence += v;
         _cadN++;
     }
     if ((v = extractBetween(line, "<AvgNormalizedPower>", "</AvgNormalizedPower>")) >= 0) {
         _stats.np = v;
     }
-    if ((v = extractBetween(line, "<Tss>", "</Tss>")) >= 0) {
+    // The firmware's TCXWriter emits <TCXTrainingMetrics_TSS>; "<Tss>" is the
+    // generic form some third-party tools use. Accept both -- the old code
+    // only matched "<Tss>" and therefore read TSS=0 from every file this
+    // device produces.
+    if ((v = extractBetween(line, "<Tss>", "</Tss>")) >= 0 ||
+        (v = extractBetween(line, "<TCXTrainingMetrics_TSS>",
+                            "</TCXTrainingMetrics_TSS>")) >= 0) {
         _stats.tss = v;
     }
 

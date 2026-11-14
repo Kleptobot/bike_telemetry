@@ -32,14 +32,11 @@ public:
     void newLap(const timeData& currentTime) override;
     bool finaliseLogging() override;
  
-    const timeDuration elapsed_Total() const override { return _currentTime - _startTime; }
+    const timeDuration elapsed_Total() const override { return activeTotal(); }
     // laps.back() on an empty vector is undefined behaviour. It is empty
     // whenever startLogging bailed out (e.g. the file would not open), and
     // App::update calls this every iteration while in AppState::LOGGING.
-    const timeDuration elapsed_Lap() const override {
-        if (laps.empty()) return timeDuration(0);
-        return _currentTime - laps.back().startTime;
-    }
+    const timeDuration elapsed_Lap() const override { return activeLap(); }
  
 private:
     FitWriter _writer;   // _startTime/_currentTime inherited from ILogger
@@ -62,7 +59,8 @@ private:
     static constexpr uint8_t LOCAL_SESSION  = 3;
     static constexpr uint8_t LOCAL_ACTIVITY = 4;
  
-    void writeLapMessage(const Lap& lap, uint32_t startTimeFit, uint32_t endTimeFit);
+    void writeLapMessage(const Lap& lap, uint32_t elapsedSeconds,
+                         uint32_t startTimeFit, uint32_t endTimeFit);
     void writeSessionMessage(uint32_t endTimeFit);
     void writeActivityMessage(uint32_t endTimeFit);
 };

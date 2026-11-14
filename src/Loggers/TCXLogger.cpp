@@ -2,15 +2,19 @@
 #include "TCXLogger.hpp"
 
 void TCXLogger::startLogging(const timeData& currentTime) {
-    _startTime = currentTime;
-    _pauseAnchor = currentTime;
-    _currentTime = currentTime;
+    initTimer(currentTime);
     laps.clear();
     laps.push_back({currentTime, 0, 0, 0, 0, 0, 0});
     resetTotals();
     snprintf(_filename, sizeof(_filename), "/%04d%02d%02d_%02d%02d%02d.tcx",
              _startTime.year(), _startTime.month(), _startTime.day(),
              _startTime.hour(), _startTime.minute(), _startTime.second());
+    // Breadcrumb: which file this ride will materialise as. After an
+    // unreproducible "deleted log came back" report, the only way to tell a
+    // real resurrection from a same-name recreation (clock reset to the same
+    // value after power-off) is knowing exactly which names were created.
+    Serial.print("[TCXLogger] ride file will be ");
+    Serial.println(_filename);
 
     if (file.isOpen()) {
         file.close();
@@ -50,7 +54,12 @@ void TCXLogger::writeLapHeader(uint16_t lapIndex, File32 *file) {
     if (ts._totalSeconds > 0) {
         avgHRM = float(lp.totalHRM) / float(ts._totalSeconds);
     }
-    float avgCAD = lp.totalCadence / ts._totalSeconds;
+    float avgCAD = 0;
+    if (ts._totalSeconds > 0) {
+        // Unguarded this was a float division by zero for a zero-length lap
+        // (immediate pause/stop), writing <Cadence>inf</Cadence> into the file.
+        avgCAD = lp.totalCadence / ts._totalSeconds;
+    }
 
     sprintf(time, "%d-%02d-%02dT%02d:%02d:%02d", lp.startTime.year(), lp.startTime.month(), lp.startTime.day(), lp.startTime.hour(), lp.startTime.minute(), lp.startTime.second());
     file->print("      <Lap StartTime=\"");file->print(time);file->println("\">");
@@ -158,6 +167,7 @@ void TCXLogger::newLap(const timeData& currentTime) {
     totalPoints = 0;
     resetTotals();
     laps.push_back({currentTime, 1, 1, 0, 0, 0, 0});
+    laps.back().activeAtStart = activeAt(currentTime);
     file.close();
 
     memset(lap_name,0,32);

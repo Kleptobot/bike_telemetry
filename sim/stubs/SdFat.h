@@ -93,6 +93,10 @@ public:
 
     uint32_t sectorCount() const { return SECTORS; }
 
+    // Last card-level error code, mirroring the real SdFat API so firmware
+    // diagnostics compile unchanged on the host (always 0 in the sim).
+    uint8_t errorCode() const { return 0; }
+
     bool readSectors(uint32_t sector, uint8_t* dst, size_t ns) {
         if ((size_t)sector + ns > SECTORS) return false;
         FILE* fp = fopen(simSdRoot(), "rb");
@@ -127,6 +131,9 @@ public:
     // first MB of every mounted volume is the mount point. Shared so firmware
     // file I/O and USB-MSC block I/O target the same bytes.
     SdCard* card() { return SdCard::instance(); }
+
+    // Last SdFat-level error code (real API parity; always 0 in the sim).
+    uint8_t sdErrorCode() { return 0; }
 
 private:
     bool _mounted = false;

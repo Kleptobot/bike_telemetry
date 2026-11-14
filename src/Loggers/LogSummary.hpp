@@ -45,6 +45,12 @@ public:
 class CsvLogParser : public LogParser {
 public:
     CsvLogParser();
+    // SdFat's File32 destructor does NOT close the file (DESTRUCTOR_CLOSES_FILE
+    // defaults to 0), so each parser must close its own handle. Without this,
+    // LogSummaryScreen's "_parser.reset() closes the file" comment was only
+    // true on the host stub (whose ~File32 closes) -- on the device the File32
+    // was destroyed while still open.
+    ~CsvLogParser() override { close(); }
     void reset();
     // Opens and positions at the header. Returns false if open failed.
     bool open(IStorage* storage, const char* path);
@@ -97,6 +103,9 @@ private:
 class FitLogParser : public LogParser {
 public:
     FitLogParser();
+    // See CsvLogParser's destructor: close-on-destroy is mandatory on the
+    // device where File32's own destructor is a no-op.
+    ~FitLogParser() override { close(); }
     void reset();
     // Opens and skips the 14-byte FIT header (+ optional 2-byte header CRC).
     // Returns false if open failed or the magic ".FIT" tag is missing, so a
@@ -156,6 +165,9 @@ private:
 class TcxLogParser : public LogParser {
 public:
     TcxLogParser();
+    // See CsvLogParser's destructor: close-on-destroy is mandatory on the
+    // device where File32's own destructor is a no-op.
+    ~TcxLogParser() override { close(); }
     void reset();
     bool open(IStorage* storage, const char* path);
     void close();
@@ -175,6 +187,12 @@ private:
     uint16_t _hrN = 0;
     uint16_t _cadN = 0;
     RideStats _stats;
+
+    // True between <Track> and </Track>: in that section <DistanceMeters>,
+    // <Calories> and <Cadence> belong to individual trackpoints (cumulative
+    // trip distance, per-sample calories, instantaneous cadence), not to the
+    // lap-level aggregates the summary reports. See processLine().
+    bool _inTrack = false;
 
     enum class HrExpect { None, Avg, Max };
     HrExpect _hrExpect = HrExpect::None;

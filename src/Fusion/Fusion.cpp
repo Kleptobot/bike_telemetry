@@ -62,9 +62,18 @@ void FusionEngine::update(const MeasurementFrame& f, uint16_t wheelCircumference
     // so the first real fix would take the bias-trim branch instead of the
     // bootstrap branch -- altitude would sit near zero for thousands of
     // seconds while k_gps trimmed the bias.
+    //
+    // The fix-quality verdict (shared HDOP gate with Stage 4) is passed down
+    // rather than checked here: AltitudeFusion honours it only in the
+    // bias-trim branch. Bootstrap and the pre-calibration re-anchor still
+    // accept any valid fix -- and while P0 is uncalibrated the re-anchor
+    // re-adopting every commit is what stops est_alt becoming pure IMU
+    // dead-reckoning (bench drift with a marginal fix).
     if (f.gpsAltM.valid &&
         (firstTick || f.gpsAltM.seq != _prev.gpsAltM.seq)) {
-        _alt.altitudeGPSCorrect((float)f.gpsAltM.value);
+        const bool fixQualityOk = f.gpsHdop.valid &&
+                                  f.gpsHdop.value < GPS_TRUSTED_HDOP;
+        _alt.altitudeGPSCorrect((float)f.gpsAltM.value, fixQualityOk);
     }
 
     // --- Stage 4: baro calibration from GPS (was HAL's 1 Hz HDOP block) -------
@@ -77,7 +86,7 @@ void FusionEngine::update(const MeasurementFrame& f, uint16_t wheelCircumference
     // first seconds after boot.
     if (firstTick || f.gpsAltM.seq != _prev.gpsAltM.seq) {
         if (f.baroPressurePa.valid && f.gpsAltM.valid &&
-            f.gpsHdop.valid && f.gpsHdop.value < 2.0) {
+            f.gpsHdop.valid && f.gpsHdop.value < GPS_TRUSTED_HDOP) {
             _alt.baroCalibrateFromGPS((float)f.gpsAltM.value,
                                       f.baroPressurePa.value,
                                       f.baroTempC.value);

@@ -38,10 +38,11 @@ public:
         backWidget.setOnPress([this]() {
             emitUIEvent(UIEventType::ChangeScreen, ScreenID::LogList);
         });
+        // Body lives in deleteCurrentLog() (LogSummaryScreen.cpp): it is too
+        // security/correctness-sensitive (close-then-remove, post-remove
+        // verification) to hide inside a constructor lambda.
         deleteWidget.setOnPress([this]() {
-            if (HAL::inst().SD()->remove(_file.c_str())) {
-                emitUIEvent(UIEventType::ChangeScreen, ScreenID::LogList);
-            }
+            deleteCurrentLog();
         });
     }
 
@@ -55,6 +56,12 @@ public:
     void handleInput(const physIO input) override;
 
 private:
+    // Declared BEFORE every widget: the constructor's initializer list passes
+    // _file to titleWidget, and reading a member that has not been constructed
+    // yet is undefined behaviour (it only worked because the fresh heap chunk
+    // was usually zeroed -- an empty String copy).
+    String _file;
+
     SelectableTextWidget titleWidget;
     SelectableTextWidget subtitleWidget;
 
@@ -79,9 +86,22 @@ private:
     std::unique_ptr<LogParser> _parser;
     bool _parsing = false;
     bool _ok      = false;
-    String _file;
+    bool _delFailed = false;   // last Del press failed; shown until next action
 
-    String fmtRow(const String& label, const String& value);
+    // ---- subtitle / stat-row refresh bookkeeping (see update()) ----
+    int      _subtitleCode = -1;  // last state rendered into subtitleWidget
+    uint32_t _lastRowsMs = 0;     // last time the stat rows were rebuilt
+    String   _padded[13];         // padded row labels, built once per onEnter
+
+    // Rebuild the parser after open() or a failed delete (allocation-guarded).
+    bool openParser();
+    // Del-button action: close-then-remove, verify against a fresh mount.
+    void deleteCurrentLog();
+    // Push RideStats into the row widgets (throttled by _lastRowsMs).
+    void refreshRows();
+    // One-time label padding for the value column (was fmtRow's inner loop).
+    String padLabel(const char* label);
+    String rowText(int row, const String& value);
     static String fmtDuration(uint32_t sec);
     static String fmtDistance(float m);
     static String fmt1(float v);

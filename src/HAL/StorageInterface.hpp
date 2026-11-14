@@ -18,6 +18,10 @@ public:
     // how many were written. Returns false if the directory could not be
     // opened. Entries are returned in filesystem order (unsorted).
     virtual bool listFiles(const char* dir, StorageEntry* out, uint8_t max, uint8_t& count) = 0;
+    // Discard cached filesystem state and re-read the card. Default is a no-op
+    // so lightweight implementations don't have to care; SDCardSystem does the
+    // real end()+begin().
+    virtual bool remount() { return false; }
     virtual ~IStorage() = default;
 };
 

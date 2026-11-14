@@ -171,7 +171,11 @@ public:
             case AppState::LOGGING:
             case AppState::PAUSED:
                 if (input.Select.held) {
-                    emitAppEvent({AppEventType::Sleep,0});
+                    // Stop logging before sleeping so the open log file is
+                    // properly finalized (closed/synced) instead of being left
+                    // open on the SD card -- which produces a malformed log.
+                    emitAppEvent({AppEventType::StopLogging, 0});
+                    emitAppEvent({AppEventType::Sleep, 0});
                 } else if (input.Select.press) {
                     // pause while logging, resume while paused
                     if (model.app() == AppState::LOGGING) {

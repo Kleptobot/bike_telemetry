@@ -37,41 +37,53 @@ void FITLogger::writeDefinitionsOnce() {
             {3,   1, FitBaseType::UINT8},  // heart_rate (bpm, 0xFF = invalid)
             {4,   1, FitBaseType::UINT8},  // cadence (rpm, 0xFF = invalid)
             {7,   2, FitBaseType::UINT16}, // power (watts, 0xFFFF = invalid)
-            {15,  2, FitBaseType::UINT16}, // calories, scale 10 (kcal x 10)
+            {33,  2, FitBaseType::UINT16}, // calories (kcal) -- NOT 15, which is
+                                           // not a RECORD field at all
         };
         _writer.writeDefinition(LOCAL_RECORD, FitMesg::RECORD, f, 10);
     }
 
         // LAP: timestamp(u32), start_time(u32), total_elapsed_time(u32, scale 1000),
-    //      total_distance(u32, scale 100), max_speed(u16, scale 1000),
-    //      avg_heart_rate(u8), max_heart_rate(u8), avg_cadence(u8),
-    //      total_calories(u32, scale 10 = kcal x 10)
+    //      total_timer_time(u32, scale 1000), total_distance(u32, scale 100),
+    //      total_calories(u16, kcal), avg_speed(u16, scale 1000),
+    //      max_speed(u16, scale 1000), avg_heart_rate(u8), max_heart_rate(u8),
+    //      avg_cadence(u8)
+    //
+    // Field numbers verified against the FIT profile (see sim/tools/fit_profile.py).
+    // Three of them used to be wrong, which is silent: the file still parsed, the
+    // values just landed in the wrong column. 13 is avg_speed (not max_speed),
+    // 32 is num_lengths -- a SWIM field -- where total_calories was intended, and
+    // 14/max_speed plus 8/total_timer_time were missing entirely.
     {
         FitFieldDef f[] = {
             {253, 4, FitBaseType::UINT32}, // timestamp (= end of lap)
             {2,   4, FitBaseType::UINT32}, // start_time
             {7,   4, FitBaseType::UINT32}, // total_elapsed_time, scale 1000 (s)
+            {8,   4, FitBaseType::UINT32}, // total_timer_time, scale 1000 (s)
             {9,   4, FitBaseType::UINT32}, // total_distance, scale 100 (m)
-            {13,  2, FitBaseType::UINT16}, // max_speed, scale 1000 (m/s)
+            {11,  2, FitBaseType::UINT16}, // total_calories (kcal)
+            {13,  2, FitBaseType::UINT16}, // avg_speed, scale 1000 (m/s)
+            {14,  2, FitBaseType::UINT16}, // max_speed, scale 1000 (m/s)
             {15,  1, FitBaseType::UINT8},  // avg_heart_rate (bpm)
             {16,  1, FitBaseType::UINT8},  // max_heart_rate (bpm)
             {17,  1, FitBaseType::UINT8},  // avg_cadence (rpm)
-            {32,  4, FitBaseType::UINT32}, // total_calories, scale 10 (kcal x 10)
         };
-        _writer.writeDefinition(LOCAL_LAP, FitMesg::LAP, f, 9);
+        _writer.writeDefinition(LOCAL_LAP, FitMesg::LAP, f, 11);
     }
 
     // SESSION: timestamp(u32), start_time(u32), total_elapsed_time(u32,scale1000),
-    //          total_distance(u32,scale100), sport(u8,enum)
+    //          total_timer_time(u32,scale1000), total_distance(u32,scale100),
+    //          sport(u8,enum)
     {
         FitFieldDef f[] = {
             {253, 4, FitBaseType::UINT32},
             {2,   4, FitBaseType::UINT32},
             {7,   4, FitBaseType::UINT32},
+            {8,   4, FitBaseType::UINT32}, // total_timer_time
             {9,   4, FitBaseType::UINT32},
             {5,   1, FitBaseType::ENUM},   // sport: 2 = cycling
         };
-        _writer.writeDefinition(LOCAL_SESSION, FitMesg::SESSION, f, 5);
+        _writer.writeDefinition(LOCAL_SESSION, FitMesg::SESSION, f, 6);
     }
 
     // ACTIVITY: timestamp(u32), total_timer_time(u32,scale1000),
@@ -92,9 +104,7 @@ void FITLogger::writeDefinitionsOnce() {
 }
 
 void FITLogger::startLogging(const timeData& currentTime) {
-    _startTime = currentTime;
-    _pauseAnchor = currentTime;
-    _currentTime = currentTime;
+    initTimer(currentTime);
         _lastDistanceM = 0;
     _lapStartDistanceM = 0;
     _lastCalories = 0;
@@ -112,6 +122,10 @@ void FITLogger::startLogging(const timeData& currentTime) {
         Serial.print("[FITLogger] failed to open "); Serial.println(path);
         return;
     }
+    // Breadcrumb: see TCXLogger::startLogging -- every created log name is
+    // logged so a "deleted file reappeared" report can be checked against the
+    // names actually written this session.
+    Serial.print("[FITLogger] logging to "); Serial.println(path);
 
     writeDefinitionsOnce();
 
@@ -145,8 +159,10 @@ void FITLogger::addTrackpoint(const Trackpoint& tp, const timeData& currentTime)
     _writer.writeU8(tp.heartrate > 0 ? static_cast<uint8_t>(tp.heartrate) : 0xFF);
     _writer.writeU8(tp.cadence > 0 ? static_cast<uint8_t>(tp.cadence) : 0xFF);
         _writer.writeU16(tp.power > 0 ? static_cast<uint16_t>(tp.power) : 0xFFFF);
-    // calories field 15: scale 10 (kcal x 10), per FIT profile
-        _writer.writeU16(static_cast<uint16_t>(tp.calories * 10.0));
+    // calories is RECORD field 33 (kcal, scale 1). It used to be written as
+    // field 15, which is not a RECORD field in the profile at all, so every
+    // reader saw it as an unknown column.
+        _writer.writeU16(static_cast<uint16_t>(tp.calories));
     _lastCalories = tp.calories;
 
     _lastDistanceM = tp.distance;
@@ -179,11 +195,18 @@ void FITLogger::newLap(const timeData& currentTime) {
         // Trackpoint field.
         closingLap.totalCalories = static_cast<float>(_lastCalories - _lapStartCalories);
         if (closingLap.totalCalories < 0) closingLap.totalCalories = 0;
-        writeLapMessage(closingLap, toFitTimestamp(closingLap.startTime.unixtime()), endFit);
+        // activeLap() still refers to this closing lap: laps.back() has not
+        // been replaced yet. Using the banked timer time (instead of the
+        // difference of two anchors) keeps the lap duration right even when
+        // the ride was paused right up to the lap boundary.
+        writeLapMessage(closingLap,
+                        static_cast<uint32_t>(activeLap().totalSeconds()),
+                        toFitTimestamp(closingLap.startTime.unixtime()), endFit);
     }
 
     Lap lap{};
     lap.startTime = currentTime;
+    lap.activeAtStart = activeAt(currentTime);
     lap.maxHRM = 0;
     lap.totalHRM = 0;
     lap.totalCadence = 0;
@@ -195,39 +218,67 @@ void FITLogger::newLap(const timeData& currentTime) {
 
     _lapStartDistanceM = _lastDistanceM;
     _lapStartCalories = _lastCalories;
+
+    // Save the _activeAccum value at lap start so writeLapMessage() can
+    // compute total_timer_time excluding paused time
+    laps.back().activeAccumAtStart = _activeAccum;
 }
 
-void FITLogger::writeLapMessage(const Lap& lap, uint32_t startTimeFit, uint32_t endTimeFit) {
-    uint32_t elapsedSeconds = endTimeFit - startTimeFit;
+void FITLogger::writeLapMessage(const Lap& lap, uint32_t elapsedSeconds,
+                                uint32_t startTimeFit, uint32_t endTimeFit) {
     uint8_t avgHr = lap.parts > 0 ? static_cast<uint8_t>(lap.totalHRM / lap.parts) : 0xFF;
     uint8_t avgCadence = lap.parts > 0 ? static_cast<uint8_t>(lap.totalCadence / lap.parts) : 0xFF;
     uint8_t maxHr = lap.maxHRM > 0 ? static_cast<uint8_t>(lap.maxHRM) : 0xFF;
 
+    // avg_speed is a real profile field (13) -- it was previously written as if
+    // it were max_speed. Derive it from this lap's distance and timer time.
+    const float lapMs = kmhToMs(lap.maxSpeed);              // km/h -> m/s
+    float avgMs = 0.0f;
+    if (elapsedSeconds > 0) avgMs = lap.totalDistance / static_cast<float>(elapsedSeconds);
+
     _writer.beginDataMessage(LOCAL_LAP);
     _writer.writeU32(endTimeFit);
     _writer.writeU32(startTimeFit);
-    _writer.writeU32(elapsedSeconds * 1000); // scale 1000
+    // total_elapsed_time includes pauses; total_timer_time excludes pauses.
+    // Compute paused time during this lap by comparing _activeAccum at lap start
+    // (saved in lap.activeAccumAtStart by newLap()) with the current value.
+    uint32_t lapPausedSeconds = 0;
+    if (elapsedSeconds > 0) {
+        timeDuration pausedDiff = _activeAccum - lap.activeAccumAtStart;
+        lapPausedSeconds = static_cast<uint32_t>(pausedDiff.totalSeconds());
+        if (lapPausedSeconds > elapsedSeconds) {
+            lapPausedSeconds = elapsedSeconds;  // clamp if needed
+        }
+    }
+    _writer.writeU32(elapsedSeconds * 1000);        // total_elapsed_time, scale 1000 (includes pauses)
+    _writer.writeU32((elapsedSeconds - lapPausedSeconds) * 1000);  // total_timer_time, scale 1000 (excludes pauses)
     _writer.writeU32(static_cast<uint32_t>(lap.totalDistance * 100)); // scale 100
-    _writer.writeU16(static_cast<uint16_t>(kmhToMs(lap.maxSpeed) * 1000));   // m/s, scale 1000
+    _writer.writeU16(static_cast<uint16_t>(lap.totalCalories));       // kcal, scale 1
+    _writer.writeU16(static_cast<uint16_t>(avgMs * 1000.0f));         // avg_speed, scale 1000
+    _writer.writeU16(static_cast<uint16_t>(lapMs * 1000.0f));         // max_speed, scale 1000
     _writer.writeU8(avgHr);
     _writer.writeU8(maxHr);
         _writer.writeU8(avgCadence);
-    _writer.writeU32(static_cast<uint32_t>(lap.totalCalories * 10)); // scale 10
 }
 
 void FITLogger::writeSessionMessage(uint32_t endTimeFit) {
-    uint32_t elapsedSeconds = endTimeFit - toFitTimestamp(_startTime.unixtime());
+    // Timer time from the logger's own accumulator, NOT from the difference of
+    // the time anchors: a pause at the end of the ride (auto-pause on a stop)
+    // used to make that difference zero, which is how a 10 s ride was written
+    // with total_elapsed_time = 0.
+    uint32_t elapsedSeconds = static_cast<uint32_t>(activeTotal().totalSeconds());
 
     _writer.beginDataMessage(LOCAL_SESSION);
     _writer.writeU32(endTimeFit);
     _writer.writeU32(toFitTimestamp(_startTime.unixtime()));
     _writer.writeU32(elapsedSeconds * 1000);
+    _writer.writeU32(elapsedSeconds * 1000); // total_timer_time
     _writer.writeU32(static_cast<uint32_t>(_lastDistanceM * 100)); // total = final cumulative value
     _writer.writeU8(2); // sport = cycling
 }
 
 void FITLogger::writeActivityMessage(uint32_t endTimeFit) {
-    uint32_t totalSeconds = endTimeFit - toFitTimestamp(_startTime.unixtime());
+    uint32_t totalSeconds = static_cast<uint32_t>(activeTotal().totalSeconds());
 
     _writer.beginDataMessage(LOCAL_ACTIVITY);
     _writer.writeU32(endTimeFit);
@@ -248,7 +299,9 @@ bool FITLogger::finaliseLogging() {
         closingLap.totalDistance = static_cast<float>(_lastDistanceM - _lapStartDistanceM);
         closingLap.totalCalories = static_cast<float>(_lastCalories - _lapStartCalories);
         if (closingLap.totalCalories < 0) closingLap.totalCalories = 0;
-        writeLapMessage(closingLap, toFitTimestamp(closingLap.startTime.unixtime()), endFit);
+        writeLapMessage(closingLap,
+                        static_cast<uint32_t>(activeLap().totalSeconds()),
+                        toFitTimestamp(closingLap.startTime.unixtime()), endFit);
     }
     writeSessionMessage(endFit);
     writeActivityMessage(endFit);

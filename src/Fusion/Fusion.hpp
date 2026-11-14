@@ -196,6 +196,11 @@ private:
     // consecutive worse samples (hysteresis); promotion is immediate.
     static constexpr float   GPS_POOR_HDOP   = 2.5f;
     static constexpr float   GPS_FAIR_HDOP   = 1.5f;
+    // HDOP gate for trusting a GPS *altitude* commit at all: the bias-trim
+    // branch (Stage 3) and the P0 calibrator (Stage 4) share it. Above this
+    // the altitude wanders metres per minute on a stationary receiver, which
+    // is worse than no correction at all.
+    static constexpr float   GPS_TRUSTED_HDOP = 2.0f;
     static constexpr uint8_t GPS_POOR_SATS   = 4;
     static constexpr uint8_t GPS_FAIR_SATS   = 6;
     static constexpr uint8_t GPS_DEGRADE_TICKS = 3;

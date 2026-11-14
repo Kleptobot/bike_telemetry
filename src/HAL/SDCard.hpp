@@ -23,14 +23,21 @@ public:
     bool isMounted() const { return mounted; }
 
     // Discard all cached filesystem state and re-read it from the card.
-    // Mandatory after the host has written to the card via USB MSC: SdFat
-    // trusts its caches, so stale cached FAT/directory sectors would be
-    // traversed against the card's real (new) contents and crash the MCU.
-    // All firmware file handles must be closed before calling this.
+    // Mandatory after the host has written to the card via USB MSC, and
+    // whenever the card's contents may have changed behind SdFat's back
+    // (e.g. the card was pulled and edited on a PC): SdFat trusts its caches,
+    // so stale cached FAT/directory sectors would be traversed against the
+    // card's real (new) contents -- deleted entries still showing in lists,
+    // or worse, a crash. All firmware file handles must be closed before
+    // calling this.
+    // If the card was pulled (mounted still true) this drops it; if it was
+    // never mounted or the mount failed, it retries the mount anyway, so a
+    // re-inserted card is picked up on the next call.
     bool remount() {
-        if (!mounted) return false;
-        sd.end();
-        mounted = false;
+        if (mounted) {
+            sd.end();
+            mounted = false;
+        }
         return init(_date);
     }
     bool isBusy() const { return busy; }

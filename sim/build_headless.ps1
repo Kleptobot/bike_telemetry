@@ -35,9 +35,11 @@ $fw = @(
     "$root\src\Fusion\FitnessFusion.cpp",
     "$root\src\Fusion\Fusion.cpp",
     "$root\src\Fusion\FtpEstimator.cpp",
+    "$root\src\HAL\FaultReport.cpp",
     "$root\src\HAL\InputSystem.cpp",
     "$root\src\HAL\Sensors.cpp",
     "$root\src\HAL\SDCard.cpp",
+    # resume, so omitting it here fails at link with undefined references.
     "$root\src\HAL\button.cpp",
     "$root\src\HAL\Bluetooth\BluetoothSystem.cpp",
     "$root\src\HAL\Bluetooth\BT_Device.cpp",

@@ -33,15 +33,44 @@ void AltitudeFusion::altitudeDPSUpdate(float dpsAlt) {
     acc_bias_z -= error * k_bias;
 }
 
-void AltitudeFusion::altitudeGPSCorrect(float gpsAlt) {
+void AltitudeFusion::altitudeGPSCorrect(float gpsAlt, bool fixQualityOk) {
     if (!altitudeValidLast) {
+        // First fix ever: adopt it outright. Bootstrap (rather than trim) so
+        // the first real fix cannot be mistaken for a bias to chase -- see the
+        // FusionEngine Stage 3 comment for what happens the other way.
         est_alt = gpsAlt;
+        est_vel_z = 0.0f;     // start the vertical channel from rest, too
         baro_bias_z = 0.0f;
         altitudeValidLast = true;
-    } else {
-        float gps_error = gpsAlt - est_alt;
-        baro_bias_z -= gps_error * k_gps;
+        return;
     }
+
+    if (!P0_calibrated) {
+        // Until P0 is calibrated the barometer never feeds the filter at all
+        // (FusionEngine gates altitudeDPSUpdate on seaLevelPressureCalibrated),
+        // so between the first fix and calibration the output would be pure IMU
+        // dead-reckoning: any accelerometer zero-g offset integrates into an
+        // unbounded -- typically slow, downward -- altitude drift. That is
+        // exactly the "altitude slowly falls while sitting on a bench" failure
+        // seen on devices whose bench fix is too poor (HDOP >= 2) to ever
+        // calibrate P0. Re-anchor every commit while uncalibrated: GPS is then
+        // the only absolute reference that exists, however rough, and est_alt
+        // can never wander away from it.
+        est_alt = gpsAlt;
+        est_vel_z = 0.0f;
+        return;
+    }
+
+    // Bias-trim branch. Gated on fix quality: a marginal indoor fix (HDOP 2-5)
+    // reports an altitude that wanders metres per minute, and at k_gps it took
+    // only ~50 s to drag the fused altitude along with it. Outlier-gated on
+    // top of that: one multipath jump must never be absorbed into baro_bias_z.
+    if (!fixQualityOk) return;
+
+    const float gps_error = gpsAlt - est_alt;
+    if (fabsf(gps_error) > GPS_ALT_OUTLIER_M) return;
+
+    baro_bias_z -= gps_error * k_gps;
 }
 
 float AltitudeFusion::computeAltitudeFromPressure(float pressurePa, float tempC) const {
@@ -67,30 +96,41 @@ bool AltitudeFusion::gpsHistoryIsStable() const {
     return (maxV - minV) <= GPS_STABILITY_THRESHOLD_M;
 }
 
-void AltitudeFusion::baroCalibrateFromGPS(float gpsAlt, float pressurePa, float tempC) {
-    // Always feed the rolling history so the stability check reflects live
-    // data, regardless of how often the caller happens to invoke this.
+void AltitudeFusion::pushGpsAltHistory(float gpsAlt) {
     for (uint8_t i = 0; i < 4; i++) gps_alt_history[i] = gps_alt_history[i + 1];
     gps_alt_history[4] = gpsAlt;
     if (gps_hist_count < 5) gps_hist_count++;
+}
 
+void AltitudeFusion::baroCalibrateFromGPS(float gpsAlt, float pressurePa, float tempC) {
     if (!P0_calibrated) {
         // Bootstrap from a single sample rather than waiting on 5 stable
         // history entries -- altitudeDPSUpdate() is gated off until this
-        // fires (see HAL.cpp), so getting *some* P0 quickly matters more
+        // fires (see Fusion.cpp), so getting *some* P0 quickly matters more
         // than getting a perfect one. A noisy first snap gets pulled toward
         // the true value by the slow-track branch below once the history
         // is stable.
         P0_local = computeSeaLevelPressure(pressurePa, tempC, gpsAlt);
         P0_calibrated = true;
         lastP0UpdateMs = millis();
+        pushGpsAltHistory(gpsAlt);   // seed the history with the anchor sample
         return;
     }
 
-    if (!gpsHistoryIsStable()) return;
     if (millis() - lastP0UpdateMs < P0_UPDATE_COOLDOWN_MS) return;
+    // Pace everything below by the cooldown, including the history push. The
+    // caller invokes this on every ~1 Hz GPS altitude commit, and the history
+    // used to be fed at that rate, so the 5-sample "stability" window spanned
+    // five seconds -- every slow drift passed that check, and P0_local chased
+    // GPS altitude downward on a bench (taking baro altitude and the fused
+    // output with it). Paced by the 30 s cooldown the same five samples span
+    // ~2.5 minutes, so the check finally means what its name claims: only a
+    // genuinely settled GPS altitude earns a slow P0 update.
+    lastP0UpdateMs = millis();
+
+    pushGpsAltHistory(gpsAlt);
+    if (!gpsHistoryIsStable()) return;
 
     float impliedP0 = computeSeaLevelPressure(pressurePa, tempC, gpsAlt);
     P0_local += (impliedP0 - P0_local) * P0_LOWPASS_ALPHA;
-    lastP0UpdateMs = millis();
 }

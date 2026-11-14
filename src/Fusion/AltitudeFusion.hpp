@@ -23,6 +23,14 @@ class AltitudeFusion {
     const float k_gps  = 0.02f;     // raised now that it only trims a slow bias term
     const float k_bias = 0.001f;
 
+    // Rejects a single GPS commit further than this from the current estimate
+    // in the bias-trim branch: an indoor-multipath jump must not be absorbed
+    // into baro_bias_z, from where it would drag the fused altitude for
+    // minutes. The bootstrap and the pre-calibration re-anchor are NOT
+    // outlier-gated -- without any absolute reference the filter output is
+    // worse than a rough one.
+    static constexpr float GPS_ALT_OUTLIER_M = 10.0f;
+
     // -- P0 calibration state --
     float P0_local = STANDARD_SEA_LEVEL_PA;
     bool P0_calibrated = false;   // NEW: tracks whether we've ever locked P0
@@ -36,12 +44,18 @@ class AltitudeFusion {
 
     float computeSeaLevelPressure(float pressurePa, float tempC, float knownAltM) const;
     bool gpsHistoryIsStable() const;
+    // One entry into the rolling stability history (shift-left register).
+    void pushGpsAltHistory(float gpsAlt);
 
     public:
 
     void altitudeIMUUpdate(float accZ, float dtSeconds);
     void altitudeDPSUpdate(float dpsAlt);
-    void altitudeGPSCorrect(float gpsAlt);
+    // GPS altitude commit. fixQualityOk is the caller's fix-quality verdict
+    // (the HDOP gate in FusionEngine); it is honoured ONLY by the bias-trim
+    // branch -- the first-fix bootstrap and the pre-calibration re-anchor
+    // accept whatever fix exists.
+    void altitudeGPSCorrect(float gpsAlt, bool fixQualityOk);
 
     // Call alongside altitudeGPSCorrect() with the raw pressure/temp
     // used to compute dpsAlt, so P0_local can be recalibrated.

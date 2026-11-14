@@ -78,10 +78,11 @@ FW_SRCS := \
   $(ROOT)/src/Fusion/FitnessFusion.cpp \
   $(ROOT)/src/Fusion/FtpEstimator.cpp \
   $(ROOT)/src/Fusion/Fusion.cpp \
+  $(ROOT)/src/HAL/FaultReport.cpp \
   $(ROOT)/src/HAL/InputSystem.cpp \
   $(ROOT)/src/HAL/Sensors.cpp \
   $(ROOT)/src/HAL/SDCard.cpp \
-  $(ROOT)/src/HAL/USBMSC.cpp \
+$(ROOT)/src/HAL/SpiBusLock.cpp \\
   $(ROOT)/src/HAL/button.cpp \
   $(ROOT)/src/HAL/Bluetooth/BluetoothSystem.cpp \
   $(ROOT)/src/HAL/Bluetooth/BT_Device.cpp \

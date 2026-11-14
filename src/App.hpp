@@ -11,7 +11,6 @@
 #include "AppEvents.hpp"
 #include "DataModel/DataModel.hpp"
 #include "HAL/BluetoothInterface.hpp"
-#include "HAL/USBMSC.hpp"
 #include "DataModel/Settings/BiometricsSettings.hpp"
 #include "DataModel/Settings/BikeSettings.hpp"
 #include "DataModel/Settings/LayoutSettings.hpp"
@@ -74,9 +73,6 @@ private:
     TCXLogger* tcxLogger = nullptr;
     FITLogger* fitLogger = nullptr;
     CSVLogger* csvLogger = nullptr;
-
-    // USB mass storage: exposes the SD card to a host PC while IDLE.
-    USBMSC _usbMsc;
 
     AppState state = AppState::BOOT, state_prev = AppState::BOOT;
     uint32_t _lastRenderMillis = 0;

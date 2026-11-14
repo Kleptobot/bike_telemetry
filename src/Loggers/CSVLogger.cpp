@@ -20,6 +20,9 @@ void CSVLogger::startLogging(const timeData& currentTime) {
         Serial.println(_filename);
         return;
     }
+    // Breadcrumb: see TCXLogger::startLogging.
+    Serial.print("[CSVLogger] logging to ");
+    Serial.println(_filename);
 
     writeHeader();
     file.flush();

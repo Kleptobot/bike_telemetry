@@ -42,20 +42,42 @@ struct Lap {
   float totalTss = 0.0f;             // cumulative TSS from FitnessFusion
   float lastNormalizedPower = 0.0f;   // last NP value seen (watts)
   float lastIntensityFactor = 0.0f;  // last IF value seen
+  // Timer time accumulated when this lap started, so a lap's own timer time is
+  // derived by subtraction and never depends on wall-clock anchors.
+  timeDuration activeAtStart = timeDuration(0);
+  // _activeAccum value at lap start, used to compute total_timer_time excluding pauses
+  timeDuration activeAccumAtStart = timeDuration(0);
 };
 
 class ILogger {
 public:
-    // Timer-time support: pause() shifts every time anchor forward by the
-    // time actually spent logging since the last resume/start, so all
-    // wall-clock subtraction (elapsed_Total, elapsed_Lap, and every duration
-    // written to file) always yields timer time with pauses excluded.
+    // Timer-time support: paused intervals are ACCUMULATED here rather than
+    // folded into _startTime. The previous version did
+    //     d = currentTime - _pauseAnchor; _startTime = _startTime + d;
+    // which threw the completed segment away instead of banking it, so any
+    // pause that was the last thing to happen before finaliseLogging() left
+    // every duration derived from _startTime at zero. That is the normal case,
+    // not an edge case: auto-pause fires as soon as the bike stops, so stopping
+    // a stationary test ride produced a .fit with total_elapsed_time = 0.
     void pause(const timeData& currentTime) {
-        timeDuration d = currentTime - _pauseAnchor;
-        _startTime = _startTime + d;
-        for (auto& l : laps) l.startTime = l.startTime + d;
+        _activeAccum = _activeAccum + timeDuration(currentTime - _pauseAnchor);
+        _pauseAnchor = currentTime;
+        _currentTime = currentTime;   // freeze the ride clock at the pause
     }
     void resume(const timeData& currentTime) { _pauseAnchor = currentTime; }
+
+    // Timer time (pauses excluded) accumulated by the given instant. Valid
+    // whether or not logging is currently paused.
+    timeDuration activeAt(const timeData& t) const {
+        return _activeAccum + timeDuration(t - _pauseAnchor);
+    }
+    // Total timer time for the ride so far.
+    timeDuration activeTotal() const { return activeAt(_currentTime); }
+    // Timer time of the lap in progress.
+    timeDuration activeLap() const {
+        if (laps.empty()) return timeDuration(0);
+        return activeTotal() - laps.back().activeAtStart;
+    }
 
     virtual void startLogging(const timeData& currentTime) =0 ;
     virtual void addTrackpoint(const Trackpoint& tp, const timeData& currentTime) = 0;
@@ -82,7 +104,18 @@ protected:
     timeData _startTime;
     timeData _currentTime;
     timeData _pauseAnchor;  // wall time when logging last became active
+    // Timer time banked by completed (paused) segments. _startTime is the REAL
+    // ride start and is never shifted, so file timestamps stay truthful.
+    timeDuration _activeAccum = timeDuration(0);
     std::vector<Lap> laps; // kept public to match original's `laps.back()` usage
+
+    // Resets every timer anchor at the start of a ride. Loggers call this from
+    // startLogging() instead of assigning the anchors themselves, so a new ride
+    // can never inherit the previous ride's banked active time.
+    void initTimer(const timeData& startTime) {
+        _startTime = _currentTime = _pauseAnchor = startTime;
+        _activeAccum = timeDuration(0);
+    }
 };
 
 #endif /* LOGGERINTERFACE_H */
