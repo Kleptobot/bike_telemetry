@@ -48,6 +48,7 @@ struct FitnessOutput {
     uint8_t hrZone          = 0;   // 0 = no HR / below zone 1; else 1..5
     uint8_t powerZone       = 0;   // 0 = no power / FTP unset; else 1..5
     float   normalizedPowerW = 0.0f;   // 30 s rolling NP
+    float   avg3sPowerW      = 0.0f;  // 3 s rolling display power (meter or estimate)
     float   intensityFactor  = 0.0f;   // NP / FTP
     float   tss              = 0.0f;   // accumulated training stress score
     // Seconds accumulated in each HR zone: index 0..4 == zone1..zone5.
@@ -79,6 +80,8 @@ private:
     static constexpr float KJ_TO_KCAL    = 4.184f;
     // Normalized Power window: 30 samples x 1 Hz (RTC-second gated).
     static constexpr uint8_t NP_WINDOW   = 30;
+    // 3 s display-power window: 3 samples x 1 Hz, same RTC-second gating.
+    static constexpr uint8_t P3_WINDOW   = 3;
 
     // --- NP rolling window state --------------------------------------------
     // Ring of power^4 samples so the running mean can be updated in O(1);
@@ -90,9 +93,18 @@ private:
     bool   _hasNpSec = false;
     time_t _lastNpSec = -1;    // last RTC second a sample was pushed
 
+    // --- 3 s display-power ring (plain average, same gating) ------------------
+    float   _p3Ring[P3_WINDOW] = { 0.0f };
+    uint8_t _p3Idx   = 0;
+    uint8_t _p3Count = 0;
+    float   _p3Sum   = 0.0f;
+
     // One power sample per RTC second (1 Hz), regardless of main-loop cadence.
-    void samplePower(float watts, time_t sec);
+    // npWatts feeds the NP window (power meter only); p3Watts feeds the 3 s
+    // display ring (best available source).
+    void samplePower(float npWatts, float p3Watts, time_t sec);
     void updateNp();
+    void updateP3();
     // The Key-et-al per-second calorie rate for a live HR sample; the exact
     // same constants TCXLogger uses, so live and logged calories agree.
     float hrCaloriePerSec(float bpm, const FitnessProfile& p) const;

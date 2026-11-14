@@ -91,6 +91,23 @@ private:
     uint32_t _lastActivityMs = 0;  // timestamp of the last button press/hold
     bool _idleActive = false;      // true while in IDLE, re-arms the countdown on entry
 
+    // Ride timers: elapsed since logging start, moving excludes pauses.
+    float _rideElapsedSec = 0.0f;
+    float _rideMovingSec  = 0.0f;
+
+    // Battery: debounced charging state + one-shot low-battery alarm.
+    bool _chargingRaw = false;        // latest (undebounced) charger flag
+    bool _chargingState = false;      // debounced published state
+    uint8_t _chargingDebounce = 0;    // consecutive samples disagreeing
+    bool _battLowLatched = false;     // low-battery beeped; until recharged
+
+    // SD-card-removed alarm: one beep per removal while logging.
+    bool _sdAlarmLatched = false;
+
+    // Auto-lap anchors (ride distance / moving time at the last lap).
+    float _lastLapDistanceM  = 0.0f;
+    float _lastLapMovingSec  = 0.0f;
+
     DataModel model;
     UIManager ui;
     FusionEngine _fusion;
@@ -130,6 +147,13 @@ private:
     static constexpr uint8_t IDLE_SLEEP_DEFAULT_MIN = 5;
     void updateAutoPause(uint32_t now);
     void updateIdleSleep(const physIO& io, uint32_t now);
+
+    // Ride timing / alarms / auto-lap (see App.cpp for details).
+    void updateRideTimers(float dt);
+    void updateBatteryAlarm();
+    void updateSdAlarm();
+    void updateAutoLap();
+    static uint8_t vbatToPct(float volts);
 
     void saveLayout();
     void loadLayout();

@@ -54,18 +54,23 @@ float FitnessFusion::hrCaloriePerSec(float bpm, const FitnessProfile& p) const {
 // NP rolling window -----------------------------------------------------------
 // ---------------------------------------------------------------------------
 
-void FitnessFusion::samplePower(float watts, time_t sec) {
+void FitnessFusion::samplePower(float npWatts, float p3Watts, time_t sec) {
     // Gate to one sample per RTC second so the 30-slot ring really is 30 s
     // no matter how fast the main loop spins or how busy the I2C bus got.
     if (_hasNpSec && sec == _lastNpSec) return;
     _lastNpSec = sec;
     _hasNpSec  = true;
 
-    const float p4 = watts * watts * watts * watts;
+    const float p4 = npWatts * npWatts * npWatts * npWatts;
     _npSum4 += p4 - _npRing[_npIdx];   // slot starts 0 warm-up => subtracts nothing
     _npRing[_npIdx] = p4;
     _npIdx = (_npIdx + 1) % NP_WINDOW;
     if (_npCount < NP_WINDOW) _npCount++;
+
+    _p3Sum += p3Watts - _p3Ring[_p3Idx];
+    _p3Ring[_p3Idx] = p3Watts;
+    _p3Idx = (_p3Idx + 1) % P3_WINDOW;
+    if (_p3Count < P3_WINDOW) _p3Count++;
 }
 
 void FitnessFusion::updateNp() {
@@ -75,6 +80,10 @@ void FitnessFusion::updateNp() {
     }
     // NP = (mean(p^4))^(1/4), the standard weighted (rolling-30) plateau.
     _out.normalizedPowerW = powf(_npSum4 / (float)_npCount, 0.25f);
+}
+
+void FitnessFusion::updateP3() {
+    _out.avg3sPowerW = (_p3Count == 0) ? 0.0f : _p3Sum / (float)_p3Count;
 }
 
 // ---------------------------------------------------------------------------
@@ -111,8 +120,11 @@ void FitnessFusion::update(const MeasurementFrame& f, const FitnessProfile& prof
     }
 
     // --- Normalized Power + power zone (power meter only) --------------------
-    samplePower(powerWatts, f.rtcNow.value);
+    // The 3 s display ring takes the best available source each second: the
+    // power meter when live, otherwise the physics estimate (0 when neither).
+    samplePower(powerWatts, powerWatts > 0.0f ? powerWatts : estPowerWatts, f.rtcNow.value);
     updateNp();
+    updateP3();
     _out.powerZone = powerZoneFor(powerWatts, profile);
 
     // --- Intensity Factor and TSS ---------------------------------------------
@@ -134,4 +146,8 @@ void FitnessFusion::reset() {
     for (uint8_t i = 0; i < NP_WINDOW; i++) _npRing[i] = 0.0f;
     _hasNpSec = false;
     _lastNpSec = -1;
+    _p3Count = 0;
+    _p3Idx   = 0;
+    _p3Sum   = 0.0f;
+    for (uint8_t i = 0; i < P3_WINDOW; i++) _p3Ring[i] = 0.0f;
 }

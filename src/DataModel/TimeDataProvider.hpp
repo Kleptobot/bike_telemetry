@@ -20,6 +20,20 @@ struct timeDuration {
     int  seconds() const { return (int)(_totalSeconds % 60L); }
  
     timeDuration operator-() const { return timeDuration(-_totalSeconds); }
+    timeDuration operator-(const timeDuration& rhs) const {
+        return timeDuration(_totalSeconds - rhs._totalSeconds);
+    }
+    timeDuration& operator-=(const timeDuration& rhs) {
+        _totalSeconds -= rhs._totalSeconds;
+        return *this;
+    }
+    timeDuration operator+(const timeDuration& rhs) const {
+        return timeDuration(_totalSeconds + rhs._totalSeconds);
+    }
+    timeDuration& operator+=(const timeDuration& rhs) {
+        _totalSeconds += rhs._totalSeconds;
+        return *this;
+    }
 };
 
 struct timeData {

@@ -30,6 +30,12 @@ enum class TelemetryType : uint8_t {
     NormalizedPower,// rolling 30 s power    W
     IntensityFactor,// NP / FTP              x
     Tss,            // training stress score
+    // New derived (timing / display power / analytics)
+    ElapsedTime,    // ride time incl. pauses mm:ss
+    MovingTime,     // ride time excl. pauses mm:ss
+    AvgPower,       // 3 s rolling power     W
+    Wkg,            // power / rider mass    W/kg
+    Vam,            // vertical ascent rate  m/h
     // Measured
     Power,          // power meter           W
     HeartRate,      // HRM                   bpm
@@ -80,6 +86,11 @@ static constexpr TelemetryTypeInfo kTypeTable[] = {
     { TelemetryType::NormalizedPower, "NP",         "W  "  },
     { TelemetryType::IntensityFactor, "IF",         "x  "  },
     { TelemetryType::Tss,           "TSS",          "pts"  },
+    { TelemetryType::ElapsedTime,   "Elapsed",      ""     },
+    { TelemetryType::MovingTime,    "Moving",       ""     },
+    { TelemetryType::AvgPower,      "AvgPwr",       "W  "  },
+    { TelemetryType::Wkg,           "W/kg",         "    "  },
+    { TelemetryType::Vam,           "VAM",          "m/h "  },
     { TelemetryType::Power,         "Power",        "W  "  },
     { TelemetryType::HeartRate,     "HeartRate",    "bpm"  },
     { TelemetryType::Temperature,   "Temperature",  "C  "  },  // deg sign cannot be rendered

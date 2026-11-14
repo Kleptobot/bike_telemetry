@@ -34,6 +34,17 @@ enum class Topic : uint8_t {
     TotalDescent,
     Coasting,
 
+    // New derived signals (batch: timing, display power, analytics)
+    ElapsedSec,      // float: seconds since logging started (incl. pauses)
+    MovingSec,       // float: seconds actively logging (pauses excluded)
+    Avg3sPower,      // float: 3 s rolling average power (meter or estimate)
+    WattsPerKg,      // float: current power / rider mass
+    Vam,             // float: vertical ascent rate, m/h
+    BatteryCharging, // bool: charger reports charging (debounced)
+    GpsQuality,      // uint8_t: 0 = Good, 1 = Fair, 2 = Poor
+    ShiftCount,      // uint32_t: detected gear shifts this ride
+    GearShifted,     // bool: shift event on this tick
+
     // Fitness (from FitnessFusion; ride-scoped, reset with distance)
     Calories,        // float: kcal accumulated this ride
     NormalizedPower, // float: 30 s rolling NP (power meter), watts

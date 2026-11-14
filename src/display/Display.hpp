@@ -50,7 +50,7 @@ namespace Disp {
 
     void printFloat(float data, int precision);
     void printDouble(double value, int precision);
-    void getTextBounds(const String text, int16_t x, int16_t y, int16_t* x1, int16_t* y1, uint16_t* w, uint16_t* h);
+    void getTextBounds(const String& text, int16_t x, int16_t y, int16_t* x1, int16_t* y1, uint16_t* w, uint16_t* h);
 }
 
 #endif /* DISPLAY_H */

@@ -43,13 +43,13 @@ public:
     if (_device.saved) {
       Disp::drawBitmap(_x + 18, _y + 10, epd_bitmap_save, 16, 16, ST77XX_WHITE);
 
-      if (_device.connected)
-          Disp::drawBitmap(_x + 34, _y + 10, epd_bitmap_Bluetooth, 16, 16, ST77XX_WHITE);
-
-      Disp::drawBitmap(_x + 50, _y + 10, epd_bitmap_battery, 32, 16, ST77XX_WHITE);
-      Disp::setCursor(_x + 57, _y + 15);
+      if (_device.connected) {
+        Disp::drawBitmap(_x + 34, _y + 10, epd_bitmap_Bluetooth, 16, 16, ST77XX_WHITE);
+        Disp::drawBitmap(_x + 50, _y + 10, epd_bitmap_battery, 32, 16, ST77XX_WHITE);
+        Disp::setCursor(_x + 57, _y + 15);
+        Disp::print(_device.batt);
+      }
     }
-    Disp::print(_device.batt);
   }
 
   void render(int x, int y) override {
