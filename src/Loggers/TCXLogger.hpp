@@ -21,7 +21,11 @@ class TCXLogger : public ILogger {
     size_t bytesRead = 0;
     char lap_name[32];
 
-    std::vector<Lap> laps;
+    // NOTE: no laps vector here. This class used to declare its own, shadowing
+    // ILogger::laps -- so ILogger::pause() was shifting the BASE vector's lap
+    // start times while TCXLogger read its own, and the lap timer time came out
+    // wrong. The base vector is the single source of truth (and carries the
+    // per-lap timer baseline that activeLap() needs).
 
     char _filename[32];  // _startTime/_currentTime inherited from ILogger
 
@@ -39,12 +43,11 @@ class TCXLogger : public ILogger {
     void newLap(const timeData& currentTime);
     bool finaliseLogging();
 
-    const timeDuration elapsed_Total() const {return _currentTime-_startTime;};
+    const timeDuration elapsed_Total() const {return activeTotal();};
     // Guarded for the same reason as FITLogger: laps.back() on an empty
     // vector is undefined behaviour.
     const timeDuration elapsed_Lap() const {
-        if (laps.empty()) return timeDuration(0);
-        return _currentTime-laps.back().startTime;
+        return activeLap();
     };
 
 };

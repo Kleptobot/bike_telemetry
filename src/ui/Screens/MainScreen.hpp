@@ -115,8 +115,14 @@ public:
             }
         }
 
-        //display if gps has a valid location
-        gpsIcon.setVisible(bus.get<bool>(Topic::GpsValid));
+        // GPS status icon is always visible and colour-coded: white = good
+        // fix, orange = fair, red = poor quality or no fix at all.
+        const bool gpsValid = bus.get<bool>(Topic::GpsValid);
+        const uint8_t gpsQuality = bus.get<uint8_t>(Topic::GpsQuality);
+        gpsIcon.setVisible(true);
+        gpsIcon.setColor(!gpsValid || gpsQuality >= 2 ? ST77XX_RED
+                        : gpsQuality == 1            ? ST77XX_ORANGE
+                                                     : ST77XX_WHITE);
 
         //display the current time
         timeWidget.update(dt);

@@ -21,12 +21,14 @@ public:
         // Decimal/unit text is always drawn at decimalSizeFor(intSize), roughly 1/3 the integer size.
         int16_t bx, by;
         bestSize = 1;
+        // Time tiles render mm:ss, so measure with a 5-char sample, not "888".
+        const char* intSample = isTimeType() ? "88:88" : "888";
 
         for (uint8_t s = 1; s <= MAX_BIG_TEXT_SIZE; s++) {
             uint8_t decSize = decimalSizeFor(s);
 
             Disp::setTextSize(s);
-            Disp::getTextBounds("888", 0, 0, &bx, &by, &intW, &intH);
+            Disp::getTextBounds(intSample, 0, 0, &bx, &by, &intW, &intH);
 
             Disp::setTextSize(decSize);
             Disp::getTextBounds(".*", 0, 0, &bx, &by, &decW, &decH);
@@ -41,7 +43,7 @@ public:
         }
         
         Disp::setTextSize(bestSize);
-        Disp::getTextBounds("888", 0, 0, &bx, &by, &intW, &intH);
+        Disp::getTextBounds(intSample, 0, 0, &bx, &by, &intW, &intH);
         uint8_t decSize = decimalSizeFor(bestSize);
         Disp::setTextSize(decSize);
         Disp::getTextBounds(".*", 0, 0, &bx, &by, &decW, &decH);
@@ -335,6 +337,7 @@ private:
             case TelemetryType::Calories:
             case TelemetryType::NormalizedPower:
             case TelemetryType::Tss:
+            case TelemetryType::Vam:
                 return 0;
             default:
                 return 1;
@@ -345,6 +348,14 @@ private:
     // Shared by the subscription path (update(float)) and the polling path
     // (poll()), which used to duplicate this block.
     void formatValue() {
+        // Time types render as mm:ss (up to hours via minutes: 75:30).
+        if (_type == TelemetryType::ElapsedTime || _type == TelemetryType::MovingTime) {
+            uint32_t total = (uint32_t)max(0.0f, _value);
+            uint32_t mm = total / 60, ss = total % 60;
+            intStr = (mm < 10 ? "0" : "") + String(mm) + ":" + (ss < 10 ? "0" : "") + String(ss);
+            decStr = "";
+            return;
+        }
         int intPart = (int)_value;
         const uint8_t decimals = decimalsForType(_type);
         intStr = padIntPart(intPart);
@@ -357,6 +368,10 @@ private:
         int decPart = abs((int)((_value - intPart) * 10.0f * scale));
         decStr = "." + String(decPart);
     }
+    bool isTimeType() const {
+        return _type == TelemetryType::ElapsedTime || _type == TelemetryType::MovingTime;
+    }
+
     // Map TelemetryType to a DataBus Topic for SUBSCRIPTION (float-backed
     // storage only -- the callback casts the slot to float). Types with
     // non-float storage or special rendering return TopicCount and go
@@ -380,6 +395,9 @@ private:
             case TelemetryType::NormalizedPower: return Topic::NormalizedPower;
             case TelemetryType::IntensityFactor: return Topic::IntensityFactor;
             case TelemetryType::Tss:         return Topic::Tss;
+            case TelemetryType::AvgPower:    return Topic::Avg3sPower;
+            case TelemetryType::Wkg:         return Topic::WattsPerKg;
+            case TelemetryType::Vam:         return Topic::Vam;
             // Measured
             case TelemetryType::Cadence:     return Topic::Cadence;
             case TelemetryType::HeartRate:   return Topic::HeartRate;
