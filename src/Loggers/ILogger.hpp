@@ -35,7 +35,7 @@ struct Lap {
   float totalHRM;
   float totalCadence;
   float maxSpeed;
-        float totalDistance = 0;     // Cumulative distance in meters
+  float totalDistance = 0;     // Cumulative distance in meters
   uint16_t parts = 0;
   // Fitness accumulators (cumulative-from-last-trackpoint for the lap)
   float totalCalories = 0.0f;        // cumulative kcal from FitnessFusion

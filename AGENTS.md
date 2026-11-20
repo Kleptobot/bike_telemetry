@@ -20,7 +20,6 @@ Arduino framework) for a Seeed XIAO nRF52840 Sense, plus KiCad hardware and
 | Static analysis | `pio check` (cppcheck; flags in `platformio.ini`) |
 | Build/run simulator | `cd sim` then `.\run.bat` (Windows) or `./run.sh` (Git Bash/Linux/macOS) |
 | Headless sim run | `.\run.bat --headless --frames 30 --out out` then `python tools\ppm2png.py out --scale 2` |
-| Re-apply TinyUSB MSC patch | `python tools/patch_tinyusb_stack.py` |
 
 **Hard prerequisite for the simulator:** run `pio run` once in the repo root
 first. The sim compiles against the vendored library sources in
@@ -44,7 +43,7 @@ Full simulator reference (flags, keys, scenarios, injected BLE sensors):
 | `src/` | All firmware source. See §4. |
 | `sim/` | Desktop simulator: builds most of the real firmware for the host. See §5 and `sim/README.md`. |
 | `platformio.ini` | Firmware build config: board, C++17, build flags, library deps. |
-| `tools/patch_tinyusb_stack.py` | Idempotent patch to the vendored Adafruit TinyUSB nRF port (bigger USB-task stack + MSC buffer) so USB mass-storage over SD works. Re-apply after PlatformIO reinstalls the core package. |
+
 | `tiles/` | Map-tile pipeline. `tiles/convert_to_rgb565.py` (tracked) converts PNG tiles to raw RGB565; the tile images themselves are gitignored. |
 | `tiles_raw/` | Raw RGB565 slippy-map tiles (`z/x/y`, 256×256, 2 B/px) copied to the SD card as `/tiles/z/x/y.raw`. Gitignored. |
 | `kicad/` | Schematic + PCB. `kicad/obike_schem.pdf` is the readable schematic; `OBike-backups/` are auto-backups. |
@@ -68,7 +67,7 @@ main.cpp loop()
        ├─ updateTelemetry()      MeasurementFrame → FusionEngine → DataBus topics
        ├─ drain AppEvent queue   (start/stop logging, save settings, GPS cmds…)
        ├─ ui.update()/render()/handleInput()   (render throttled to ~10 Hz)
-       ├─ USB-MSC gate, auto-pause, idle-sleep, buzzer,
+       ├─ auto-pause, idle-sleep, buzzer,
        │  ride timers, battery/SD alarms, auto-lap
        └─ AppState switch: BOOT → IDLE ⇄ LOGGING ⇄ PAUSED (CONFIG exists too)
 ```
@@ -90,8 +89,9 @@ signal in the system — consult it before adding a new metric.
 
 **`src/DataModel/DataModel.hpp`** aggregates the persistent providers
 (`time()`, `bio()`, `bike()`, `layout()`, `logger()`, `SD()`, `bluetooth()`)
-plus `bus()` and `gpsTrack()`. Settings classes under `src/DataModel/Settings/`
-load/save JSON files on the SD card through `IStorage`.
+plus `bus()` and `gpsTrack()`. Settings JSON files (`layout.txt`, `bikeStats.txt`,
+`biometrics.txt`, `time.txt`) are loaded/saved by `App.cpp` through `IStorage` +
+ArduinoJson — see §6.
 
 **Events** (`src/AppEvents.hpp`, `src/UIEvents.hpp`, `src/UIEventBus.hpp`):
 screens never call App directly — they post `AppEvent`s (commands: SaveTime,
@@ -107,24 +107,24 @@ tick in `App::handleAppEvent()`.
 | Path | Role |
 |---|---|
 | `main.cpp` | Arduino `setup()`/`loop()`. Thin: init HAL, begin App, update both, deep-sleep when GPS-enable pin says so. Debug toggles at the top (`DebugConfig.hpp`). |
-| `App.cpp` / `App.hpp` | **The application.** Singleton (`App::instance()`). Screen registration (`App::begin`), state machine, event handling, auto-pause (3/5 km/h hysteresis), idle auto-sleep, ride timers, auto-lap, buzzer patterns, battery/SD alarms, USB-MSC gating, FTP estimator hookup. Start reading here after this file. |
+| `App.cpp` / `App.hpp` | **The application.** Singleton (`App::instance()`). Screen registration (`App::begin`), state machine, event handling, auto-pause (3/5 km/h hysteresis), idle auto-sleep, ride timers, auto-lap, buzzer patterns, battery/SD alarms, FTP estimator hookup. Start reading here after this file. |
 | `HAL/HAL.*` | Singleton (`HAL::inst()`). Owns all subsystems, builds the `MeasurementFrame` (`refreshFrame()` is inline in `HAL.hpp` so the sim shares it). |
 | `HAL/LC76G.*` | Quectel LC76G GNSS driver: NMEA handling, command/PAIR protocol, NMEA-rate config. Historically sensitive to malformed/long NMEA streams. |
 | `HAL/Sensors.*` | Onboard sensors (baro Dps3xx, IMU LSM6DS3, RTC, battery/charger). |
 | `HAL/InputSystem.*`, `HAL/button.*` | Physical buttons via MCP23017 expander: edge/hold/repeat logic, outputs (screen backlight, aux rail). |
 | `HAL/SDCard.*`, `HAL/StorageInterface.hpp` | SD mount/unmount + the **`IStorage`** interface the sim replaces. Settings/log file access flows through this. |
-| `HAL/USBMSC.*` | Exposes the SD card to a PC over USB mass storage while IDLE on the main menu. Requires the TinyUSB patch (§2). Must never run while firmware code touches the filesystem. |
+
 | `HAL/Bluetooth/` | BLE central: `BluetoothSystem` (scan/pair/mode), `BT_Device`, and measurement parsers `csc.*` (speed+cadence), `cps.*` (power), `hrm.*` (heart rate). `SpscRing.hpp` is the lock-free ring used at the BLE boundary. |
-| `HAL/I2CArbiter.hpp`, `HAL/SpiBusLock.hpp` | Bus-sharing policy between subsystems. |
+| `HAL/I2CArbiter.hpp` | I2C bus-sharing policy between subsystems. |
 | `HAL/Measurements.hpp` | `MeasurementFrame` contract — see §3. |
 | `Fusion/` | `Fusion.*` (engine: altitude fusion, speed-source selection, grade, distance), `AltitudeFusion.*` (baro+GPS bias filter), `FitnessFusion.*` (calories, zones, NP/TSS), `FtpEstimator.*` (best 20-min avg × 0.95). |
-| `Loggers/` | `ILogger.hpp` interface; `FITLogger`/`FITWriter` (binary FIT), `TCXLogger` (XML), `CSVLogger`. `LogSummary.*` = chunked parsers (`FitLogParser`, `TcxLogParser`, `CsvLogParser`) producing `RideStats` for the on-device ride-summary screens. The FIT parser's assumptions about the file's message set are documented in `LogSummary.hpp`. |
+| `Loggers/` | `ILogger.hpp` interface; `FITLogger`/`FITWriter` (binary FIT), `TCXLogger` (XML), `CSVLogger`. |
 | `DataModel/` | Providers + `DataBus` + `GpsTrack` (breadcrumb store for the map) — see §3. |
 | `Map/TileLoader.*` | Slippy-tile math + loading `/tiles/z/x/y.raw` RGB565 tiles from SD onto the canvas. |
 | `display/Display.*` | ST7789 wrapper: init, dirty-rect flush to hardware. |
 | `ui/UIManager.*` | Screen registry (`registerScreen<>()`, `showScreen()`), render/update/input dispatch, UI-event handling. |
-| `ui/Screens/` | One class per screen; IDs in `ScreenID.hpp` (MainMenu, SettingsMenu, Bluetooth, Biometrics, GPSSettings, TimeMenu, DisplayEdit, UnmountSD, BikeStats, LogList, LogSummary). Header-only screens exist (e.g. `MainScreen.hpp`, `BluetoothScreen.hpp`). |
-| `ui/Widgets/` | Reusable widgets: `BigDataWidget`/`SmallDataWidget` (tile metrics), `MapWidget`, `SelectableText*`, `ListView`, `TimeWidget`/`DateWidget`/`DurationWidget`, `BatteryWidget`, `BluttoothDeviceWidget` (sic), `InputHints`, etc. |
+| `ui/Screens/` | One class per screen; IDs in `ScreenID.hpp` (None, MainMenu, Bluetooth, SettingsMenu, Biometrics, GPSSettings, TimeMenu, DisplayEdit, UnmountSD, BikeStats). Header-only screens exist (e.g. `MainScreen.hpp`, `BluetoothScreen.hpp`). |
+| `ui/Widgets/` | Reusable widgets: `BigDataWidget`/`SmallDataWidget` (tile metrics), `MapWidget`, `SelectableText*`/`SelectableTextIcon`, `ListView`, `TimeWidget`/`DateWidget`/`DurationWidget`, `BatteryWidget`, `BluttoothDeviceWidget` (sic), `CursorWidget`, `DisplayEditWidget`, `GridOverlayWidget`, `IconWidget`, `InputHints`, `Widget.hpp`, etc. |
 | `ui/GFX.h` | Adafruit_GFX glue + shared canvas helpers. |
 | `art/` | Bitmap/PNG assets embedded in firmware. |
 | `MAC.hpp` | Misc small utilities. |
@@ -145,8 +145,8 @@ story. Orientation:
 | `host/main.cpp` | Host frontend: SDL window (optional) or headless frame dump; CLI flags (`--headless`, `--frames`, `--sensors`, `--stats`, `--screen`, `--sd`, `--last`, …). |
 | `host/SimHAL.*`, `host/SimLC76G.*` | Simulated sensors and NMEA generation (real NMEA sentences through the real TinyGPSPlus). |
 | `stubs/` | Arduino/hardware stubs (`Arduino.h`, `SdFat`, `bluefruit`, `Wire`/`SPI`, sensor stubs…). This is the substrate any new host-side test should reuse. |
-| `tests/` | Smoke tests: `FitParser_smoke`, `FitLoggerPause_smoke`, `FitDelRepro`, `FitnessFusion_smoke`, `FtpEstimator_smoke`, `USBMSC_smoke`. Build command is in each file's header comment; run from `sim/`. |
-| `tools/` | `ppm2png.py` (frame conversion, stdlib-only), `inspect_fit.py` / `fit_profile.py` (FIT file inspection/reference), `get-sdl2.bat`/`.sh` (optional SDL2 SDK for the interactive window). |
+| `tests/` | Smoke tests: `FitnessFusion_smoke`, `FtpEstimator_smoke`. Build command is in each file's header comment; run from `sim/`. |
+| `tools/` | `ppm2png.py` (frame conversion, stdlib-only), `get-sdl2.bat`/`.sh` (optional SDL2 SDK for the interactive window). |
 | `Makefile` | The sim build. **Must be kept in sync when adding a source file — see §7.** `run.bat`/`run.sh` wrap it; `build_headless.ps1` is a direct-g++ fallback for shells where the Makefile's Unix probing fails. |
 | `sample-sd/` | Seed config copied into gitignored `sdcard/` on first run: `layout.txt`, `bikeStats.txt` (wheel circumference — without it wheel speed is exactly 0), `biometrics.txt`, `time.txt`. `devices.txt` (paired-sensor fixture) is seeded at runtime. |
 | `sdcard/` | The live simulated SD card (gitignored). Settings edits made in the sim persist here; a simulated ride writes a genuine `.fit` file. |
@@ -155,21 +155,20 @@ story. Orientation:
 
 ## 6. SD-card file formats (settings)
 
-Settings are JSON-ish text files at the SD root, owned by
-`src/DataModel/Settings/*` classes (each subclasses `ISettings`, load/save via
-`IStorage` + `JsonFile.hpp`):
+Settings are JSON-ish text files at the SD root, loaded and saved directly by
+`App.cpp` through `IStorage` + ArduinoJson (there is no `Settings/` directory,
+no `ISettings`, and no `JsonFile.hpp`):
 
-| File | Owner class | Contents |
+| File | Loader / owner | Contents |
 |---|---|---|
-| `layout.txt` | `LayoutSettings` | Tile grid layout for the stats screen. |
-| `bikeStats.txt` | `BikeSettings` | Wheel circumference (mm), bike mass, logger format selection, idle-sleep minutes, etc. |
-| `biometrics.txt` | `BiometricsSettings` | Rider mass, birthday, HR zones, FTP, caloric profile. |
-| `time.txt` | `TimeSettings` | UTC offset and time prefs. |
-| `devices.txt` | `BluetoothSystem::loadDevices()` | Paired BLE sensors (not a Settings class). |
+| `layout.txt` | `App::loadLayout()`/`saveLayout()` (`LayoutDataProvider`) | Tile grid layout for the stats screen. |
+| `bikeStats.txt` | `App::loadBikeStats()`/`saveBikeStats()` (`BikeDataProvider`) | Wheel circumference (mm), bike mass, logger format selection, idle-sleep minutes, auto-pause, auto-lap. |
+| `biometrics.txt` | `App::loadBiometrics()`/`saveBiometrics()` (`BioDataProvider`) | Rider mass, birthday, HR zones, FTP, caloric profile. |
+| `time.txt` | `App::loadTime()`/`saveTime()` (`TimeDataProvider`) | UTC offset and time prefs. |
+| `devices.txt` | `BluetoothSystem::loadDevices()`/`saveDevices()` | Paired BLE sensors (not a Settings class). |
 
 Ride logs are written by the active logger (`FIT`/`TCX`/`CSV`, chosen in bike
-settings) under the SD root; `LogSummary`'s parsers read them back for the
-LogList/LogSummary screens.
+settings) under the SD root.
 
 
 ---
@@ -198,8 +197,6 @@ LogList/LogSummary screens.
 - **New acquired fact →** add a field to `MeasurementFrame`
   (`HAL/Measurements.hpp`) and fill it in `HAL::refreshFrame()` — never derive
   inside HAL, never bypass the frame with a bespoke getter.
-- **Touching USB MSC or SD access →** read the gating comment in
-  `App::update()` (`App.cpp`): MSC only runs while `IDLE` + MainMenu.
 - **`SERIAL_BUFFER_SIZE=256` in `platformio.ini` is load-bearing** — the nRF52
   Wire DMA path overflows the 64-byte default when the LC76G driver reads
   128-byte NMEA chunks. Don't lower it without re-reading that comment.
@@ -212,6 +209,6 @@ LogList/LogSummary screens.
 2. Build and run the sim:
    `cd sim && .\run.bat --headless --frames 300 --sensors --stats --out out`.
    Visual check via `tools\ppm2png.py`, numeric check via `--stats`.
-3. For logger/file-format work, prefer the relevant `sim/tests/*_smoke` binary,
-   and validate generated `.fit` files with `sim/tools/inspect_fit.py`.
+3. For smoke-test work, build the relevant `sim/tests/*_smoke.cpp` binary with
+   the `g++` command in its header comment and run it from `sim/`.
 

@@ -2,7 +2,7 @@
 #define DEBUG_GPS 0
 #define DEBUG_INPUTS 0
 #define DEBUG_BLUETOOTH 0
-#define DEBUG_I2C 1
+#define DEBUG_I2C 0
 
 #include <Arduino.h>
 #include "DebugConfig.hpp"

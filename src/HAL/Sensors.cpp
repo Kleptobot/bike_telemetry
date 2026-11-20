@@ -19,8 +19,9 @@ void SensorSystem::init_low() {
     
     pinMode(VBAT_ENABLE, OUTPUT);
     pinMode(BAT_CHARGE_STATE, INPUT);
+    pinMode(BAT_HIGH_CHARGE, OUTPUT);   // charge-current select: LOW = 100 mA, HIGH = 50mA
 
-    digitalWrite(BAT_HIGH_CHARGE, HIGH); // charge with 50mA
+    digitalWrite(BAT_HIGH_CHARGE, LOW); // charge with 100mA
 }
 
 void SensorSystem::init() {
