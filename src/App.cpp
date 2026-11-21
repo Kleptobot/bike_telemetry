@@ -12,6 +12,8 @@
 #include "UI/Screens/GPSScreen.hpp"
 #include "UI/Screens/UnmountSDScreen.hpp"
 #include "UI/Screens/BikeStatsScreen.hpp"
+#include "UI/Screens/LogListScreen.hpp"
+#include "UI/Screens/LogSummaryScreen.hpp"
 
 // ---- Buzzer feedback patterns (ms, alternating on/off starting with ON) ----
 // Distinct feel per event: start = one short chirp, pause = one long beep,
@@ -179,6 +181,8 @@ void App::begin(IStorage* storage) {
     ui.registerScreen<GPSScreen>(ScreenID::GPSSettings,App::instance().getModel());
     ui.registerScreen<UnmountSDScreen>(ScreenID::UnmountSD,App::instance().getModel());
     ui.registerScreen<BikeStatsScreen>(ScreenID::BikeStats,App::instance().getModel());
+    ui.registerScreen<LogListScreen>(ScreenID::LogList,App::instance().getModel());
+    ui.registerScreen<LogSummaryScreen>(ScreenID::LogSummary,App::instance().getModel());
 
     ui.begin(ScreenID::MainMenu);
 

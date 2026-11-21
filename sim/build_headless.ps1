@@ -51,6 +51,8 @@ $fw = @(
     "$root\src\Map\TileLoader.cpp",
     "$root\src\ui\UIManager.cpp",
     "$root\src\ui\Screens\BikeStatsScreen.cpp",
+    "$root\src\ui\Screens\LogListScreen.cpp",
+    "$root\src\ui\Screens\LogSummaryScreen.cpp",
     "$root\src\ui\Screens\BiometricsScreen.cpp",
     "$root\src\ui\Screens\DisplayEditScreen.cpp",
     "$root\src\ui\Screens\GPSScreen.cpp",

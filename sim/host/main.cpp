@@ -39,6 +39,8 @@ static ScreenID parseScreen(const char* name) {
         {"BikeStats", ScreenID::BikeStats}, {"GPS",      ScreenID::GPSSettings},
         {"Time",      ScreenID::TimeMenu},  {"Display",  ScreenID::DisplayEdit},
         {"UnmountSD", ScreenID::UnmountSD},
+        {"LogList",   ScreenID::LogList},
+        {"LogSummary",ScreenID::LogSummary},
     };
     for (const auto& e : k)
         if (strcmp(name, e.n) == 0) return e.id;

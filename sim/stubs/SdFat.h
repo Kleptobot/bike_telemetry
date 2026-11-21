@@ -11,6 +11,7 @@
 #include "Arduino.h"
 #include <cstdio>
 #include <string>
+#include <dirent.h>
 
 typedef uint8_t oflag_t;
 
@@ -52,8 +53,17 @@ public:
 
     bool open(const char* path, oflag_t mode = O_RDONLY);
     void close();
-    bool isOpen() const { return _fp != nullptr; }
+    bool isOpen() const { return _fp != nullptr || _dir != nullptr; }
     explicit operator bool() const { return isOpen(); }
+
+    // Directory iteration (used by SDCardSystem::listFiles). openNext(&dir,
+    // O_READ) steps through dir's entries; getName/getName8/isDir/fileSize
+    // then describe the current entry.
+    bool openNext(File32* dirFile, oflag_t oflag = O_READ);
+    size_t getName(char* name, size_t size);
+    size_t getName8(char* name, size_t size);
+    bool isLFN() const { return !_name.empty(); }  // host FS always has long names
+    bool isDir() const { return _dir != nullptr || _isDir; }
 
     size_t write(uint8_t c) override { return _fp ? fwrite(&c, 1, 1, _fp) : 0; }
     size_t write(const uint8_t* buf, size_t n) override { return _fp ? fwrite(buf, 1, n, _fp) : 0; }
@@ -70,6 +80,12 @@ public:
 
 private:
     FILE* _fp = nullptr;
+    DIR*  _dir = nullptr;            // set when open() was used on a directory
+    std::string _dirPath;            // host path of the directory being iterated
+    std::string _name;               // cached entry name from last openNext()
+    bool    _isDir = false;          // cached isDir from last openNext()
+    uint32_t _size = 0;              // cached size from last openNext()
+    bool    _sizeCached = false;     // true when _size came from openNext()
 };
 
 class SdFat32 {

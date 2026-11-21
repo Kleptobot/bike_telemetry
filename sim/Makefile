@@ -97,6 +97,8 @@ FW_SRCS := \
   $(ROOT)/src/ui/Screens/BiometricsScreen.cpp \
   $(ROOT)/src/ui/Screens/DisplayEditScreen.cpp \
   $(ROOT)/src/ui/Screens/GPSScreen.cpp \
+  $(ROOT)/src/ui/Screens/LogListScreen.cpp \
+  $(ROOT)/src/ui/Screens/LogSummaryScreen.cpp \
   $(ROOT)/src/ui/Screens/TimeEditScreen.cpp \
   $(ROOT)/src/ui/Widgets/DateWidget.cpp \
   $(ROOT)/src/ui/Widgets/DurationWidget.cpp \
