@@ -1,11 +1,11 @@
 // Standalone smoke test for FitLogParser. Build and run from sim/:
-//   g++ -std=gnu++17 -I . -I stubs -I host -I ..\src -I ..\.pio\libdeps\seeed-xiao-afruitnrf52-nrf52840-sense\LibYxml tests\FitLogParser_smoke.cpp ..\src\Loggers\FITWriter.cpp ..\.pio\libdeps\seeed-xiao-afruitnrf52-nrf52840-sense\LibYxml\yxml.c stubs\Arduino.cpp stubs\SdFat.cpp -o build\FitLogParser_smoke.exe
+//   g++ -std=gnu++17 -I . -I stubs -I host -I ..\src -I ..\.pio\libdeps\seeed-xiao-afruitnrf52-nrf52840-sense\LibYxml tests\FitLogParser_smoke.cpp ..\src\Loggers\FitLogParser.cpp ..\src\Loggers\FITWriter.cpp ..\.pio\libdeps\seeed-xiao-afruitnrf52-nrf52840-sense\LibYxml\yxml.c stubs\Arduino.cpp stubs\SdFat.cpp -o build\FitLogParser_smoke.exe
 //
 // The fixture is emitted with FitWriter, then decoded through the same
 // streaming parser used by LogSummaryScreen.
 
 #include "Loggers/FITWriter.hpp"
-#include "Loggers/LogParser.hpp"
+#include "Loggers/FitLogParser.hpp"
 #include "stubs/SdFat.h"
 #include <cstdio>
 

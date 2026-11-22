@@ -1,12 +1,12 @@
 // Standalone smoke test for TcxLogParser. Built ad hoc on the host:
-//   g++ -std=gnu++17 -I . -I stubs -I host -I ..\src -I ..\.pio\libdeps\seeed-xiao-afruitnrf52-nrf52840-sense\ArduinoJson\src -I ..\.pio\libdeps\seeed-xiao-afruitnrf52-nrf52840-sense\TinyGPSPlus\src -I ..\.pio\libdeps\seeed-xiao-afruitnrf52-nrf52840-sense\LibYxml -I "..\.pio\libdeps\seeed-xiao-afruitnrf52-nrf52840-sense\Adafruit GFX Library" tests\TcxLogParser_smoke.cpp ..\.pio\libdeps\seeed-xiao-afruitnrf52-nrf52840-sense\LibYxml\yxml.c stubs\Arduino.cpp stubs\SdFat.cpp -o build\TcxLogParser_smoke.exe
+//   g++ -std=gnu++17 -I . -I stubs -I host -I ..\src -I ..\.pio\libdeps\seeed-xiao-afruitnrf52-nrf52840-sense\ArduinoJson\src -I ..\.pio\libdeps\seeed-xiao-afruitnrf52-nrf52840-sense\TinyGPSPlus\src -I ..\.pio\libdeps\seeed-xiao-afruitnrf52-nrf52840-sense\LibYxml -I "..\.pio\libdeps\seeed-xiao-afruitnrf52-nrf52840-sense\Adafruit GFX Library" tests\TcxLogParser_smoke.cpp ..\src\Loggers\TcxLogParser.cpp ..\.pio\libdeps\seeed-xiao-afruitnrf52-nrf52840-sense\LibYxml\yxml.c stubs\Arduino.cpp stubs\SdFat.cpp -o build\TcxLogParser_smoke.exe
 //
 // Run from sim/ with a sample TCX in sdcard/.
 // Validates that parsing a real TCX (written by TCXLogger) yields non-zero,
 //
 // sensible RideStats — the fix for the "all zeros + Error" LogSummaryScreen bug.
 
-#include "Loggers/LogParser.hpp"
+#include "Loggers/TcxLogParser.hpp"
 #include "stubs/SdFat.h"
 #include <cstdio>
 #include <cstring>

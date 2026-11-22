@@ -30,7 +30,7 @@ these dependencies and supplies the streaming XML parser used for TCX summaries.
 
 There is **no unit-test framework**. Tests are standalone smoke-test programs
 under `sim/tests/` — each carries its own `g++` build command in a header
-comment. Current tests cover `FitnessFusion`, `FtpEstimator`, and the FIT/TCX
+comment. Current tests cover `FitnessFusion`, `FtpEstimator`, and the FIT/TCX/CSV
 log parsers. Build artifacts go in `sim/build/` (gitignored).
 
 Full simulator reference (flags, keys, scenarios, injected BLE sensors):
@@ -120,7 +120,7 @@ tick in `App::handleAppEvent()`.
 | `HAL/I2CArbiter.hpp` | I2C bus-sharing policy between subsystems. |
 | `HAL/Measurements.hpp` | `MeasurementFrame` contract — see §3. |
 | `Fusion/` | `Fusion.*` (engine: altitude fusion, speed-source selection, grade, distance), `AltitudeFusion.*` (baro+GPS bias filter), `FitnessFusion.*` (calories, zones, NP/TSS), `FtpEstimator.*` (best 20-min avg × 0.95). |
-| `Loggers/` | `ILogger.hpp` interface; `FITLogger`/`FITWriter` (binary FIT), `TCXLogger` (XML), `CSVLogger`, and `LogParser.hpp` for saved-log summaries. `FitLogParser`, `TcxLogParser`, and `CsvLogParser` stream their input and populate ride metrics. New CSV logs end with a versioned summary row for duration, distance, and lap count; older CSV logs are still read for metrics present in their trackpoint rows. |
+| `Loggers/` | `ILogger.hpp` interface; `FITLogger`/`FITWriter` (binary FIT), `TCXLogger` (XML), `CSVLogger`, and format-specific `FitLogParser`, `TcxLogParser`, and `CsvLogParser` modules for saved-log summaries. These parsers stream input and populate ride metrics through the small shared `LogParser` interface. New CSV logs end with a versioned summary row for duration, distance, and lap count; older CSV logs are still read for metrics present in their trackpoint rows. |
 | `DataModel/` | Providers + `DataBus` + `GpsTrack` (breadcrumb store for the map) — see §3. |
 | `Map/TileLoader.*` | Slippy-tile math + loading `/tiles/z/x/y.raw` RGB565 tiles from SD onto the canvas. |
 | `display/Display.*` | ST7789 wrapper: init, dirty-rect flush to hardware. |

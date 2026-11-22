@@ -1,11 +1,11 @@
 // Standalone smoke test for CsvLogParser. Build and run from sim/:
-//   g++ -std=gnu++17 -I . -I stubs -I host -I ..\src -I ..\.pio\libdeps\seeed-xiao-afruitnrf52-nrf52840-sense\LibYxml tests\CsvLogParser_smoke.cpp ..\src\Loggers\CSVLogger.cpp ..\.pio\libdeps\seeed-xiao-afruitnrf52-nrf52840-sense\LibYxml\yxml.c stubs\Arduino.cpp stubs\SdFat.cpp -o build\CsvLogParser_smoke.exe
+//   g++ -std=gnu++17 -I . -I stubs -I host -I ..\src -I ..\.pio\libdeps\seeed-xiao-afruitnrf52-nrf52840-sense\LibYxml tests\CsvLogParser_smoke.cpp ..\src\Loggers\CsvLogParser.cpp ..\src\Loggers\CSVLogger.cpp ..\.pio\libdeps\seeed-xiao-afruitnrf52-nrf52840-sense\LibYxml\yxml.c stubs\Arduino.cpp stubs\SdFat.cpp -o build\CsvLogParser_smoke.exe
 //
 // Exercises a CSVLogger-generated file and a legacy file without a summary
 // footer. Both are parsed incrementally with fixed-size line storage.
 
 #include "Loggers/CSVLogger.hpp"
-#include "Loggers/LogParser.hpp"
+#include "Loggers/CsvLogParser.hpp"
 #include "stubs/SdFat.h"
 #include <cstdio>
 

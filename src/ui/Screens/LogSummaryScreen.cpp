@@ -1,6 +1,9 @@
 #include "LogSummaryScreen.hpp"
 #include "HAL/HAL.hpp"
 #include "Display/Display.hpp"
+#include "Loggers/CsvLogParser.hpp"
+#include "Loggers/FitLogParser.hpp"
+#include "Loggers/TcxLogParser.hpp"
 #include "UI/Screens/LogViewer.hpp"
 #include <new>
 

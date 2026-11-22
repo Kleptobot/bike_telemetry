@@ -90,8 +90,11 @@ FW_SRCS := \
   $(ROOT)/src/HAL/Bluetooth/hrm.cpp \
   $(ROOT)/src/Loggers/FITLogger.cpp \
   $(ROOT)/src/Loggers/FITWriter.cpp \
+  $(ROOT)/src/Loggers/FitLogParser.cpp \
   $(ROOT)/src/Loggers/TCXLogger.cpp \
+  $(ROOT)/src/Loggers/TcxLogParser.cpp \
   $(ROOT)/src/Loggers/CSVLogger.cpp \
+  $(ROOT)/src/Loggers/CsvLogParser.cpp \
   $(ROOT)/src/Map/TileLoader.cpp \
   $(ROOT)/src/ui/UIManager.cpp \
   $(ROOT)/src/ui/Screens/BikeStatsScreen.cpp \
