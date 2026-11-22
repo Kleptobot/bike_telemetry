@@ -64,6 +64,8 @@ public:
     size_t getName8(char* name, size_t size);
     bool isLFN() const { return !_name.empty(); }  // host FS always has long names
     bool isDir() const { return _dir != nullptr || _isDir; }
+    bool isHidden() const { return false; }
+    bool isSystem() const { return false; }
 
     size_t write(uint8_t c) override { return _fp ? fwrite(&c, 1, 1, _fp) : 0; }
     size_t write(const uint8_t* buf, size_t n) override { return _fp ? fwrite(buf, 1, n, _fp) : 0; }

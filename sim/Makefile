@@ -28,11 +28,12 @@ LIBDEPS  := $(ROOT)/.pio/libdeps/seeed-xiao-afruitnrf52-nrf52840-sense
 GFX      := $(LIBDEPS)/Adafruit GFX Library
 AJSON    := $(LIBDEPS)/ArduinoJson/src
 TINYGPS  := $(LIBDEPS)/TinyGPSPlus/src
+YXML     := $(LIBDEPS)/LibYxml
 
 BUILD    := build
 BIN      := $(BUILD)/obike-sim
 
-INCLUDES := -Istubs -Ihost -I$(ROOT)/src -I"$(GFX)" -I"$(AJSON)" -I"$(TINYGPS)"
+INCLUDES := -Istubs -Ihost -I$(ROOT)/src -I"$(GFX)" -I"$(AJSON)" -I"$(TINYGPS)" -I"$(YXML)"
 CXXFLAGS := -std=gnu++17 -DARDUINO=10800 -g -O1 -Wall -Wextra -Wno-unused-parameter $(INCLUDES)
 LDFLAGS  :=
 
@@ -118,7 +119,7 @@ STUB_SRCS := \
 
 HOST_SRCS := host/SimHAL.cpp host/SimLC76G.cpp host/main.cpp
 
-LIB_SRCS := "$(GFX)/Adafruit_GFX.cpp" "$(TINYGPS)/TinyGPS++.cpp"
+LIB_SRCS := "$(GFX)/Adafruit_GFX.cpp" "$(TINYGPS)/TinyGPS++.cpp" "$(YXML)/yxml.c"
 
 # LIB_SRCS is kept OUT of the prerequisite list: those paths contain spaces
 # ("Adafruit GFX Library"), which make cannot express as prerequisites. They

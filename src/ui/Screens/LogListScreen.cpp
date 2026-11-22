@@ -1,5 +1,3 @@
-#pragma once
-
 #include "LogListScreen.hpp"
 #include "HAL/HAL.hpp"
 #include "UI/GFX.h"

@@ -8,6 +8,7 @@ $libroot = Join-Path $root ".pio\libdeps\seeed-xiao-afruitnrf52-nrf52840-sense"
 $gfx     = Join-Path $libroot "Adafruit GFX Library"
 $ajson   = Join-Path $libroot "ArduinoJson\src"
 $tinygps = Join-Path $libroot "TinyGPSPlus\src"
+$yxml    = Join-Path $libroot "LibYxml"
 
 $cxx = "C:\Users\willn\AppData\Local\Microsoft\WinGet\Packages\BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\mingw64\bin\g++.exe"
 
@@ -24,7 +25,8 @@ $flags = @(
     "-I$root\src",
     "-I$gfx",
     "-I$ajson",
-    "-I$tinygps"
+    "-I$tinygps",
+    "-I$yxml"
 )
 
 $fw = @(
@@ -48,6 +50,7 @@ $fw = @(
     "$root\src\Loggers\FITWriter.cpp",
     "$root\src\Loggers\TCXLogger.cpp",
     "$root\src\Loggers\CSVLogger.cpp",
+    "$yxml\\yxml.c",
     "$root\src\Map\TileLoader.cpp",
     "$root\src\ui\UIManager.cpp",
     "$root\src\ui\Screens\BikeStatsScreen.cpp",

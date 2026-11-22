@@ -25,11 +25,13 @@ Arduino framework) for a Seeed XIAO nRF52840 Sense, plus KiCad hardware and
 first. The sim compiles against the vendored library sources in
 `.pio/libdeps/seeed-xiao-afruitnrf52-nrf52840-sense` — if that directory is
 missing, the sim build fails or links stale copies. Never vendor a second copy
-of a library; the sim deliberately shares the firmware's.
+of a library; the sim deliberately shares the firmware's. `LibYxml` is one of
+these dependencies and supplies the streaming XML parser used for TCX summaries.
 
 There is **no unit-test framework**. Tests are standalone smoke-test programs
 under `sim/tests/` — each carries its own `g++` build command in a header
-comment. Build artifacts go in `sim/build/` (gitignored).
+comment. Current tests cover `FitnessFusion`, `FtpEstimator`, and the FIT/TCX
+log parsers. Build artifacts go in `sim/build/` (gitignored).
 
 Full simulator reference (flags, keys, scenarios, injected BLE sensors):
 **`sim/README.md`**. It is accurate and detailed; read it instead of guessing.
@@ -118,7 +120,7 @@ tick in `App::handleAppEvent()`.
 | `HAL/I2CArbiter.hpp` | I2C bus-sharing policy between subsystems. |
 | `HAL/Measurements.hpp` | `MeasurementFrame` contract — see §3. |
 | `Fusion/` | `Fusion.*` (engine: altitude fusion, speed-source selection, grade, distance), `AltitudeFusion.*` (baro+GPS bias filter), `FitnessFusion.*` (calories, zones, NP/TSS), `FtpEstimator.*` (best 20-min avg × 0.95). |
-| `Loggers/` | `ILogger.hpp` interface; `FITLogger`/`FITWriter` (binary FIT), `TCXLogger` (XML), `CSVLogger`. |
+| `Loggers/` | `ILogger.hpp` interface; `FITLogger`/`FITWriter` (binary FIT), `TCXLogger` (XML), `CSVLogger`, and `LogParser.hpp` for saved-log summaries. `FitLogParser` streams FIT record/lap/session messages; `TcxLogParser` streams XML through LibYxml. Both populate ride summary metrics; CSV summary parsing currently only checks that the file opens. |
 | `DataModel/` | Providers + `DataBus` + `GpsTrack` (breadcrumb store for the map) — see §3. |
 | `Map/TileLoader.*` | Slippy-tile math + loading `/tiles/z/x/y.raw` RGB565 tiles from SD onto the canvas. |
 | `display/Display.*` | ST7789 wrapper: init, dirty-rect flush to hardware. |
@@ -145,7 +147,7 @@ story. Orientation:
 | `host/main.cpp` | Host frontend: SDL window (optional) or headless frame dump; CLI flags (`--headless`, `--frames`, `--sensors`, `--stats`, `--screen`, `--sd`, `--last`, …). |
 | `host/SimHAL.*`, `host/SimLC76G.*` | Simulated sensors and NMEA generation (real NMEA sentences through the real TinyGPSPlus). |
 | `stubs/` | Arduino/hardware stubs (`Arduino.h`, `SdFat`, `bluefruit`, `Wire`/`SPI`, sensor stubs…). This is the substrate any new host-side test should reuse. |
-| `tests/` | Smoke tests: `FitnessFusion_smoke`, `FtpEstimator_smoke`. Build command is in each file's header comment; run from `sim/`. |
+| `tests/` | Smoke tests: `FitnessFusion_smoke`, `FtpEstimator_smoke`, `FitLogParser_smoke`, and `TcxLogParser_smoke`. Build command is in each file's header comment; run from `sim/`. The FIT test generates a fixture with `FitWriter`; the TCX test reads a fixture from `sdcard/`. |
 | `tools/` | `ppm2png.py` (frame conversion, stdlib-only), `get-sdl2.bat`/`.sh` (optional SDL2 SDK for the interactive window). |
 | `Makefile` | The sim build. **Must be kept in sync when adding a source file — see §7.** `run.bat`/`run.sh` wrap it; `build_headless.ps1` is a direct-g++ fallback for shells where the Makefile's Unix probing fails. |
 | `sample-sd/` | Seed config copied into gitignored `sdcard/` on first run: `layout.txt`, `bikeStats.txt` (wheel circumference — without it wheel speed is exactly 0), `biometrics.txt`, `time.txt`. `devices.txt` (paired-sensor fixture) is seeded at runtime. |
@@ -188,6 +190,10 @@ settings) under the SD root.
 - **Adding a `.cpp` to `src/` that the sim needs → add it to BOTH source lists:**
   `sim/Makefile` (`FW_SRCS`) and `sim/build_headless.ps1` (its `$fw` array).
   A missing file breaks one build path only, which is how drift happens.
+- **Changing simulator library dependencies → keep both build paths aligned:**
+  add required include paths and source files from `.pio/libdeps` to both
+  `sim/Makefile` and `sim/build_headless.ps1`. The TCX parser specifically
+  requires `LibYxml` (`yxml.h` and `yxml.c`).
 - **Adding a screen →** add the enum to `ui/Screens/ScreenID.hpp` *and* register
   it in `App::begin()` (`ui.registerScreen<T>(…)`). `showScreen()` on an
   unregistered ID logs and keeps the current screen — IDs are not contiguous.
