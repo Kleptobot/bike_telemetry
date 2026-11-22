@@ -4,6 +4,7 @@ void CSVLogger::startLogging(const timeData& currentTime) {
     _startTime = currentTime;
     _pauseAnchor = currentTime;
     _currentTime = currentTime;
+    _lastDistanceM = 0;
     laps.clear();
     laps.push_back({currentTime, 0, 0, 0, 0, 0, 0});
 
@@ -33,7 +34,7 @@ void CSVLogger::writeHeader() {
     // Header must match addTrackpoint's row exactly: time + the Trackpoint
     // fields it prints, in order. (The old 19-column header was stale from
     // the Telemetry-struct era and misaligned every spreadsheet import.)
-    file.println("time,latitude,longitude,altitude,speed,heartrate,cadence,power,calories,normalizedpower,intensityfactor,tss,hrzone,powerzone");
+    file.println("time,latitude,longitude,altitude,speed,heartrate,cadence,power,calories,normalizedpower,intensityfactor,tss,hrzone,powerzone,distance");
     file.flush();
 }
 
@@ -55,7 +56,8 @@ void CSVLogger::addTrackpoint(const Trackpoint& tp, const timeData& currentTime)
     file.print(tp.intensityFactor); file.print(",");
     file.print(tp.tss); file.print(",");
     file.print(tp.hrZone); file.print(",");
-    file.print(tp.powerZone); file.println();
+    file.print(tp.powerZone); file.print(",");
+    file.print(tp.distance); file.println();
     file.flush();
 
     _currentTime = currentTime;
@@ -66,6 +68,7 @@ void CSVLogger::addTrackpoint(const Trackpoint& tp, const timeData& currentTime)
         laps.back().maxHRM = tp.heartrate;
 
     laps.back().totalDistance = tp.distance;
+    _lastDistanceM = tp.distance;
 }
 
 void CSVLogger::newLap(const timeData& currentTime) {
@@ -74,6 +77,13 @@ void CSVLogger::newLap(const timeData& currentTime) {
 
 bool CSVLogger::finaliseLogging() {
     if (file.isOpen()) {
+        const long elapsedSeconds = elapsed_Total().totalSeconds();
+        file.print("#summary,1,");
+        file.print(elapsedSeconds > 0 ? static_cast<uint32_t>(elapsedSeconds) : 0);
+        file.print(",");
+        file.print(_lastDistanceM, 2);
+        file.print(",");
+        file.println(static_cast<unsigned long>(laps.size()));
         file.flush();
         file.close();
     }

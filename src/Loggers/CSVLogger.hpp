@@ -25,6 +25,7 @@ private:
     IStorage* _storage;
     File32 file;
     char _filename[64];  // _startTime/_currentTime inherited from ILogger
+    float _lastDistanceM = 0;
 
     void writeHeader();
 };

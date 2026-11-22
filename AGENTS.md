@@ -120,7 +120,7 @@ tick in `App::handleAppEvent()`.
 | `HAL/I2CArbiter.hpp` | I2C bus-sharing policy between subsystems. |
 | `HAL/Measurements.hpp` | `MeasurementFrame` contract — see §3. |
 | `Fusion/` | `Fusion.*` (engine: altitude fusion, speed-source selection, grade, distance), `AltitudeFusion.*` (baro+GPS bias filter), `FitnessFusion.*` (calories, zones, NP/TSS), `FtpEstimator.*` (best 20-min avg × 0.95). |
-| `Loggers/` | `ILogger.hpp` interface; `FITLogger`/`FITWriter` (binary FIT), `TCXLogger` (XML), `CSVLogger`, and `LogParser.hpp` for saved-log summaries. `FitLogParser` streams FIT record/lap/session messages; `TcxLogParser` streams XML through LibYxml. Both populate ride summary metrics; CSV summary parsing currently only checks that the file opens. |
+| `Loggers/` | `ILogger.hpp` interface; `FITLogger`/`FITWriter` (binary FIT), `TCXLogger` (XML), `CSVLogger`, and `LogParser.hpp` for saved-log summaries. `FitLogParser`, `TcxLogParser`, and `CsvLogParser` stream their input and populate ride metrics. New CSV logs end with a versioned summary row for duration, distance, and lap count; older CSV logs are still read for metrics present in their trackpoint rows. |
 | `DataModel/` | Providers + `DataBus` + `GpsTrack` (breadcrumb store for the map) — see §3. |
 | `Map/TileLoader.*` | Slippy-tile math + loading `/tiles/z/x/y.raw` RGB565 tiles from SD onto the canvas. |
 | `display/Display.*` | ST7789 wrapper: init, dirty-rect flush to hardware. |
@@ -147,7 +147,7 @@ story. Orientation:
 | `host/main.cpp` | Host frontend: SDL window (optional) or headless frame dump; CLI flags (`--headless`, `--frames`, `--sensors`, `--stats`, `--screen`, `--sd`, `--last`, …). |
 | `host/SimHAL.*`, `host/SimLC76G.*` | Simulated sensors and NMEA generation (real NMEA sentences through the real TinyGPSPlus). |
 | `stubs/` | Arduino/hardware stubs (`Arduino.h`, `SdFat`, `bluefruit`, `Wire`/`SPI`, sensor stubs…). This is the substrate any new host-side test should reuse. |
-| `tests/` | Smoke tests: `FitnessFusion_smoke`, `FtpEstimator_smoke`, `FitLogParser_smoke`, and `TcxLogParser_smoke`. Build command is in each file's header comment; run from `sim/`. The FIT test generates a fixture with `FitWriter`; the TCX test reads a fixture from `sdcard/`. |
+| `tests/` | Smoke tests: `FitnessFusion_smoke`, `FtpEstimator_smoke`, `FitLogParser_smoke`, `TcxLogParser_smoke`, and `CsvLogParser_smoke`. Build command is in each file's header comment; run from `sim/`. The FIT test generates a fixture with `FitWriter`; the TCX test reads a fixture from `sdcard/`; the CSV test exercises generated and legacy formats. |
 | `tools/` | `ppm2png.py` (frame conversion, stdlib-only), `get-sdl2.bat`/`.sh` (optional SDL2 SDK for the interactive window). |
 | `Makefile` | The sim build. **Must be kept in sync when adding a source file — see §7.** `run.bat`/`run.sh` wrap it; `build_headless.ps1` is a direct-g++ fallback for shells where the Makefile's Unix probing fails. |
 | `sample-sd/` | Seed config copied into gitignored `sdcard/` on first run: `layout.txt`, `bikeStats.txt` (wheel circumference — without it wheel speed is exactly 0), `biometrics.txt`, `time.txt`. `devices.txt` (paired-sensor fixture) is seeded at runtime. |
