@@ -3,17 +3,17 @@
 #include <cmath>
 #include "App.hpp"
 
-#include "UI/Screens/MainScreen.hpp"
-#include "UI/Screens/BluetoothScreen.hpp"
-#include "UI/Screens/TimeEditScreen.hpp"
-#include "UI/Screens/SettingsScreen.hpp"
-#include "UI/Screens/BiometricsScreen.hpp"
-#include "UI/Screens/DisplayEditScreen.hpp"
-#include "UI/Screens/GPSScreen.hpp"
-#include "UI/Screens/UnmountSDScreen.hpp"
-#include "UI/Screens/BikeStatsScreen.hpp"
-#include "UI/Screens/LogListScreen.hpp"
-#include "UI/Screens/LogSummaryScreen.hpp"
+#include "ui/Screens/MainScreen.hpp"
+#include "ui/Screens/BluetoothScreen.hpp"
+#include "ui/Screens/TimeEditScreen.hpp"
+#include "ui/Screens/SettingsScreen.hpp"
+#include "ui/Screens/BiometricsScreen.hpp"
+#include "ui/Screens/DisplayEditScreen.hpp"
+#include "ui/Screens/GPSScreen.hpp"
+#include "ui/Screens/UnmountSDScreen.hpp"
+#include "ui/Screens/BikeStatsScreen.hpp"
+#include "ui/Screens/LogListScreen.hpp"
+#include "ui/Screens/LogSummaryScreen.hpp"
 
 // ---- Buzzer feedback patterns (ms, alternating on/off starting with ON) ----
 // Distinct feel per event: start = one short chirp, pause = one long beep,

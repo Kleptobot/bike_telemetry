@@ -2,7 +2,7 @@
 #define FITLOGGER_H
 
 #include "ILogger.hpp"
-#include "FitWriter.hpp"
+#include "FITWriter.hpp"
  
 // ---------------------------------------------------------------------------
 // FitLogger : public ILogger

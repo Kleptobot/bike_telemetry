@@ -1,7 +1,7 @@
 #pragma once
 #include <Arduino.h>
 #include "DebugConfig.hpp"
-#include "UI/Widgets/Widget.hpp"
+#include "ui/Widgets/Widget.hpp"
 #include "display/Display.hpp"
 
 class SelectableTextWidget : public Widget {

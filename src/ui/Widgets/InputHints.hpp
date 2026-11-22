@@ -1,7 +1,7 @@
 #pragma once
-#include "UI/Widgets/Widget.hpp"
-#include "Display/Display.hpp"
-#include "UI/GFX.h"
+#include "ui/Widgets/Widget.hpp"
+#include "display/Display.hpp"
+#include "ui/GFX.h"
 #include <Arduino.h>
 
 // Compact input-legend row: up to three slots, each an optional 16x16 icon

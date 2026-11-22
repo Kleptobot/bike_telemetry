@@ -1,7 +1,7 @@
 #pragma once
-#include "UI/Screens/UIScreen.hpp"
+#include "ui/Screens/UIScreen.hpp"
 #include "HAL/InputInterface.hpp"
-#include "UI/GFX.h"
+#include "ui/GFX.h"
 
 class UnmountSDScreen : public UIScreen {
     public:

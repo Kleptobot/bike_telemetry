@@ -4,7 +4,7 @@
 #include <memory>
 
 #include "HAL/InputInterface.hpp"
-#include "UI/Widgets/Widget.hpp"
+#include "ui/Widgets/Widget.hpp"
 #include "UIEventBus.hpp"
 #include "DataModel/DataModel.hpp"
 

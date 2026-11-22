@@ -1,11 +1,11 @@
 #pragma once
-#include "UI/Screens/UIScreen.hpp"
-#include "UI/Widgets/ListView.hpp"
-#include "UI/Widgets/BluttoothDeviceWidget.hpp"
-#include "UI/Widgets/SelectableTextIcon.hpp"
-#include "UI/Widgets/InputHints.hpp"
+#include "ui/Screens/UIScreen.hpp"
+#include "ui/Widgets/ListView.hpp"
+#include "ui/Widgets/BluttoothDeviceWidget.hpp"
+#include "ui/Widgets/SelectableTextIcon.hpp"
+#include "ui/Widgets/InputHints.hpp"
 #include "HAL/InputInterface.hpp"
-#include "UI/GFX.h"
+#include "ui/GFX.h"
 #include <memory>
 
 class BluetoothScreen : public UIScreen {

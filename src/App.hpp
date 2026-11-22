@@ -1,7 +1,7 @@
 #ifndef APP_H
 #define APP_H
 
-#include "UI/UIManager.hpp"
+#include "ui/UIManager.hpp"
 #include "HAL/HAL.hpp"
 #include "Fusion/Fusion.hpp"
 #include "Fusion/FtpEstimator.hpp"

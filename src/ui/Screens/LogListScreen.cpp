@@ -1,7 +1,7 @@
 #include "LogListScreen.hpp"
 #include "HAL/HAL.hpp"
-#include "UI/GFX.h"
-#include "UI/Screens/LogViewer.hpp"
+#include "ui/GFX.h"
+#include "ui/Screens/LogViewer.hpp"
 #include <new>
 
 LogListScreen::LogListScreen(DataModel& model)

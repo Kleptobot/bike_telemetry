@@ -1,6 +1,6 @@
 #pragma once
-#include "UI/Widgets/Widget.hpp"
-#include "Display/Display.hpp"
+#include "ui/Widgets/Widget.hpp"
+#include "display/Display.hpp"
 
 class IconWidget : public Widget {
     public:

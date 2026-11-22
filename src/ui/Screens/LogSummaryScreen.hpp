@@ -1,10 +1,10 @@
 #pragma once
 #include <memory>
-#include "UI/Screens/UIScreen.hpp"
-#include "UI/Screens/LogViewer.hpp"
-#include "UI/Widgets/SelectableTextIcon.hpp"
-#include "UI/Widgets/SelectableText.hpp"
-#include "UI/Widgets/InputHints.hpp"
+#include "ui/Screens/UIScreen.hpp"
+#include "ui/Screens/LogViewer.hpp"
+#include "ui/Widgets/SelectableTextIcon.hpp"
+#include "ui/Widgets/SelectableText.hpp"
+#include "ui/Widgets/InputHints.hpp"
 #include "Loggers/LogParser.hpp"
 #include "HAL/HAL.hpp"
 

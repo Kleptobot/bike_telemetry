@@ -1,10 +1,10 @@
 #pragma once
 #include <vector>
-#include "UI/Screens/UIScreen.hpp"
-#include "UI/Widgets/ListView.hpp"
-#include "UI/Widgets/SelectableTextIcon.hpp"
-#include "UI/Widgets/InputHints.hpp"
-#include "UI/GFX.h"
+#include "ui/Screens/UIScreen.hpp"
+#include "ui/Widgets/ListView.hpp"
+#include "ui/Widgets/SelectableTextIcon.hpp"
+#include "ui/Widgets/InputHints.hpp"
+#include "ui/GFX.h"
 
 struct SettingsMenuItem {
     const char* label;

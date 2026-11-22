@@ -1,12 +1,12 @@
 #pragma once
-#include "UI/Screens/UIScreen.hpp"
-#include "UI/Widgets/BatteryWidget.hpp"
-#include "UI/Widgets/BigDataWidget.hpp"
-#include "UI/Widgets/SmallDataWidget.hpp"
-#include "UI/Widgets/IconWidget.hpp"
-#include "UI/Widgets/TimeWidget.hpp"
-#include "UI/Widgets/DurationWidget.hpp"
-#include "UI/GFX.h"
+#include "ui/Screens/UIScreen.hpp"
+#include "ui/Widgets/BatteryWidget.hpp"
+#include "ui/Widgets/BigDataWidget.hpp"
+#include "ui/Widgets/SmallDataWidget.hpp"
+#include "ui/Widgets/IconWidget.hpp"
+#include "ui/Widgets/TimeWidget.hpp"
+#include "ui/Widgets/DurationWidget.hpp"
+#include "ui/GFX.h"
 
 // Icon layout: the icons sit on a drawn D-pad cross (a switch shape) in the
 // free band below the data grid, so the mapping to the physical 5-position

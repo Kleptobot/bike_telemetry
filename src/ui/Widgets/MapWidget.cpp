@@ -1,6 +1,6 @@
 #include "MapWidget.hpp"
 #include <cmath>
-#include "Display/Display.hpp"
+#include "display/Display.hpp"
 #include "Map/TileLoader.hpp"
 static uint16_t tilePixels[MapWidget::MAP_W * MapWidget::MAP_H];
 

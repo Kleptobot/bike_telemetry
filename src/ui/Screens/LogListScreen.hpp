@@ -2,11 +2,11 @@
 
 #include <vector>
 #include <string>
-#include "UI/Screens/UIScreen.hpp"
-#include "UI/Widgets/ListView.hpp"
-#include "UI/Widgets/SelectableTextIcon.hpp"
-#include "UI/Widgets/InputHints.hpp"
-#include "UI/Screens/LogViewer.hpp"
+#include "ui/Screens/UIScreen.hpp"
+#include "ui/Widgets/ListView.hpp"
+#include "ui/Widgets/SelectableTextIcon.hpp"
+#include "ui/Widgets/InputHints.hpp"
+#include "ui/Screens/LogViewer.hpp"
 
 // Hand-off of the user's log selection from LogListScreen to LogSummaryScreen
 // lives in LogViewer.hpp (logViewerSelect / logViewerSelected).

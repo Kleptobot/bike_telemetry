@@ -1,5 +1,5 @@
 #pragma once
-#include "UI/Screens/ScreenID.hpp"
+#include "ui/Screens/ScreenID.hpp"
 
 enum class UIEventType {
     None,

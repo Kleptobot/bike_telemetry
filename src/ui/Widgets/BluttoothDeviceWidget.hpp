@@ -1,8 +1,8 @@
 #pragma once
 #include "display/Display.hpp"
-#include "UI/Widgets/Widget.hpp"
+#include "ui/Widgets/Widget.hpp"
 #include "HAL/BluetoothInterface.hpp"
-#include "UI/GFX.h"
+#include "ui/GFX.h"
 #include "UIEventBus.hpp"
 
 class BluetoothDeviceWidget :  public Widget {

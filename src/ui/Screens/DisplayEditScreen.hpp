@@ -1,11 +1,11 @@
 #pragma once
 
-#include "UI/Screens/UIScreen.hpp"
-#include "UI/Widgets/DisplayEditWidget.hpp"
-#include "UI/Widgets/SelectableTextIcon.hpp"
-#include "UI/Widgets/InputHints.hpp"
-#include "UI/Widgets/GridOverlayWidget.hpp"
-#include "UI/Widgets/CursorWidget.hpp"
+#include "ui/Screens/UIScreen.hpp"
+#include "ui/Widgets/DisplayEditWidget.hpp"
+#include "ui/Widgets/SelectableTextIcon.hpp"
+#include "ui/Widgets/InputHints.hpp"
+#include "ui/Widgets/GridOverlayWidget.hpp"
+#include "ui/Widgets/CursorWidget.hpp"
 
 enum class WidgetEditMode {
     NONE = 0,

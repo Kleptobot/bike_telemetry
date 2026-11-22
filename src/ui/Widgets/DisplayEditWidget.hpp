@@ -1,9 +1,9 @@
 #pragma once
-#include "UI/Widgets/Widget.hpp"
+#include "ui/Widgets/Widget.hpp"
 #include "SelectableText.hpp"
-#include "Display/Display.hpp"
+#include "display/Display.hpp"
 #include "DataModel/DataModel.hpp"
-#include "UI/GFX.h"
+#include "ui/GFX.h"
 
 class DisplayEditWidget : public Widget {
 public:

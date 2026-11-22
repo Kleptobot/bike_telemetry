@@ -1,5 +1,5 @@
 #include "DurationWidget.hpp"
-#include "Display/Display.hpp"
+#include "display/Display.hpp"
 
 void DurationWidget::update(float dt) {
     long h = _duration.totalHours();   // raw, unwrapped - can exceed 23

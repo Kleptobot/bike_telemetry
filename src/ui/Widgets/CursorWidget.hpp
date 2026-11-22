@@ -1,7 +1,7 @@
 #pragma once
 #include "Widget.hpp"
-#include "Display/Display.hpp"
-#include "UI/GFX.h"
+#include "display/Display.hpp"
+#include "ui/GFX.h"
 
 class CursorWidget : public Widget {
 public:
