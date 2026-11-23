@@ -103,7 +103,7 @@ public:
         // Update numeric displays.
         // Widgets subscribed to DataBus receive updates via callbacks.
         // Their update(float dt) processes the dirty flag and updates display strings.
-        // Non-subscribed widgets (Location, Distance, TotalDist) poll the bus.
+        // Non-float topics and display-converted values poll the bus.
         const DataBus& bus = model.bus();
 
         // Always call update(float dt) on subscribed widgets so they process dirty flag

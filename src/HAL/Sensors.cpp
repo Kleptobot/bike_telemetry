@@ -142,6 +142,7 @@ bool SensorSystem::update(bool i2cBusy) {
             _imuDtMs = observedDt(nowMs, lastIMUTime);
             lastIMUTime = nowMs;
             ++_imuSeq;
+            _imuValid = true;
             update = true;
             if (imuCallback) {
                 imuCallback({_imu.f32_acc_z,true});

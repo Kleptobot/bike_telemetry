@@ -123,7 +123,7 @@ inline void HAL::refreshFrame() {
 
     // Motion / environment -- stamped by SensorSystem at acquisition time.
     const dps_data dps = sensorSystem.dps();
-    fillSample(f.imu, sensorSystem.imu(), true,
+    fillSample(f.imu, sensorSystem.imu(), sensorSystem.imuValid(),
                sensorSystem.imuTsMs(), sensorSystem.imuSeq(), sensorSystem.imuDtMs());
     fillSample(f.baroPressurePa, dps.f32_DSP_Pa, dps.dpsValid,
                sensorSystem.dpsTsMs(), sensorSystem.dpsSeq(), sensorSystem.dpsDtMs());

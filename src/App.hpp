@@ -190,8 +190,7 @@ private:
                     Serial.println("TCX logger initialized.");
                     break;
                 case LoggerType::CSV:
-                    // Implement CSV logger initialization if needed
-                    csvLogger = new CSVLogger(_storage);
+                    csvLogger = new CSVLogger(_storage, model.bus());
                     _logger = csvLogger;
                     Serial.println("CSV logger initialized.");
                     break;

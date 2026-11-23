@@ -86,8 +86,10 @@ Key contracts — both are enforced by house rules stated in their headers:
 
 **`src/DataModel/DataBus.hpp`** is the pub/sub hub for derived signals
 (fixed-size slots, no allocation after setup, synchronous dispatch, polling
-via `get<T>()`). The `Topic` enum there is the canonical list of every derived
-signal in the system — consult it before adding a new metric.
+via `get<T>()`). Its `Topic` enum and metadata catalog are the authority for
+each signal's storage type, display name/units/format, and CSV columns. The
+Display Edit UI and CSV logger consume that catalog; do not add parallel
+topic/type tables.
 
 **`src/DataModel/DataModel.hpp`** aggregates the persistent providers
 (`time()`, `bio()`, `bike()`, `layout()`, `logger()`, `SD()`, `bluetooth()`)

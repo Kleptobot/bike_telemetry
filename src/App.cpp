@@ -440,8 +440,7 @@ void App::updateTelemetry() {
     // --- Publish position/distance/system channels to the DataBus -------------
     // These replace the last duties of the Telemetry struct: the UI (battery
     // icon, GPS icon, Location/Distance tiles) and the loggers' Trackpoint
-    // all read from the bus now. imu/dps raw blocks are not published -- no
-    // consumer ever read them from Telemetry.
+    // all read from the bus now.
     const int16_t batteryPct = frame.batteryPct;
     location_data loc;
     loc.valid     = frame.gpsPos.valid;
@@ -475,6 +474,17 @@ void App::updateTelemetry() {
     bus.publish(Topic::PedalBalance, frame.pedalBalancePct.live ? frame.pedalBalancePct.value : 0.0f);
 
     bus.publish(Topic::BatteryVolts, frame.vbatVolts.value);
+
+    // Publish the latest raw IMU sample. Invalid samples are zeroed so
+    // consumers can use ImuValid to distinguish unavailable data from rest.
+    const imu_data& imu = frame.imu.value;
+    bus.publish(Topic::ImuValid, frame.imu.valid);
+    bus.publish(Topic::ImuAccelX, frame.imu.valid ? imu.f32_acc_x : 0.0f);
+    bus.publish(Topic::ImuAccelY, frame.imu.valid ? imu.f32_acc_y : 0.0f);
+    bus.publish(Topic::ImuAccelZ, frame.imu.valid ? imu.f32_acc_z : 0.0f);
+    bus.publish(Topic::ImuGyroX,  frame.imu.valid ? imu.f32_gyro_x : 0.0f);
+    bus.publish(Topic::ImuGyroY,  frame.imu.valid ? imu.f32_gyro_y : 0.0f);
+    bus.publish(Topic::ImuGyroZ,  frame.imu.valid ? imu.f32_gyro_z : 0.0f);
 
     // Breadcrumb trail for the map widget. The store decimates to 1 Hz and
     // rejects duplicate positions internally, so feeding every tick is fine.
@@ -862,7 +872,7 @@ void App::saveLayout() {
         d[j]["y0"] = l.displays[j].y0;
         d[j]["x1"] = l.displays[j].x1;
         d[j]["y1"] = l.displays[j].y1;
-        d[j]["type"] = toString(l.displays[j].type);
+        d[j]["type"] = topicDisplayName(l.displays[j].type);
     }
 
     if (_storage->exists("/layout.txt"))
@@ -904,7 +914,7 @@ void App::loadLayout() {
         JsonArray d = jsonBuffer["displays"];
         for (const auto& member : d) {
             DisplayItem disp;
-            disp.type = TelemetryTypefromString(member["type"]);
+            disp.type = topicFromDisplayName(String(member["type"] | ""));
             disp.x0 = member["x0"];
             disp.y0 = member["y0"];
             disp.x1 = member["x1"];

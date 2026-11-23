@@ -7,7 +7,7 @@
 
 class DisplayEditWidget : public Widget {
 public:
-    DisplayEditWidget(int x, int y, TelemetryType type=TelemetryType::Undefined)
+    DisplayEditWidget(int x, int y, Topic type=Topic::TopicCount)
         : Widget(x, y)
         { setType(type); }
 
@@ -45,7 +45,7 @@ public:
         if (_mode != m) {
             _mode = m;
             switch (_mode) {
-                case WidgetSubMode::CHANGE_TYPE: setText(toString(_type)); break;
+                case WidgetSubMode::CHANGE_TYPE: setText(topicDisplayName(_type)); break;
                 case WidgetSubMode::MOVE: setText("Move"); break;
                 case WidgetSubMode::RESIZE: setText("Resize"); break;
                 case WidgetSubMode::DONE: setText("Done"); break;
@@ -54,16 +54,16 @@ public:
         }
     };
 
-    void setType(TelemetryType type) {
+    void setType(Topic type) {
         if (type != _type) {
             _type = type;
             if (_mode == WidgetSubMode::CHANGE_TYPE) {
-                setText(toString(_type));
+                setText(topicDisplayName(_type));
             }
         }
     }
 
-    const TelemetryType& type() const { return _type; }
+    const Topic& type() const { return _type; }
 
     void drawUpArrow() {
         Disp::fillTriangle(_x + _width/2, _y, _x + _width/2 + 8, _y + 8, _x + _width/2 - 8, _y + 8, ST77XX_WHITE);
@@ -127,7 +127,7 @@ public:
     }
 
 private:
-    TelemetryType _type = TelemetryType::Undefined;
+    Topic _type = Topic::TopicCount;
     WidgetSubMode _mode = WidgetSubMode::CHANGE_TYPE;
     bool _menu = false, _menuLast = false;;
     bool _inMode = false, _inModeLast = false;

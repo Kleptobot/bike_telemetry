@@ -12,9 +12,9 @@ public:
     void close() override;
 
 private:
-    static constexpr uint8_t kMaxColumns = 24;
+    static constexpr uint8_t kMaxColumns = 64;
     static constexpr size_t kReadBufferSize = 128;
-    static constexpr size_t kLineBufferSize = 256;
+    static constexpr size_t kLineBufferSize = 1024;
 
     File32 _file;
     char _readBuffer[kReadBufferSize];

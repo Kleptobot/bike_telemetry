@@ -16,15 +16,15 @@ class SettingsScreen : public UIScreen {
 public:
     SettingsScreen(DataModel& model)
         : UIScreen(model),
-          listView(5, 5, 4) {
+          listView(5, 5, 7) {
         // Define your settings options statically
         _items = {
             {"Bluetooth",   epd_bitmap_bluetooth_large,     ScreenID::Bluetooth},
             {"GPS",         epd_bitmap_antenna_large,       ScreenID::GPSSettings}, 
             {"Time",        epd_bitmap_clock_large,         ScreenID::TimeMenu},
             {"Biometrics",  epd_bitmap_heart_large,         ScreenID::Biometrics},
-            {"Bike Stats",  epd_bitmap_heart_large,         ScreenID::BikeStats},
-            {"Logs",       epd_bitmap_bin_16,              ScreenID::LogList},
+            {"Bike Stats",  epd_bitmap_sliders_32,          ScreenID::BikeStats},
+            {"Logs",        epd_bitmap_running_man_32,      ScreenID::LogList},
             {"Display",     epd_bitmap_disp_edit,           ScreenID::DisplayEdit},
             {"Unmount SD",  epd_bitmap_icons8_micro_sd_32,  ScreenID::UnmountSD},
             {"Back",        epd_bitmap_left_arrow_large,    ScreenID::MainMenu}

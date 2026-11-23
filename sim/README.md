@@ -148,9 +148,11 @@ genuine `.fit` file you can open in Garmin Connect, Strava or the FIT SDK.
 That is a considerably stronger check on the logger than any assertion.
 
 The Log Summary screen streams summary metrics from FIT record/lap/session
-messages, TCX XML, and CSV rows. New CSV logs include a versioned final summary
-row for duration, distance, and lap count; legacy CSVs remain readable for
-metrics present in their rows.
+messages, TCX XML, and CSV rows. CSV trackpoint rows include every DataBus
+signal (with `Location` split into latitude, longitude, and validity columns),
+while retaining the original leading column names. New CSV logs also include a
+versioned final summary row for duration, distance, and lap count; legacy CSVs
+remain readable for metrics present in their rows.
 
 ## Injecting BLE measurements
 

@@ -136,7 +136,7 @@ private:
             widget.setPosition(x + x0 * colPitch, y + y0 * rowPitch);
         }
 
-        void setType(TelemetryType t) { DisplayItem::type = t; widget.setType(t); }
+        void setType(Topic t) { DisplayItem::type = t; widget.setType(t); }
 
         bool contains(int x, int y) {
             return (x0 <= x && x < x1) && (y0 <= y && y < y1);

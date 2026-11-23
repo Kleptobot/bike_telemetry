@@ -2,7 +2,7 @@
 #define LAYOUTDATAPROVIDER_H
 
 #include <Arduino.h>
-#include "TelemetryType.hpp"
+#include "DataBus.hpp"
 
 enum class Edge {
     None,
@@ -39,7 +39,7 @@ inline WidgetSubMode& operator--(WidgetSubMode& w) {
 };
 
 struct DisplayItem {
-    TelemetryType type;
+    Topic type = Topic::TopicCount;
     uint8_t x0; //left
     uint8_t y0; //top
     uint8_t x1; //right
