@@ -203,6 +203,16 @@ LC76G::State LC76G::stateMachine() {
                 if (_lastDrainOkMs != 0) {
                     const uint32_t gap = nowMs - _lastDrainOkMs;
                     if (gap > _dbgMaxDrainGapMs) _dbgMaxDrainGapMs = gap;
+                    if (_drainGapWindowCount == DRAIN_GAP_WINDOW_SIZE) {
+                        _drainGapWindowSumMs -=
+                            _drainGapWindowMs[_drainGapWindowNext];
+                    } else {
+                        ++_drainGapWindowCount;
+                    }
+                    _drainGapWindowMs[_drainGapWindowNext] = gap;
+                    _drainGapWindowSumMs += gap;
+                    _drainGapWindowNext =
+                        (_drainGapWindowNext + 1) % DRAIN_GAP_WINDOW_SIZE;
                 }
                 _lastDrainOkMs = nowMs;
                 _state=STATE_PROCESS_RECEIVE;

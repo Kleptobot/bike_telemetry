@@ -153,6 +153,7 @@ void HAL::update() {
 //   idle/s   -- length polls that found nothing queued
 //   err      -- lifetime state-machine error count (grows on bus trouble)
 //   maxgap   -- worst wait between completed drains, ms
+//   avgGap   -- mean of the most recent 16 completed-drain gaps, ms
 //   bp       -- lifetime ticks where the arbiter held foreign devices off
 //               for the GNSS (rule 3); zero in normal operation
 //   in/sens  -- microseconds of bus time input/sensor passes consumed
@@ -167,13 +168,14 @@ void HAL::debugBusSummary() {
     const uint32_t bytes  = _LC76G.dbgBytesDrained();
     const uint32_t zero   = _LC76G.dbgZeroLenPolls();
 
-    Serial.printf("[i2c] tx=%lu drain=%lu bytes=%lu idle=%lu err=%u maxgap=%lums bp=%lu wedge=%d in=%luus sens=%luus\r\n",
+    Serial.printf("[i2c] tx=%lu drain=%lu bytes=%lu idle=%lu err=%u maxgap=%lums avgGap=%lums bp=%lu wedge=%d in=%luus sens=%luus\r\n",
                   (unsigned long)(tx - _dbgPrevTx),
                   (unsigned long)(cycles - _dbgPrevCycles),
                   (unsigned long)(bytes - _dbgPrevBytes),
                   (unsigned long)(zero - _dbgPrevZero),
                   _LC76G.dbgErrorCount(),
                   (unsigned long)_LC76G.dbgMaxDrainGapMs(),
+                  (unsigned long)_LC76G.dbgAvgDrainGapMs(),
                   (unsigned long)_bus.dbgBackpressureTicks(),
                   (int)s_busWasWedged,
                   (unsigned long)_dbgInBusyUs,

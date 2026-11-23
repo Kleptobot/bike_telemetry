@@ -22,37 +22,22 @@ void FusionEngine::update(const MeasurementFrame& f, uint16_t wheelCircumference
         if (f.baroPressurePa.valid) {
             const float baroAlt = _alt.computeAltitudeFromPressure(
                 f.baroPressurePa.value, f.baroTempC.value);
-            // Surface the un-filtered baro altitude for diagnostics: it is
-            // the input the whole filter anchors to, and the three-way
-            // comparison with GpsAlt and the fused Altitude shows which
-            // anchor (P0_local, baro_bias_z or est_vel_z) is off.
+            // Surface the un-filtered baro altitude for diagnostics. Compare
+            // it with GPS and fused altitude to inspect P0_local, baro_bias_z,
+            // and the altitude correction lag independently.
             // Before P0 is GPS-calibrated this is standard-atmosphere.
             _out.baroAltitudeM = baroAlt;
             _out.baroAltitudeValid = _alt.seaLevelPressureCalibrated();
             if (_alt.seaLevelPressureCalibrated()) {
-                _alt.altitudeDPSUpdate(baroAlt);
+                _alt.altitudeDPSUpdate(
+                    baroAlt, (float)f.baroPressurePa.dtMs / 1000.0f);
             }
         } else {
             _out.baroAltitudeValid = false;
         }
     }
 
-    // --- Stage 2: IMU integration --------------------------------------------
-    // Was HAL's onIMU callback. The sign flip is the board's mounting
-    // convention: the filter wants accZ positive-up and the LSM6DS3 frame
-    // the HAL reads is positive-down.
-    if (firstTick || f.imu.seq != _prev.imu.seq) {
-        // dt is the interval stamped at acquisition (Sample::dtMs) rather
-        // than a micros() diff taken at consumption time -- the same value,
-        // but deterministic and host-testable. AltitudeFusion's dt clamp
-        // (kept verbatim) rescales anything over 0.1 s down to 0.01 s, which
-        // at the current 1 Hz IMU rate means integration runs at 1/100
-        // scale; that is today's on-device behaviour, preserved on purpose.
-        _alt.altitudeIMUUpdate(-1.0f * f.imu.value.f32_acc_z,
-                               (float)f.imu.dtMs / 1000.0f);
-    }
-
-    // --- Stage 3: GPS correction on each new altitude commit ------------------
+    // --- Stage 2: GPS correction on each new altitude commit ------------------
     // Was HAL's age-shrink detection; a sequence-number change is the same
     // event (AgeSeqTracker notes a commit exactly when age() shrinks).
     // The validity gate is load-bearing: before the first fix the frame
@@ -67,7 +52,7 @@ void FusionEngine::update(const MeasurementFrame& f, uint16_t wheelCircumference
         _alt.altitudeGPSCorrect((float)f.gpsAltM.value);
     }
 
-    // --- Stage 4: baro calibration from GPS (was HAL's 1 Hz HDOP block) -------
+    // --- Stage 3: baro calibration from GPS (was HAL's 1 Hz HDOP block) -------
     // Runs on each new altitude commit instead of on a 1 Hz poll; the
     // calibrator's own 30 s cooldown and 5-sample stability history make the
     // cadence equivalent, with distinct fixes rather than repeated identical
@@ -84,8 +69,9 @@ void FusionEngine::update(const MeasurementFrame& f, uint16_t wheelCircumference
         }
     }
 
-    // --- Stage 5: altitude / vario outputs ------------------------------------
-    // Exactly the fallback getAltitude() and altVelocity() used to perform.
+    // --- Stage 4: altitude / vario outputs ------------------------------------
+    _out.baroSeaLevelPressurePa = _alt.seaLevelPressure();
+    _out.baroPressureCalibrated = _alt.seaLevelPressureCalibrated();
     _out.varioMs    = _alt.rise();
     _out.varioValid = f.baroPressurePa.valid;
     if (f.baroPressurePa.valid) {
@@ -122,10 +108,8 @@ void FusionEngine::update(const MeasurementFrame& f, uint16_t wheelCircumference
 
     // --- Stage 7: grade --------------------------------------------------------
     // The raw grade is vario (m/s -> km/h) / speed (km/h) * 100 for percent.
-    // vario comes from IMU integration and is inherently noisy, so the raw
-    // grade can swing wildly (readings in the hundreds). Apply a first-order
-    // low-pass filter to smooth the output without disturbing the fusion
-    // filter's internal state.
+    // Pressure-rate noise can still make grade jump, so apply a first-order
+    // low-pass filter without disturbing the altitude fusion state.
     //
     // Minimum speed for meaningful grade calculation (km/h). Below this,
     // raw grade is forced to 0 -- dividing by near-zero speed would produce

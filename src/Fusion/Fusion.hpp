@@ -9,7 +9,7 @@
 // FusionEngine -- the App layer's interpretation stage.
 //
 // Consumes the HAL's MeasurementFrame (raw, timestamped facts) and produces
-// the derived channels: fused altitude/vario, selected speed, grade, and
+// the derived channels: fused altitude/barometric vario, selected speed, grade, and
 // per-gate distance. This is where "what the world did" becomes "what it
 // means": nothing here belongs in HAL, and nothing acquired belongs here.
 //
@@ -30,7 +30,9 @@ struct DerivedChannels {
     // (Altitude off alone).
     float baroAltitudeM      = 0.0f;
     bool  baroAltitudeValid  = false;
-    // Vertical velocity from the fusion filter (was altVelocity()).
+    float baroSeaLevelPressurePa = 0.0f;
+    bool  baroPressureCalibrated = false;
+    // Smoothed vertical rate derived from pressure-altitude changes.
     float varioMs       = 0.0f;
     bool  varioValid    = false;
     // Speed: wheel revolutions x circumference when a wheel sensor lives,
@@ -133,10 +135,8 @@ private:
     bool   _hasLastPos = false;
 
     // Low-pass filter state for grade smoothing.
-    // The vario (est_vel_z) is derived from IMU integration and can be noisy;
-    // the raw grade (vario/speed) inherits that noise, producing the volatile
-    // readings in the hundreds. A first-order EMA smooths the output without
-    // disturbing the fusion filter's own state.
+    // The raw grade inherits pressure-rate noise. A first-order EMA smooths
+    // the output without disturbing the altitude fusion state.
     float _filteredGradePct = 0.0f;
     bool  _hasGradeSample = false;
 

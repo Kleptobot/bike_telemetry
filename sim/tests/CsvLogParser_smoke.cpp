@@ -66,6 +66,13 @@ static void publishAdditionalSignals(DataBus& bus) {
     bus.publish(Topic::GpsSats, (uint8_t)8);
     bus.publish(Topic::GpsHdop, 0.8f);
     bus.publish(Topic::BaroAlt, 99.3f);
+    bus.publish(Topic::BaroPressurePa, 100123.4f);
+    bus.publish(Topic::BaroPressureValid, true);
+    bus.publish(Topic::BaroTemperatureC, 24.75f);
+    bus.publish(Topic::BaroTemperatureValid, true);
+    bus.publish(Topic::BaroSeaLevelPressurePa, 101234.5f);
+    bus.publish(Topic::BaroPressureCalibrated, true);
+    bus.publish(Topic::ImuSampleIntervalMs, 101.0f);
     bus.publish(Topic::ImuValid, true);
     bus.publish(Topic::ImuAccelX, 0.1f);
     bus.publish(Topic::ImuAccelY, 0.2f);
@@ -209,12 +216,12 @@ int main() {
     } else {
         splitFields(generated.substr(0, headerEnd), header);
         splitFields(generated.substr(headerEnd + 1, rowEnd - headerEnd - 1), firstRow);
-        if (header.size() != 54 || firstRow.size() != header.size()) {
-            std::printf("FAIL: generated CSV column counts are %u/%u, expected 54\n",
+        if (header.size() != 61 || firstRow.size() != header.size()) {
+            std::printf("FAIL: generated CSV column counts are %u/%u, expected 61\n",
                         (unsigned)header.size(), (unsigned)firstRow.size());
             failures++;
         }
-        if (header.size() == 54 &&
+        if (header.size() == 61 &&
             (header[0] != "time" || header[1] != "latitude" ||
              header[2] != "longitude" || header[3] != "altitude" ||
              header.back() != "locationvalid")) {
@@ -225,6 +232,13 @@ int main() {
             !nearColumn(header, firstRow, "shiftcount", 7.0f) ||
             !nearColumn(header, firstRow, "gpsvalid", 1.0f) ||
             !nearColumn(header, firstRow, "imuaccelx", 0.1f) ||
+            !nearColumn(header, firstRow, "baropressurepa", 100123.4f) ||
+            !nearColumn(header, firstRow, "baropressurevalid", 1.0f) ||
+            !nearColumn(header, firstRow, "barotemperaturec", 24.75f) ||
+            !nearColumn(header, firstRow, "barotemperaturevalid", 1.0f) ||
+            !nearColumn(header, firstRow, "barop0pa", 101234.5f) ||
+            !nearColumn(header, firstRow, "baropressurecalibrated", 1.0f) ||
+            !nearColumn(header, firstRow, "imusampleintervalms", 101.0f) ||
             !nearColumn(header, firstRow, "locationvalid", 1.0f)) {
             std::printf("FAIL: generated CSV did not preserve representative bus signals\n");
             failures++;

@@ -384,7 +384,7 @@ void App::update() {
 void App::updateTelemetry() {
     // Run the fusion pipeline over this tick's acquisition frame. All the
     // derivation that used to live here (Haversine distance, speed-source
-    // selection, grade) and inside HAL (baro/GPS/IMU altitude fusion) is now
+    // selection, grade) and inside HAL (baro/GPS altitude fusion) is now
     // in one place, fed by timestamped samples.
     const MeasurementFrame& frame = HAL::inst().measurements();
 
@@ -467,6 +467,16 @@ void App::updateTelemetry() {
     bus.publish(Topic::GpsCourse,   frame.gpsCourseDeg.valid ? (float)frame.gpsCourseDeg.value : 0.0f);
     bus.publish(Topic::GpsSats,     frame.gpsSatsUsed.value);
     bus.publish(Topic::GpsHdop,     frame.gpsHdop.valid     ? (float)frame.gpsHdop.value     : 0.0f);
+    bus.publish(Topic::BaroPressurePa,
+                frame.baroPressurePa.valid ? frame.baroPressurePa.value : 0.0f);
+    bus.publish(Topic::BaroPressureValid, frame.baroPressurePa.valid);
+    bus.publish(Topic::BaroTemperatureC,
+                frame.baroTempC.valid ? frame.baroTempC.value : 0.0f);
+    bus.publish(Topic::BaroTemperatureValid, frame.baroTempC.valid);
+    bus.publish(Topic::BaroSeaLevelPressurePa, d.baroSeaLevelPressurePa);
+    bus.publish(Topic::BaroPressureCalibrated, d.baroPressureCalibrated);
+    bus.publish(Topic::ImuSampleIntervalMs,
+                frame.imu.valid ? (float)frame.imu.dtMs : 0.0f);
 
     // CPS decodes torque/balance/force but they were dropped at the frame
     // boundary until now; balance and torque are worth a tile.

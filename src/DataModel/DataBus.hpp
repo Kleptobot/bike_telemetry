@@ -85,6 +85,15 @@ enum class Topic : uint8_t {
     HeartRate,       // float: bpm
     PowerMeter,      // float: watts
 
+    // Altitude-fusion diagnostics
+    BaroPressurePa,          // float: raw barometer pressure, Pa
+    BaroPressureValid,       // bool: raw pressure sample is valid
+    BaroTemperatureC,        // float: raw barometer temperature, Celsius
+    BaroTemperatureValid,    // bool: raw barometer temperature is valid
+    BaroSeaLevelPressurePa,  // float: local sea-level pressure used for altitude, Pa
+    BaroPressureCalibrated,  // bool: local sea-level pressure has been calibrated
+    ImuSampleIntervalMs,     // float: observed interval between IMU samples, ms
+
     TopicCount  // Must be last; used for array sizing
 };
 
@@ -255,6 +264,16 @@ static constexpr TopicMetadata kTopicMetadata[] = {
     numericTopic(Topic::Battery, "Battery", "%  ", "battery", TopicValueKind::Int16, 0),
     numericTopic(Topic::BatteryVolts, "BattVolts", "V  ", "batteryvolts", TopicValueKind::Float, 2),
     numericTopic(Topic::Temperature, "Temperature", "C  ", "temperature"),
+    numericTopic(Topic::BaroPressurePa, "BaroPressure", "Pa ", "baropressurepa", TopicValueKind::Float, 1),
+    booleanTopic(Topic::BaroPressureValid, "BaroPressureValid", "baropressurevalid", "VALID", "INVALID",
+                 TopicColor::Green, TopicColor::Red),
+    numericTopic(Topic::BaroTemperatureC, "BaroTemperature", "C  ", "barotemperaturec", TopicValueKind::Float, 2),
+    booleanTopic(Topic::BaroTemperatureValid, "BaroTempValid", "barotemperaturevalid", "VALID", "INVALID",
+                 TopicColor::Green, TopicColor::Red),
+    numericTopic(Topic::BaroSeaLevelPressurePa, "BaroP0", "Pa ", "barop0pa", TopicValueKind::Float, 1),
+    booleanTopic(Topic::BaroPressureCalibrated, "BaroCalibrated", "baropressurecalibrated", "CAL", "UNCAL",
+                 TopicColor::Green, TopicColor::Orange),
+    numericTopic(Topic::ImuSampleIntervalMs, "ImuInterval", "ms ", "imusampleintervalms", TopicValueKind::Float, 1),
 };
 
 static constexpr size_t kTopicMetadataCount =

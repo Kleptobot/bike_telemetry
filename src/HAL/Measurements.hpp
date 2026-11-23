@@ -81,7 +81,8 @@ class AgeSeqTracker {
     // Call once per tick with the element's current age(). Returns true when
     // a newer value was committed since the previous tick.
     bool note(uint32_t ageMs, uint32_t nowMs) {
-        if (ageMs < _prevAge) {
+        const bool changed = ageMs < _prevAge;
+        if (changed) {
             if (_lastMs != 0 && nowMs > _lastMs) {
                 const uint32_t dt = nowMs - _lastMs;
                 _dtMs = dt > 65000 ? 65000u : (uint16_t)dt;
@@ -90,10 +91,9 @@ class AgeSeqTracker {
             }
             _lastMs  = nowMs;
             ++_seq;
-            _prevAge = ageMs;
-            return true;
         }
-        return false;
+        _prevAge = ageMs;
+        return changed;
     }
     uint16_t seq()    const { return _seq; }
     uint16_t dtMs()   const { return _dtMs; }

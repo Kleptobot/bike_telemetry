@@ -235,11 +235,17 @@ class LC76G
     // completed buffer drains -- the number the sensor sampling budget has to
     // keep bounded, or the module's internal buffer backs up and NMEA
     // corrupts (the empirical "faster sensors broke the GPS" failure).
+    // dbgAvgDrainGapMs is the mean of the most recent 16 completed-drain gaps.
     uint32_t dbgTxCount()       const { return _dbgTxCount; }      // every Wire read/write
     uint32_t dbgDrainCycles()   const { return _dbgDrainCycles; }  // buffer reads with len > 0
     uint32_t dbgBytesDrained()  const { return _dbgBytesDrained; }
     uint32_t dbgZeroLenPolls()  const { return _dbgZeroLenPolls; }   // probes that found nothing
     uint32_t dbgMaxDrainGapMs() const { return _dbgMaxDrainGapMs; }
+    uint32_t dbgAvgDrainGapMs() const {
+        return _drainGapWindowCount
+            ? _drainGapWindowSumMs / _drainGapWindowCount
+            : 0;
+    }
     uint8_t  dbgErrorCount()    const { return _errorCount; }
 
     // Milliseconds since the state machine last STARTED a bus cycle (any
@@ -333,6 +339,10 @@ class LC76G
     // Bus instrumentation accumulators (see the dbg* getters above).
     uint32_t _dbgTxCount = 0, _dbgDrainCycles = 0, _dbgBytesDrained = 0;
     uint32_t _dbgZeroLenPolls = 0, _dbgMaxDrainGapMs = 0, _lastDrainOkMs = 0;
+    static constexpr uint8_t DRAIN_GAP_WINDOW_SIZE = 16;
+    uint32_t _drainGapWindowMs[DRAIN_GAP_WINDOW_SIZE] = {};
+    uint32_t _drainGapWindowSumMs = 0;
+    uint8_t _drainGapWindowCount = 0, _drainGapWindowNext = 0;
     uint32_t _lastCycleStartMs = 0;   // arbiter backpressure signal (see above)
 
     bool _CR = false;
