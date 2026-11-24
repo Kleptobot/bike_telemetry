@@ -477,6 +477,10 @@ void App::updateTelemetry() {
     bus.publish(Topic::BaroPressureCalibrated, d.baroPressureCalibrated);
     bus.publish(Topic::ImuSampleIntervalMs,
                 frame.imu.valid ? (float)frame.imu.dtMs : 0.0f);
+    bus.publish(Topic::ImuVerticalAcceleration,
+                d.imuVerticalAccelerationMs2);
+    bus.publish(Topic::ImuVerticalVelocity,
+                d.imuVerticalVelocityMs);
 
     // CPS decodes torque/balance/force but they were dropped at the frame
     // boundary until now; balance and torque are worth a tile.

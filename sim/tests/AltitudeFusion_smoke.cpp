@@ -23,6 +23,40 @@ int main() {
     {
         AltitudeFusion fusion;
         calibrateAt(fusion, 100.0f, 100000.0f);
+        fusion.altitudeDPSUpdate(100.0f, 1.0f);
+
+        for (int i = 0; i < 30; i++)
+            fusion.altitudeIMUUpdate(0.26f, -0.05f, -0.92f, 0.1f);
+
+        if (fabsf(fusion.imuVerticalAcceleration()) > 0.05f ||
+            fabsf(fusion.imuVerticalVelocity()) > 0.05f ||
+            fabsf(fusion.altitude() - 100.0f) > 0.05f) {
+            std::printf("FAIL: stationary IMU moved vertical estimate: "
+                        "acc=%.3f vel=%.3f alt=%.3f\n",
+                        fusion.imuVerticalAcceleration(),
+                        fusion.imuVerticalVelocity(),
+                        fusion.altitude());
+            failures++;
+        }
+    }
+
+    {
+        AltitudeFusion fusion;
+        calibrateAt(fusion, 100.0f, 100000.0f);
+        fusion.altitudeDPSUpdate(100.0f, 1.0f);
+        fusion.altitudeIMUUpdate(0.0f, 0.0f, -1.0f, 0.1f);
+        fusion.altitudeIMUUpdate(0.0f, 0.0f, -0.9f, 0.1f);
+
+        if (fusion.imuVerticalAcceleration() <= 0.0f) {
+            std::printf("FAIL: positive upward acceleration had the wrong sign: %.3f m/s2\n",
+                        fusion.imuVerticalAcceleration());
+            failures++;
+        }
+    }
+
+    {
+        AltitudeFusion fusion;
+        calibrateAt(fusion, 100.0f, 100000.0f);
         for (int i = 0; i < 30; i++)
             fusion.altitudeDPSUpdate(100.0f - 0.02f * i, 1.0f);
 

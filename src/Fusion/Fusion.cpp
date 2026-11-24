@@ -52,6 +52,19 @@ void FusionEngine::update(const MeasurementFrame& f, uint16_t wheelCircumference
         _alt.altitudeGPSCorrect((float)f.gpsAltM.value);
     }
 
+    // --- Stage 2b: short-term IMU vertical-motion update -----------------------
+    // Runs on each accepted, timestamped IMU sample. The altitude and vario
+    // estimators use measured dt rather than nominal polling period because
+    // I2C arbitration can delay successful reads.
+    if (f.imu.valid &&
+        (firstTick || f.imu.seq != _prev.imu.seq) &&
+        f.imu.dtMs > 0) {
+        const imu_data& imu = f.imu.value;
+        _alt.altitudeIMUUpdate(imu.f32_acc_x, imu.f32_acc_y,
+                               imu.f32_acc_z,
+                               (float)f.imu.dtMs / 1000.0f);
+    }
+
     // --- Stage 3: baro calibration from GPS (was HAL's 1 Hz HDOP block) -------
     // Runs on each new altitude commit instead of on a 1 Hz poll; the
     // calibrator's own 30 s cooldown and 5-sample stability history make the
@@ -74,6 +87,8 @@ void FusionEngine::update(const MeasurementFrame& f, uint16_t wheelCircumference
     _out.baroPressureCalibrated = _alt.seaLevelPressureCalibrated();
     _out.varioMs    = _alt.rise();
     _out.varioValid = f.baroPressurePa.valid;
+    _out.imuVerticalAccelerationMs2 = _alt.imuVerticalAcceleration();
+    _out.imuVerticalVelocityMs = _alt.imuVerticalVelocity();
     if (f.baroPressurePa.valid) {
         _out.altitudeM     = _alt.altitude();
         _out.altitudeValid = true;

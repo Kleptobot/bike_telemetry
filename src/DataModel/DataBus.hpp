@@ -93,6 +93,8 @@ enum class Topic : uint8_t {
     BaroSeaLevelPressurePa,  // float: local sea-level pressure used for altitude, Pa
     BaroPressureCalibrated,  // bool: local sea-level pressure has been calibrated
     ImuSampleIntervalMs,     // float: observed interval between IMU samples, ms
+    ImuVerticalAcceleration, // float: gravity-normalised vertical acceleration, m/s2
+    ImuVerticalVelocity,     // float: complementary-filter vertical velocity, m/s
 
     TopicCount  // Must be last; used for array sizing
 };
@@ -274,6 +276,8 @@ static constexpr TopicMetadata kTopicMetadata[] = {
     booleanTopic(Topic::BaroPressureCalibrated, "BaroCalibrated", "baropressurecalibrated", "CAL", "UNCAL",
                  TopicColor::Green, TopicColor::Orange),
     numericTopic(Topic::ImuSampleIntervalMs, "ImuInterval", "ms ", "imusampleintervalms", TopicValueKind::Float, 1),
+    numericTopic(Topic::ImuVerticalAcceleration, "ImuVAccel", "m/s2", "imuverticalacceleration"),
+    numericTopic(Topic::ImuVerticalVelocity, "ImuVVelo", "m/s ", "imuverticalvelocity"),
 };
 
 static constexpr size_t kTopicMetadataCount =

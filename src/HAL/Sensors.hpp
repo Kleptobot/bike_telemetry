@@ -91,7 +91,7 @@ private:
     // bp must stay ~0, err flat, and the vario/grade tiles sane -- the
     // fusion dt-clamp makes the vario respond ~5x faster per wall-second
     // at this cadence than at 1 Hz.
-    static const uint16_t IMU_Read_Period = 50;
+    static const uint16_t IMU_Read_Period = 100;
     static const uint16_t DPS_Read_Period = 1000;
     static const uint16_t RTC_Read_Period = 950;
 

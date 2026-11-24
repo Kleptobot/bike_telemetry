@@ -35,6 +35,9 @@ struct DerivedChannels {
     // Smoothed vertical rate derived from pressure-altitude changes.
     float varioMs       = 0.0f;
     bool  varioValid    = false;
+    // IMU-derived diagnostics and complementary vertical-motion estimate.
+    float imuVerticalAccelerationMs2 = 0.0f;
+    float imuVerticalVelocityMs = 0.0f;
     // Speed: wheel revolutions x circumference when a wheel sensor lives,
     // otherwise GPS speed.
     float speedKmh      = 0.0f;

@@ -20,6 +20,21 @@ class AltitudeFusion {
     float lastBaroAltitudeM = 0.0f;
     bool hasLastBaroAltitude = false;
 
+    // Complementary vertical-motion state. Accelerometer values are specific
+    // force in sensor frame, in g. A low-pass gravity estimate supplies the
+    // direction of world vertical; subtracting it leaves the linear
+    // acceleration along that direction. Barometric velocity supplies the
+    // slow bias correction needed to keep the IMU velocity bounded.
+    float gravityX = 0.0f, gravityY = 0.0f, gravityZ = 0.0f;
+    bool imuGravityValid = false;
+    float imuVerticalAccelMs2 = 0.0f;
+    float imuVerticalVelMs = 0.0f;
+    float imuPredictedAltM = 0.0f;
+    bool imuAltitudeValid = false;
+    static constexpr float IMU_GRAVITY_CUTOFF_HZ = 2.0f;
+    static constexpr float IMU_ACCEL_CUTOFF_HZ = 2.0f;
+    static constexpr float IMU_VEL_CORRECTION_TAU_S = 2.0f;
+
     // -- P0 calibration state --
     float P0_local = STANDARD_SEA_LEVEL_PA;
     bool P0_calibrated = false;
@@ -36,6 +51,8 @@ class AltitudeFusion {
 
     void altitudeDPSUpdate(float dpsAlt, float dtSeconds);
     void altitudeGPSCorrect(float gpsAlt);
+    void altitudeIMUUpdate(float accelXG, float accelYG, float accelZG,
+                           float dtSeconds);
 
     // Call alongside altitudeGPSCorrect() with the raw pressure/temp
     // used to compute dpsAlt, so P0_local can be calibrated and slowly tracked.
@@ -43,8 +60,10 @@ class AltitudeFusion {
 
     float computeAltitudeFromPressure(float pressurePa, float tempC) const;
 
-    const float& altitude() const { return est_alt; };
-    const float& rise() const { return est_vel_z; };
+    float altitude() const { return imuAltitudeValid ? imuPredictedAltM : est_alt; };
+    float rise() const { return est_vel_z; };
+    float imuVerticalAcceleration() const { return imuVerticalAccelMs2; };
+    float imuVerticalVelocity() const { return imuVerticalVelMs; };
     const float& seaLevelPressure() const { return P0_local; };
     const bool& seaLevelPressureCalibrated() const { return P0_calibrated; };
 
