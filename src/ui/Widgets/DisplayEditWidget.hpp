@@ -39,6 +39,11 @@ public:
         _menuLast = _menu;
         if (_inMode) drawModeArrows();
         _inModeLast = _inMode;
+
+        _lastRenderX = _x;
+        _lastRenderY = _y;
+        _lastRenderW = _width;
+        _lastRenderH = _height;
     }
 
     void setMode(WidgetSubMode m) {
@@ -142,28 +147,43 @@ private:
 
     void calcTextCoords() {
         int16_t x1, y1;
-        uint16_t w =0,  h = 0;
+        uint16_t w = 0, h = 0;
 
         _size = 0;
         uint16_t prevW = 0, prevH = 0;
+        int16_t prevX1 = 0, prevY1 = 0;
+        const int availableW = max(1, _width - 6);
+        const int availableH = max(1, _height - 6);
+
         while (_size < MAX_TEXT_SIZE) {
             Disp::setTextSize(_size + 1);
             Disp::getTextBounds(_text, 0, 0, &x1, &y1, &w, &h);
-            if (w >= _width || h >= _height) break;   // this size doesn't fit — stop, use previous
+            if (w > availableW || h > availableH) break;
             _size++;
             prevW = w; prevH = h;
+            prevX1 = x1;
+            prevY1 = y1;
         }
         w = prevW; h = prevH;
 
-        int hx = w/2;
-        int hy = h/2;
+        if (_size == 0) {
+            _size = 1;
+            Disp::setTextSize(_size);
+            Disp::getTextBounds(_text, 0, 0, &x1, &y1, &w, &h);
+            prevW = w; prevH = h;
+            prevX1 = x1;
+            prevY1 = y1;
+        }
 
-        _offsetX = _width/2 - hx;
-        _offsetY = _height/2 - hy;
+        // getTextBounds reports a top offset (often negative) and the glyph
+        // height.  Offset by both or text becomes visually above/below centre.
+        _offsetX = (_width - (int)prevW) / 2 - prevX1;
+        _offsetY = (_height - (int)prevH) / 2 - prevY1;
     }
 
     void printTextCentered() {
-        Disp::setTextSize(_size > 0 ? _size : 1);
+        Disp::setTextSize(_size);
+        Disp::setTextColor(ST77XX_WHITE);
         Disp::setCursor(_x + _offsetX, _y + _offsetY);
         Disp::print(_text);
     }

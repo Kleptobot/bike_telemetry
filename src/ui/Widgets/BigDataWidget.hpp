@@ -17,37 +17,11 @@ public:
         const TopicMetadata* info = topicMetadata(_topic);
         unitStr = info ? String(info->units) : "";
 
-        // Find the largest integer-part text size where everything still fits the footprint.
+        // Find a starting text size; formatValue() refits it to the actual value.
         // Decimal/unit text is always drawn at decimalSizeFor(intSize), roughly 1/3 the integer size.
-        int16_t bx, by;
-        bestSize = 1;
         // Time tiles render mm:ss, so measure with a 5-char sample, not "888".
         const char* intSample = isTimeType() ? "88:88" : "888";
-
-        for (uint8_t s = 1; s <= MAX_BIG_TEXT_SIZE; s++) {
-            uint8_t decSize = decimalSizeFor(s);
-
-            Disp::setTextSize(s);
-            Disp::getTextBounds(intSample, 0, 0, &bx, &by, &intW, &intH);
-
-            Disp::setTextSize(decSize);
-            Disp::getTextBounds(".*", 0, 0, &bx, &by, &decW, &decH);
-            Disp::getTextBounds(unitStr, 0, 0, &bx, &by, &unitW, &unitH);
-
-            uint16_t totalW = intW + max(decW, unitW);
-            uint16_t stackedH = decH + UNIT_GAP_PX + unitH;
-            uint16_t totalH = max(intH, stackedH);
-
-            if (totalW > _width || totalH > _height) break;   // this size no longer fits — stop, keep previous
-            bestSize = s;
-        }
-        
-        Disp::setTextSize(bestSize);
-        Disp::getTextBounds(intSample, 0, 0, &bx, &by, &intW, &intH);
-        uint8_t decSize = decimalSizeFor(bestSize);
-        Disp::setTextSize(decSize);
-        Disp::getTextBounds(".*", 0, 0, &bx, &by, &decW, &decH);
-        Disp::getTextBounds(unitStr, 0, 0, &bx, &by, &unitW, &unitH);
+        fitTextLayout(intSample, ".*");
     }
     
 
@@ -78,6 +52,7 @@ public:
         Disp::setTextColor(_color);
 
         if (info->displayFormat == TopicDisplayFormat::Location) {
+            if (_width < LOCATION_MIN_WIDTH_PX || _height < LOCATION_MIN_HEIGHT_PX) return;
             Disp::setTextSize(1);
             Disp::setCursor(_x, _y);
             if (!_locationValue.valid) {
@@ -110,7 +85,16 @@ public:
         uint8_t decSize = decimalSizeFor(bestSize);
 
         // Integer part: top-left anchored at widget origin
-        int intY = _y + (_height - intH) / 2;
+        const bool hasDecimal = decStr.length() != 0;
+        const uint16_t stackedContentH = hasDecimal ? decH : intH;
+        const uint16_t stackedH = unitStr.length() == 0
+                                      ? 0
+                                      : stackedContentH + UNIT_GAP_PX + unitH;
+        const uint16_t totalH = max(intH, stackedH);
+        const int verticalOffset = (_height > static_cast<int>(totalH))
+                                       ? (_height - static_cast<int>(totalH)) / 2
+                                       : 0;
+        int intY = _y + verticalOffset;
         Disp::setTextSize(bestSize);
         Disp::setCursor(_x, intY);
         Disp::print(intStr);
@@ -121,9 +105,12 @@ public:
         Disp::setCursor(decX, intY);
         Disp::print(decStr);
 
-        // Units: directly below the decimal part, same x, small gap
-        int unitY = intY + decH + UNIT_GAP_PX;
-        Disp::setCursor(decX, unitY);
+        // Units sit under the decimal part, or centered under whole numbers.
+        int unitX = decStr.length() == 0
+                        ? _x + (max(intW, unitW) - unitW) / 2
+                        : decX;
+        int unitY = intY + (hasDecimal ? decH : intH) + UNIT_GAP_PX;
+        Disp::setCursor(unitX, unitY);
         Disp::print(unitStr);
 
         if (_drawRightEdge) {
@@ -286,6 +273,8 @@ public:
 private:
     static constexpr uint8_t MAX_BIG_TEXT_SIZE = 10;
     static constexpr uint8_t UNIT_GAP_PX = 2;
+    static constexpr uint16_t LOCATION_MIN_WIDTH_PX = 13 * 6;
+    static constexpr uint16_t LOCATION_MIN_HEIGHT_PX = 2 * 8;
 
     Topic _topic;
     bool _subscribed = false;
@@ -358,6 +347,45 @@ private:
         return s > 0 ? s : 1;
     }
 
+    void fitTextLayout(const String& integerText, const String& decimalText) {
+        int16_t bx, by;
+        bestSize = 1;
+        for (uint8_t s = 1; s <= MAX_BIG_TEXT_SIZE; s++) {
+            const uint8_t decSize = decimalSizeFor(s);
+            uint16_t candidateIntW, candidateIntH;
+            uint16_t candidateDecW, candidateDecH;
+            uint16_t candidateUnitW, candidateUnitH;
+
+            Disp::setTextSize(s);
+            Disp::getTextBounds(integerText, 0, 0, &bx, &by, &candidateIntW, &candidateIntH);
+            Disp::setTextSize(decSize);
+            Disp::getTextBounds(decimalText, 0, 0, &bx, &by, &candidateDecW, &candidateDecH);
+            Disp::getTextBounds(unitStr, 0, 0, &bx, &by, &candidateUnitW, &candidateUnitH);
+
+            const uint16_t totalW = decimalText.length() == 0
+                                        ? max(candidateIntW, candidateUnitW)
+                                        : candidateIntW + max(candidateDecW, candidateUnitW);
+            const bool hasDecimal = decimalText.length() != 0;
+            const uint16_t stackedContentH = hasDecimal ? candidateDecH : candidateIntH;
+            const uint16_t stackedH = unitStr.length() == 0
+                                          ? 0
+                                          : stackedContentH + UNIT_GAP_PX + candidateUnitH;
+            const uint16_t totalH = max(candidateIntH, stackedH);
+            const bool fits = totalW <= _width && totalH <= _height;
+
+            if (s == 1 || fits) {
+                bestSize = s;
+                intW = candidateIntW;
+                intH = candidateIntH;
+                decW = candidateDecW;
+                decH = candidateDecH;
+                unitW = candidateUnitW;
+                unitH = candidateUnitH;
+            }
+            if (!fits) break;
+        }
+    }
+
     String padIntPart(int intPart) const {
         String s = String(intPart);
         while (s.length() < 3) s = " " + s;
@@ -379,6 +407,7 @@ private:
             uint32_t mm = total / 60, ss = total % 60;
             intStr = (mm < 10 ? "0" : "") + String(mm) + ":" + (ss < 10 ? "0" : "") + String(ss);
             decStr = "";
+            fitTextLayout(intStr, decStr);
             return;
         }
         int intPart = (int)_value;
@@ -386,12 +415,14 @@ private:
         intStr = padIntPart(intPart);
         if (decimals == 0) {
             decStr = "";
+            fitTextLayout(intStr, decStr);
             return;
         }
         int scale = 1;
         for (uint8_t i = 1; i < decimals; i++) scale *= 10;
         int decPart = abs((int)((_value - intPart) * 10.0f * scale));
         decStr = "." + String(decPart);
+        fitTextLayout(intStr, decStr);
     }
     bool isTimeType() const {
         const TopicMetadata* info = topicMetadata(_topic);
