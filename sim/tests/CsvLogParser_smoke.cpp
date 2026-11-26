@@ -42,6 +42,10 @@ static bool near(float actual, float expected) {
 
 static void publishAdditionalSignals(DataBus& bus) {
     bus.publish(Topic::WheelSpeed, 11.0f);
+    bus.publish(Topic::WheelRevs, (uint32_t)123);
+    bus.publish(Topic::WheelRevsValid, true);
+    bus.publish(Topic::CrankRevs, (uint32_t)456);
+    bus.publish(Topic::CrankRevsValid, false);
     bus.publish(Topic::Vario, -0.75f);
     bus.publish(Topic::SmoothedGrade, 3.2f);
     bus.publish(Topic::GearRatio, 2.0f);
@@ -149,6 +153,8 @@ int main() {
 
     if (topicFromDisplayName(String("EstimatedSpeed")) != Topic::EstimatedSpeed ||
         topicFromDisplayName(String("WheelSpeed")) != Topic::WheelSpeed ||
+        topicFromDisplayName(String("WheelRevs")) != Topic::WheelRevs ||
+        topicFromDisplayName(String("CrankRevs")) != Topic::CrankRevs ||
         topicFromDisplayName(String("TotalDist")) != Topic::TotalDistanceM) {
         std::printf("FAIL: existing layout names did not resolve to DataBus topics\n");
         failures++;
@@ -220,12 +226,12 @@ int main() {
     } else {
         splitFields(generated.substr(0, headerEnd), header);
         splitFields(generated.substr(headerEnd + 1, rowEnd - headerEnd - 1), firstRow);
-        if (header.size() != 65 || firstRow.size() != header.size()) {
-            std::printf("FAIL: generated CSV column counts are %u/%u, expected 65\n",
+        if (header.size() != 69 || firstRow.size() != header.size()) {
+            std::printf("FAIL: generated CSV column counts are %u/%u, expected 69\n",
                         (unsigned)header.size(), (unsigned)firstRow.size());
             failures++;
         }
-        if (header.size() == 65 &&
+        if (header.size() == 69 &&
             (header[0] != "time" || header[1] != "latitude" ||
              header[2] != "longitude" || header[3] != "altitude" ||
              header.back() != "locationvalid")) {
@@ -235,6 +241,10 @@ int main() {
         if (!nearColumn(header, firstRow, "estimatedspeed", 20.0f) ||
             !nearColumn(header, firstRow, "wheelspeed", 11.0f) ||
             !nearColumn(header, firstRow, "wheelrpm", 0.0f) ||
+            !nearColumn(header, firstRow, "wheelrevs", 123.0f) ||
+            !nearColumn(header, firstRow, "wheelrevsvalid", 1.0f) ||
+            !nearColumn(header, firstRow, "crankrevs", 456.0f) ||
+            !nearColumn(header, firstRow, "crankrevsvalid", 0.0f) ||
             !nearColumn(header, firstRow, "vario", -0.75f) ||
             !nearColumn(header, firstRow, "shiftcount", 7.0f) ||
             !nearColumn(header, firstRow, "gpsvalid", 1.0f) ||

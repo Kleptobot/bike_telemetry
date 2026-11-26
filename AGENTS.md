@@ -30,8 +30,9 @@ these dependencies and supplies the streaming XML parser used for TCX summaries.
 
 There is **no unit-test framework**. Tests are standalone smoke-test programs
 under `sim/tests/` — each carries its own `g++` build command in a header
-comment. Current tests cover `FitnessFusion`, `FtpEstimator`, and the FIT/TCX/CSV
-log parsers. Build artifacts go in `sim/build/` (gitignored).
+comment. Current tests cover `FitnessFusion`, CSC event-count fusion,
+`FtpEstimator`, and the FIT/TCX/CSV log parsers. Build artifacts go in
+`sim/build/` (gitignored).
 
 Full simulator reference (flags, keys, scenarios, injected BLE sensors):
 **`sim/README.md`**. It is accurate and detailed; read it instead of guessing.
@@ -149,7 +150,7 @@ story. Orientation:
 | `host/main.cpp` | Host frontend: SDL window (optional) or headless frame dump; CLI flags (`--headless`, `--frames`, `--sensors`, `--stats`, `--screen`, `--sd`, `--last`, …). |
 | `host/SimHAL.*`, `host/SimLC76G.*` | Simulated sensors and NMEA generation (real NMEA sentences through the real TinyGPSPlus). |
 | `stubs/` | Arduino/hardware stubs (`Arduino.h`, `SdFat`, `bluefruit`, `Wire`/`SPI`, sensor stubs…). This is the substrate any new host-side test should reuse. |
-| `tests/` | Smoke tests: `FitnessFusion_smoke`, `FtpEstimator_smoke`, `FitLogParser_smoke`, `TcxLogParser_smoke`, and `CsvLogParser_smoke`. Build command is in each file's header comment; run from `sim/`. The FIT test generates a fixture with `FitWriter`; the TCX test reads a fixture from `sdcard/`; the CSV test exercises generated and legacy formats. |
+| `tests/` | Smoke tests: `FitnessFusion_smoke`, `FusionEventCount_smoke`, `FtpEstimator_smoke`, `FitLogParser_smoke`, `TcxLogParser_smoke`, and `CsvLogParser_smoke`. Build command is in each file's header comment; run from `sim/`. The FIT test generates a fixture with `FitWriter`; the TCX test reads a fixture from `sdcard/`; the CSV test exercises generated and legacy formats. |
 | `tools/` | `ppm2png.py` (frame conversion, stdlib-only), `get-sdl2.bat`/`.sh` (optional SDL2 SDK for the interactive window). |
 | `Makefile` | The sim build. **Must be kept in sync when adding a source file — see §7.** `run.bat`/`run.sh` wrap it; `build_headless.ps1` is a direct-g++ fallback for shells where the Makefile's Unix probing fails. |
 | `sample-sd/` | Seed config copied into gitignored `sdcard/` on first run: `layout.txt`, `bikeStats.txt` (wheel circumference — without it wheel speed is exactly 0), `biometrics.txt`, `time.txt`. `devices.txt` (paired-sensor fixture) is seeded at runtime. |

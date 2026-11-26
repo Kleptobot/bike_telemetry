@@ -2,6 +2,7 @@
 #include "csc.hpp"
 
 std::vector<csc*> csc::_cscDevices;
+uint32_t csc::_nextSourceId = 0;
 
 void csc::csc_notify_callback(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len) {
   //itterate the members of the bt device base
@@ -61,11 +62,15 @@ void csc::discover(uint16_t conn_handle) {
       u16_SpeedEvt_Prev = 0;
       u16_CrankCount_Prev = 0;
       u16_CrankEvt_Prev = 0;
-      //f32_kph_raw = 0;
-      raw_wheel_rpm = 0;
-      f32_cadence_raw = 0;
-      f32_wheel_rpm = 0;
-      f32_cadence = 0;
+      u16_SpeedEvt_Last = 0;
+      u16_CrankEvt_Last = 0;
+      millis_at_spd_evt = 0;
+      millis_at_cad_evt = 0;
+      _hasWheelSample = false;
+      _hasCrankSample = false;
+      _wheelResync = true;
+      _crankResync = true;
+      _disconnected = false;
 
       u8_feature = csc_feat.read8();
       b_speed_present = ((u8_feature & 0x01) == 1);
@@ -132,48 +137,26 @@ void csc::csc_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len) 
     memcpy(&u16_SpeedEvt, data+offset, 2);
     offset += 2;
 
-    //check for disconnect
-    if(_disconnected) {
+    const uint32_t receivedAt = millis();
+    _hasWheelSample = true;
+    if (_wheelResync) {
       u16_SpeedEvt_Prev=u16_SpeedEvt;
       u32_WheelCount_Prev=u32_WheelCount;
-      _wheelResync = true;
-      _disconnected=false;
-    }
-  
-    //check for overflow of speed evt
-    if (u16_SpeedEvt != u16_SpeedEvt_Prev) {
-      // Free-running uint16 counter: plain unsigned subtraction already wraps
-      // correctly, and does so without the off-by-one of (65535 - prev).
-      u16_speed_delta = (uint16_t)(u16_SpeedEvt - u16_SpeedEvt_Prev);
-      u16_SpeedEvt_Prev = u16_SpeedEvt;
-      millis_at_spd_evt = millis();
-      exp_next_spd_evt = millis_at_spd_evt + uint(u16_speed_delta*0.9765625); //convert 1/1024ths of a second into milliseconds
-    }
-
-    u16_SpeedEvt_Last = u16_SpeedEvt;
-
-    //free-running uint32 counter, wraps correctly under subtraction
-    u32_WheelCount_delta = (uint32_t)(u32_WheelCount - u32_WheelCount_Prev);
-    u32_WheelCount_Prev = u32_WheelCount;
-
-    // The cumulative total only advances on genuine deltas: the first packet
-    // after construction/discover/reconnect baselines Prev instead of adding
-    // the sensor's whole lifetime count to the total.
-    if (_wheelResync) {
+      u16_SpeedEvt_Last = u16_SpeedEvt;
+      millis_at_spd_evt = receivedAt;
       _wheelResync = false;
     } else {
-      u32_WheelCount_Total += u32_WheelCount_delta;
-    }
+      // Free-running counters wrap naturally under unsigned subtraction.
+      const uint16_t eventDelta = (uint16_t)(u16_SpeedEvt - u16_SpeedEvt_Prev);
+      const uint32_t revDelta = (uint32_t)(u32_WheelCount - u32_WheelCount_Prev);
+      u16_SpeedEvt_Prev = u16_SpeedEvt;
+      u32_WheelCount_Prev = u32_WheelCount;
+      u16_SpeedEvt_Last = u16_SpeedEvt;
+      u32_WheelCount_Total += revDelta;
 
-    //calculate the rate of change and convert to km/h
-    raw_wheel_rpm = 0;
-    if (u16_speed_delta > 0) {
-      //speed delta is in 1024ths of a second, 3.6 * 1024/1000 = 3.6864
-      //f32_kph_raw = f32_circ * 3.6864 *float(u32_WheelCount_delta)/float(u16_speed_delta);
-
-      //csc time delta is in 1/1024ths of a second
-      //
-      raw_wheel_rpm = 61440.0 * float(u32_WheelCount_delta)/float(u16_speed_delta);
+      if (eventDelta > 0 || revDelta > 0) {
+        millis_at_spd_evt = receivedAt;
+      }
     }
   }
   if ((data[0] & 0x02) == 2) {
@@ -183,76 +166,27 @@ void csc::csc_notify(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len) 
     memcpy(&u16_CrankEvt, data+offset, 2);
     offset += 2;
 
-    //check for disconnect
-    if(_disconnected) {
+    const uint32_t receivedAt = millis();
+    _hasCrankSample = true;
+    if (_crankResync) {
       u16_CrankEvt_Prev = u16_CrankEvt;
       u16_CrankCount_Prev = u16_CrankCount;
-      _crankResync = true;
-      _disconnected=false;
-    }
-
-    //check for overflow of crank evt
-    if (u16_CrankEvt != u16_CrankEvt_Prev) {
-      u16_crank_delta = (uint16_t)(u16_CrankEvt - u16_CrankEvt_Prev);
-      millis_at_cad_evt = millis();
-      exp_next_cad_evt = millis_at_cad_evt + uint(u16_crank_delta*0.9765625); //convert 1/1024ths of a second into milliseconds
-      u16_CrankEvt_Prev = u16_CrankEvt;
-    }
-
-    u16_CrankEvt_Last = u16_CrankEvt;
-
-    //free-running uint16 counter, wraps correctly under subtraction
-    u16_CrankCount_delta = (uint16_t)(u16_CrankCount - u16_CrankCount_Prev);
-    u16_CrankCount_Prev = u16_CrankCount;
-
-    if (_crankResync) {
+      u16_CrankEvt_Last = u16_CrankEvt;
+      millis_at_cad_evt = receivedAt;
       _crankResync = false;
     } else {
-      u32_CrankCount_Total += u16_CrankCount_delta;
-    }
-    
-    //calculate rate of change and convert to rpm
-    f32_cadence_raw = 0;
-    if (u16_crank_delta>0) {
-      //61440 is 60*1024: converts the crank delta and 1/1024s time delta into revolutions per minute
-      f32_cadence_raw = 61440.0 *float(u16_CrankCount_delta)/float(u16_crank_delta);
-    }
-  }
-}
+      const uint16_t eventDelta = (uint16_t)(u16_CrankEvt - u16_CrankEvt_Prev);
+      const uint16_t revDelta = (uint16_t)(u16_CrankCount - u16_CrankCount_Prev);
+      u16_CrankEvt_Prev = u16_CrankEvt;
+      u16_CrankCount_Prev = u16_CrankCount;
+      u16_CrankEvt_Last = u16_CrankEvt;
+      u32_CrankCount_Total += revDelta;
 
-data_record csc::getSpeed() {
-  // Average over the devices that actually contribute, not over every CSC
-  // device present. Dividing by _cscDevices.size() halved the reading when
-  // one of two sensors reported cadence only.
-  data_record speed = {0, false};
-  uint16_t contributors = 0;
-  for (csc* dev : _cscDevices) {
-    if(dev->b_speed_present) {
-      speed.value += dev->f32_wheel_rpm;
-      speed.live = true;
-      contributors++;
+      if (eventDelta > 0 || revDelta > 0) {
+        millis_at_cad_evt = receivedAt;
+      }
     }
   }
-  if (contributors > 0) {
-    speed.value /= contributors;
-  }
-  return speed;
-}
-
-data_record csc::getCadence() {
-  data_record cadence = {0, false};
-  uint16_t contributors = 0;
-  for (csc* dev : _cscDevices) {
-    if(dev->b_cadence_present) {
-      cadence.value += dev->f32_cadence;
-      cadence.live = true;
-      contributors++;
-    }
-  }
-  if (contributors > 0) {
-    cadence.value /= contributors;
-  }
-  return cadence;
 }
 
 const csc* csc::latestWheelSource() {
@@ -279,37 +213,11 @@ void csc::disconnect(uint16_t conn_handle, uint8_t reason) {
 
   b_speed_present = false;
   b_cadence_present = false;
+  _hasWheelSample = false;
+  _hasCrankSample = false;
+  _wheelResync = true;
+  _crankResync = true;
   Serial.println("CSC Disconnected");
 
   BT_Device::disconnect(conn_handle,reason);
 }
-
-void csc::update(uint32_t now) {
-  float est_wheel_rpm = 0, f32_cad_est = 0;
-  
-  //use the last known u16_CrankCount_delta delta and an adjusted time delta to come up with an actual cadance estimate
-  if (now>exp_next_cad_evt) {
-    uint32_t diff = now - exp_next_cad_evt;
-    uint32_t delta_adjusted = u16_crank_delta + diff * 1.024f; //convert milliseconds into 1/1024ths of a second (1024/1000)
-    if ( delta_adjusted > 0)
-      f32_cad_est = 61440.0 *float(u16_CrankCount_delta)/float(delta_adjusted);
-  }else{
-    f32_cad_est = f32_cadence_raw;
-  }
-  
-  //low pass filter the cadance estimate
-  f32_cadence = f32_cad_est * 0.01 + f32_cadence * 0.99;
-
-  //use the last known wheelcount delta and an adjusted time delta to come up with an actual speed estimate
-  if(now>exp_next_spd_evt) {
-    uint32_t diff = now - exp_next_spd_evt;
-    uint32_t delta_adjusted = u16_speed_delta + diff * 1.024f; //milliseconds into 1/1024ths of a second
-    if ( delta_adjusted > 0)
-      est_wheel_rpm = 61440.0 * float(u32_WheelCount_delta)/float(delta_adjusted);
-  }else{
-    est_wheel_rpm = raw_wheel_rpm;
-  }
-  
-  //low pass filter the speed estimate
-  f32_wheel_rpm = est_wheel_rpm * 0.01 + f32_wheel_rpm * 0.99;
-};

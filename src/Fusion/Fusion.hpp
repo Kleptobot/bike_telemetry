@@ -13,10 +13,9 @@
 // per-gate distance. This is where "what the world did" becomes "what it
 // means": nothing here belongs in HAL, and nothing acquired belongs here.
 //
-// Every stage runs once per App tick, gated on the frame's per-channel
-// sequence numbers, so each estimator sees each acquired sample exactly once
-// with the interval it was actually sampled at (Sample::dtMs), regardless of
-// how fast the main loop spins or how busy the I2C bus got.
+// Every stage runs once per App tick, gated on per-channel sequence numbers or
+// native event counters, so estimators use the source's actual sampling interval
+// regardless of how fast the main loop spins or how busy the I2C bus got.
 // =============================================================================
 
 struct DerivedChannels {
@@ -63,6 +62,9 @@ struct DerivedChannels {
     bool  cadenceValid  = false;
     // Filtered wheel speed in revolutions per minute. 0 when unavailable.
     float wheelRpm      = 0.0f;
+    bool  wheelRpmValid = false;
+    bool  wheelRevsValid = false;
+    bool  crankRevsValid = false;
     // Gear ratio: wheel RPM / crank RPM. Dimensionless, 0 when not computable.
     // Higher = harder gear. Guarded: requires both sensors live and cadence > min.
     float gearRatio     = 0.0f;
@@ -129,12 +131,26 @@ public:
     const DerivedChannels& out() const { return _out; }
 
 private:
+    struct EventRateState {
+        uint32_t sourceId = 0;
+        uint32_t previousCounter = 0;
+        uint16_t previousEventTime = 0;
+        uint32_t lastEventMs = 0;
+        uint32_t revolutionDelta = 0;
+        uint16_t eventTimeDelta = 0;
+        float filteredRpm = 0.0f;
+        bool hasBaseline = false;
+        bool hasRate = false;
+    };
+
     AltitudeFusion _alt;
     FitnessFusion _fitness;
 
     // Previous frame, for per-channel sequence-number gating.
     MeasurementFrame _prev{};
     bool _hasPrev = false;
+    EventRateState _wheelRate{};
+    EventRateState _crankRate{};
 
     // DistanceTracker state -- moved verbatim from App::updateTelemetry()
     // (App's _lastLocation TinyGPSLocation copy and its validity flag).
@@ -209,6 +225,9 @@ private:
 
     DerivedChannels _out{};
 
+    float updateEventRate(const EventCount& event, EventRateState& state,
+                          uint32_t nowMs, uint32_t staleTimeoutMs,
+                          bool& valid);
     void updateDistance(const MeasurementFrame& f);
 };
 

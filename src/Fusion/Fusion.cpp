@@ -1,6 +1,61 @@
 #include "Fusion.hpp"
 #include <cmath>
 
+float FusionEngine::updateEventRate(const EventCount& event,
+                                    EventRateState& state,
+                                    uint32_t nowMs,
+                                    uint32_t staleTimeoutMs,
+                                    bool& valid) {
+    valid = false;
+    if (!event.valid || event.sourceId == 0) {
+        state = EventRateState{};
+        return 0.0f;
+    }
+
+    if (!state.hasBaseline || state.sourceId != event.sourceId) {
+        state = EventRateState{};
+        state.sourceId = event.sourceId;
+        state.previousCounter = event.counter;
+        state.previousEventTime = event.evtTime1024;
+        state.lastEventMs = event.tsMs;
+        state.hasBaseline = true;
+    } else if (event.counter != state.previousCounter ||
+               event.evtTime1024 != state.previousEventTime) {
+        state.revolutionDelta = event.counter - state.previousCounter;
+        state.eventTimeDelta =
+            (uint16_t)(event.evtTime1024 - state.previousEventTime);
+        state.previousCounter = event.counter;
+        state.previousEventTime = event.evtTime1024;
+        state.lastEventMs = event.tsMs;
+        state.hasRate = state.eventTimeDelta > 0;
+    }
+
+    const int32_t signedAgeMs = (int32_t)(nowMs - state.lastEventMs);
+    if (signedAgeMs > (int32_t)staleTimeoutMs) {
+        state.filteredRpm = 0.0f;
+        return 0.0f;
+    }
+
+    valid = true;
+    if (!state.hasRate || state.eventTimeDelta == 0) return 0.0f;
+
+    const uint32_t elapsedSinceEvent = signedAgeMs > 0
+        ? (uint32_t)signedAgeMs : 0;
+    const float expectedIntervalMs =
+        (float)state.eventTimeDelta * (1000.0f / 1024.0f);
+    float adjustedEventTime = (float)state.eventTimeDelta;
+    if ((float)elapsedSinceEvent > expectedIntervalMs) {
+        adjustedEventTime +=
+            ((float)elapsedSinceEvent - expectedIntervalMs) * 1.024f;
+    }
+
+    const float estimatedRpm = adjustedEventTime > 0.0f
+        ? 61440.0f * (float)state.revolutionDelta / adjustedEventTime
+        : 0.0f;
+    state.filteredRpm += 0.01f * (estimatedRpm - state.filteredRpm);
+    return state.filteredRpm;
+}
+
 void FusionEngine::update(const MeasurementFrame& f, uint16_t wheelCircumferenceMm,
                           const FitnessProfile& profile) {
     const bool firstTick = !_hasPrev;
@@ -111,14 +166,16 @@ void FusionEngine::update(const MeasurementFrame& f, uint16_t wheelCircumference
 
     // --- Stage 6: wheel and best-available speed -------------------------------
     _out.speedKmh = 0.0f;
-    _out.wheelRpm = f.wheelRpmFiltered.live ? f.wheelRpmFiltered.value : 0.0f;
+    _out.wheelRpm = updateEventRate(f.wheelRevs, _wheelRate, f.tickStartMs,
+                                    CSC_WHEEL_STALE_TIMEOUT_MS,
+                                    _out.wheelRevsValid);
+    _out.wheelRpmValid = _out.wheelRevsValid;
     _out.wheelSpeedKmh = 0.0f;
     // Treat a zero circumference as "no wheel data" rather than computing a
     // speed of zero from it. Without this, an unconfigured circumference
-    // silently suppressed the GPS fallback: wheelRPM.live is true whenever a
-    // CSC sensor is connected, so the first branch was taken and produced 0.
-    if (f.wheelRpmFiltered.live && wheelCircumferenceMm > 0) {
-        _out.wheelSpeedKmh = f.wheelRpmFiltered.value * wheelCircumferenceMm * 0.00006f;
+    // silently suppressed the GPS fallback.
+    if (_out.wheelRpmValid && wheelCircumferenceMm > 0) {
+        _out.wheelSpeedKmh = _out.wheelRpm * wheelCircumferenceMm * 0.00006f;
         _out.speedKmh = _out.wheelSpeedKmh;
     } else if (f.gpsSpeedKmh.valid) {
         _out.speedKmh = (float)f.gpsSpeedKmh.value;
@@ -151,19 +208,20 @@ void FusionEngine::update(const MeasurementFrame& f, uint16_t wheelCircumference
     _out.gradePct = _filteredGradePct;
 
     // --- Stage 8: cadence ------------------------------------------------------
-    // Derive cadence in RPM from the crank EventCount. The HAL already
-    // pre-computes cadenceRpmFiltered from the CSC parser; we just surface it.
-    _out.cadenceValid = f.cadenceRpmFiltered.live;
-    _out.cadenceRpm = f.cadenceRpmFiltered.live ? f.cadenceRpmFiltered.value : 0.0f;
+    // Derive cadence from the crank counter and its native 1/1024 s event clock.
+    _out.cadenceRpm = updateEventRate(f.crankRevs, _crankRate, f.tickStartMs,
+                                      CSC_CRANK_STALE_TIMEOUT_MS,
+                                      _out.crankRevsValid);
+    _out.cadenceValid = _out.crankRevsValid;
 
     // --- Stage 9: gear ratio ---------------------------------------------------
     // Gear ratio = wheel RPM / crank RPM. Both must be live and cadence must
     // be above minimum (avoid division by near-zero when coasting/stopped).
     _out.gearRatioValid = false;
     _out.gearRatio = 0.0f;
-    if (f.wheelRpmFiltered.live && f.cadenceRpmFiltered.live &&
-        f.cadenceRpmFiltered.value >= GEAR_RATIO_MIN_CADENCE_RPM) {
-        _out.gearRatio = f.wheelRpmFiltered.value / f.cadenceRpmFiltered.value;
+    if (_out.wheelRpmValid && _out.cadenceValid &&
+        _out.cadenceRpm >= GEAR_RATIO_MIN_CADENCE_RPM) {
+        _out.gearRatio = _out.wheelRpm / _out.cadenceRpm;
         _out.gearRatioValid = true;
     }
 

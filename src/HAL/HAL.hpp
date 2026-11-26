@@ -112,9 +112,8 @@ class HAL {
 //
 // Inline here -- not in HAL.cpp -- so the simulator, which replaces only
 // HAL.cpp at link time, builds the frame from this exact implementation
-// instead of a forked copy. It reads the same acquisition state the legacy
-// getters fold, stamps it, and changes no behaviour: it runs after everything
-// else in HAL::update(), and nothing consumes the frame yet.
+// instead of a forked copy. It snapshots acquisition state and exact CSC
+// event counters after the other HAL subsystems have updated.
 // =============================================================================
 inline void HAL::refreshFrame() {
     MeasurementFrame f;
@@ -143,17 +142,15 @@ inline void HAL::refreshFrame() {
     const csc* wheelSrc = csc::latestWheelSource();
     if (wheelSrc) {
         fillEventCount(f.wheelRevs, wheelSrc->wheelRevTotal(), wheelSrc->lastWheelEvt1024(),
-                       wheelSrc->b_speed_present, wheelSrc->wheelEvtMillis());
+                       wheelSrc->hasWheelSample(), wheelSrc->wheelEvtMillis(),
+                       wheelSrc->sourceId());
     }
     const csc* crankSrc = csc::latestCrankSource();
     if (crankSrc) {
         fillEventCount(f.crankRevs, crankSrc->crankRevTotal(), crankSrc->lastCrankEvt1024(),
-                       crankSrc->b_cadence_present, crankSrc->crankEvtMillis());
+                       crankSrc->hasCrankSample(), crankSrc->crankEvtMillis(),
+                       crankSrc->sourceId());
     }
-    // ...and the legacy filtered aggregates exactly as the getters fold them.
-    f.wheelRpmFiltered   = csc::getSpeed();
-    f.cadenceRpmFiltered = csc::getCadence();
-
     // Power / bio -- torque, balance and force are decoded by the parser but
     // were previously dropped at the boundary.
     f.powerWatts      = cps::getPower();

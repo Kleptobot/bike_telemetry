@@ -419,6 +419,10 @@ void App::updateTelemetry() {
     bus.publish(Topic::SmoothedGrade, d.gradePct);
     bus.publish(Topic::Cadence, d.cadenceRpm);
     bus.publish(Topic::WheelRpm, d.wheelRpm);
+    bus.publish(Topic::WheelRevs, frame.wheelRevs.counter);
+    bus.publish(Topic::WheelRevsValid, d.wheelRevsValid);
+    bus.publish(Topic::CrankRevs, frame.crankRevs.counter);
+    bus.publish(Topic::CrankRevsValid, d.crankRevsValid);
     bus.publish(Topic::GearRatio, d.gearRatio);
     bus.publish(Topic::Energy, d.energyKj);
     bus.publish(Topic::Acceleration, d.accelMs2);
