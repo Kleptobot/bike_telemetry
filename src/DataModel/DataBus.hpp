@@ -23,9 +23,11 @@ enum class Topic : uint8_t {
     // Fusion outputs
     FusedAltitude,
     Vario,                 // float: vertical velocity (m/s)
-    SelectedSpeed,
+    EstimatedSpeed,
+    WheelSpeed,
     SmoothedGrade,
     Cadence,
+    WheelRpm,
     GearRatio,
     Energy,
     Acceleration,
@@ -211,9 +213,11 @@ constexpr TopicMetadata gpsQualityTopic() {
 static constexpr TopicMetadata kTopicMetadata[] = {
     locationTopic(),
     numericTopic(Topic::FusedAltitude, "Altitude", "m  ", "altitude"),
-    numericTopic(Topic::SelectedSpeed, "Speed", "km/h", "speed"),
+    numericTopic(Topic::EstimatedSpeed, "EstimatedSpeed", "km/h", "estimatedspeed"),
+    numericTopic(Topic::WheelSpeed, "WheelSpeed", "km/h", "wheelspeed"),
     numericTopic(Topic::HeartRate, "HeartRate", "bpm", "heartrate"),
     numericTopic(Topic::Cadence, "Cadence", "rpm", "cadence"),
+    numericTopic(Topic::WheelRpm, "WheelRpm", "rpm", "wheelrpm"),
     numericTopic(Topic::PowerMeter, "Power", "W  ", "power"),
     numericTopic(Topic::Calories, "Calories", "kcal", "calories", TopicValueKind::Float, 0),
     numericTopic(Topic::NormalizedPower, "NP", "W  ", "normalizedpower", TopicValueKind::Float, 0),

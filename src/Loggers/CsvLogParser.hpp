@@ -12,7 +12,7 @@ public:
     void close() override;
 
 private:
-    static constexpr uint8_t kMaxColumns = 64;
+    static constexpr uint8_t kMaxColumns = 80;
     static constexpr size_t kReadBufferSize = 128;
     static constexpr size_t kLineBufferSize = 1024;
 

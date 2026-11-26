@@ -38,9 +38,11 @@ struct DerivedChannels {
     // IMU-derived diagnostics and complementary vertical-motion estimate.
     float imuVerticalAccelerationMs2 = 0.0f;
     float imuVerticalVelocityMs = 0.0f;
-    // Speed: wheel revolutions x circumference when a wheel sensor lives,
-    // otherwise GPS speed.
+    // Best available speed: wheel-derived speed when configured, otherwise GPS.
     float speedKmh      = 0.0f;
+    // Speed calculated from wheel RPM and configured circumference; 0 when
+    // wheel data or circumference is unavailable.
+    float wheelSpeedKmh = 0.0f;
     // Grade: vario converted to km/h over speed, as a percentage.
     float gradePct      = 0.0f;
     // Per-gate distance increment (metres). Accumulation stays in
@@ -59,6 +61,8 @@ struct DerivedChannels {
     // Cadence in RPM (from crank sensor). 0 when no crank data available.
     float cadenceRpm    = 0.0f;
     bool  cadenceValid  = false;
+    // Filtered wheel speed in revolutions per minute. 0 when unavailable.
+    float wheelRpm      = 0.0f;
     // Gear ratio: wheel RPM / crank RPM. Dimensionless, 0 when not computable.
     // Higher = harder gear. Guarded: requires both sensors live and cadence > min.
     float gearRatio     = 0.0f;

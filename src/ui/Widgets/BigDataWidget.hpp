@@ -8,7 +8,7 @@
 
 class BigDataWidget : public Widget {
 public:
-    BigDataWidget(int x, int y, int w, int h, Topic topic=Topic::SelectedSpeed)
+    BigDataWidget(int x, int y, int w, int h, Topic topic=Topic::EstimatedSpeed)
         : Widget(x, y),
         _topic(topic),
         _subscribed(false) {

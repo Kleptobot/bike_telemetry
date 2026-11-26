@@ -79,7 +79,8 @@ bool CsvLogParser::_parseHeader(char* line) {
 
     for (uint8_t i = 0; i < count; ++i) {
         if (strcmp(columns[i], "time") == 0) _timeColumn = i;
-        else if (strcmp(columns[i], "speed") == 0) _speedColumn = i;
+        else if (strcmp(columns[i], "estimatedspeed") == 0 ||
+                 strcmp(columns[i], "speed") == 0) _speedColumn = i;
         else if (strcmp(columns[i], "heartrate") == 0) _hrColumn = i;
         else if (strcmp(columns[i], "cadence") == 0) _cadenceColumn = i;
         else if (strcmp(columns[i], "power") == 0) _powerColumn = i;

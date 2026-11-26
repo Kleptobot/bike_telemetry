@@ -346,7 +346,7 @@ void App::update() {
                                 tp.latitude  = loc.latitude;
                 tp.longitude = loc.longitude;
                 tp.altitude  = bus.get<float>(Topic::FusedAltitude);
-                tp.speed     = bus.get<float>(Topic::SelectedSpeed);
+                tp.speed     = bus.get<float>(Topic::EstimatedSpeed);
                 tp.heartrate = bus.get<float>(Topic::HeartRate);
                 tp.power     = bus.get<float>(Topic::PowerMeter);
                 tp.cadence   = bus.get<float>(Topic::Cadence);
@@ -414,9 +414,11 @@ void App::updateTelemetry() {
     bus.publish(Topic::FusedAltitude, d.altitudeM);
     bus.publish(Topic::BaroAlt, d.baroAltitudeM);
     bus.publish(Topic::Vario, d.varioMs);
-    bus.publish(Topic::SelectedSpeed, d.speedKmh);
+    bus.publish(Topic::EstimatedSpeed, d.speedKmh);
+    bus.publish(Topic::WheelSpeed, d.wheelSpeedKmh);
     bus.publish(Topic::SmoothedGrade, d.gradePct);
     bus.publish(Topic::Cadence, d.cadenceRpm);
+    bus.publish(Topic::WheelRpm, d.wheelRpm);
     bus.publish(Topic::GearRatio, d.gearRatio);
     bus.publish(Topic::Energy, d.energyKj);
     bus.publish(Topic::Acceleration, d.accelMs2);
@@ -549,7 +551,7 @@ void App::updateGpsEnable(bool state) {
 void App::updateAutoPause(uint32_t now) {
     if (!model.bike().get().autoPause) return;
 
-    const float speedKmh = model.bus().get<float>(Topic::SelectedSpeed);
+    const float speedKmh = model.bus().get<float>(Topic::EstimatedSpeed);
     const float cadence  = model.bus().get<float>(Topic::Cadence);
     const bool gpsValid  = model.bus().get<bool>(Topic::GpsValid);
 

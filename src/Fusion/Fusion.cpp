@@ -109,14 +109,17 @@ void FusionEngine::update(const MeasurementFrame& f, uint16_t wheelCircumference
         _out.temperatureC = 0.0f;
     }
 
-    // --- Stage 6: speed selection (verbatim from App::updateTelemetry) --------
+    // --- Stage 6: wheel and best-available speed -------------------------------
     _out.speedKmh = 0.0f;
+    _out.wheelRpm = f.wheelRpmFiltered.live ? f.wheelRpmFiltered.value : 0.0f;
+    _out.wheelSpeedKmh = 0.0f;
     // Treat a zero circumference as "no wheel data" rather than computing a
     // speed of zero from it. Without this, an unconfigured circumference
     // silently suppressed the GPS fallback: wheelRPM.live is true whenever a
     // CSC sensor is connected, so the first branch was taken and produced 0.
     if (f.wheelRpmFiltered.live && wheelCircumferenceMm > 0) {
-        _out.speedKmh = f.wheelRpmFiltered.value * wheelCircumferenceMm * 0.00006;
+        _out.wheelSpeedKmh = f.wheelRpmFiltered.value * wheelCircumferenceMm * 0.00006f;
+        _out.speedKmh = _out.wheelSpeedKmh;
     } else if (f.gpsSpeedKmh.valid) {
         _out.speedKmh = (float)f.gpsSpeedKmh.value;
     }

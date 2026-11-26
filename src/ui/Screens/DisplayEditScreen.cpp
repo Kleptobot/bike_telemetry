@@ -316,7 +316,7 @@ void DisplayEditScreen::createItemAtCursor() {
     item.y0 = _cursorY;
     item.y1 = _cursorY + 1;
 
-    item.setType(Topic::SelectedSpeed);
+    item.setType(Topic::EstimatedSpeed);
     item.widget.setMode(WidgetSubMode::CHANGE_TYPE);
 
     _displays.push_back(item);
