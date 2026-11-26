@@ -64,6 +64,10 @@ enum class Topic : uint8_t {
     Location,        // location_data: valid + lat/lng (24 bytes, fits a slot)
     DistanceDeltaM,  // float: per-tick distance increment (metres)
     TotalDistanceM,  // float: accumulated ride distance (metres)
+    GpsDistanceDeltaM, // float: Haversine distance increment (metres)
+    GpsTotalDistanceM, // float: accumulated GPS distance (metres)
+    WheelDistanceDeltaM, // float: wheel-revolution distance increment (metres)
+    WheelTotalDistanceM, // float: accumulated wheel distance (metres)
     GpsSpeed,        // float: GPS-reported ground speed (km/h)
     GpsAltitude,     // float: GPS-reported altitude (metres)
     GpsCourse,       // float: GPS course over ground (degrees)
@@ -236,6 +240,8 @@ static constexpr TopicMetadata kTopicMetadata[] = {
     zoneTopic(Topic::HrZone, "HrZone", "hrzone", 'Z'),
     zoneTopic(Topic::PowerZone, "PowerZone", "powerzone", 'P'),
     numericTopic(Topic::TotalDistanceM, "TotalDist", "km ", "distance", TopicValueKind::Float, 1, 0.001f),
+    numericTopic(Topic::GpsTotalDistanceM, "GpsTotalDist", "km ", "gpstotaldistance", TopicValueKind::Float, 1, 0.001f),
+    numericTopic(Topic::WheelTotalDistanceM, "WheelTotalDist", "km ", "wheeltotaldistance", TopicValueKind::Float, 1, 0.001f),
 
     numericTopic(Topic::Vario, "Vario", "m/s", "vario"),
     numericTopic(Topic::SmoothedGrade, "Grade", "%  ", "grade"),
@@ -261,6 +267,8 @@ static constexpr TopicMetadata kTopicMetadata[] = {
     booleanTopic(Topic::GpsValid, "GPSValid", "gpsvalid", "FIX", "NOFIX",
                  TopicColor::Green, TopicColor::Red),
     numericTopic(Topic::DistanceDeltaM, "Distance", "m  ", "distancedelta"),
+    numericTopic(Topic::GpsDistanceDeltaM, "GpsDistDelta", "m  ", "gpsdistancedelta"),
+    numericTopic(Topic::WheelDistanceDeltaM, "WheelDistDelta", "m  ", "wheeldistancedelta"),
     numericTopic(Topic::GpsSpeed, "GpsSpeed", "km/h", "gpsspeed"),
     numericTopic(Topic::GpsAltitude, "GpsAlt", "m  ", "gpsaltitude"),
     numericTopic(Topic::GpsCourse, "GpsCourse", "deg", "gpscourse", TopicValueKind::Float, 0),

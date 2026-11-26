@@ -82,6 +82,64 @@ int main() {
         failures++;
     }
 
+    // Both distance estimates are retained; the legacy output prefers a
+    // configured live wheel sensor and falls back to GPS.
+    FusionEngine distanceFusion;
+    MeasurementFrame distanceFrame{};
+    distanceFrame.tickStartMs = 1000;
+    distanceFrame.gpsPos = {0.0, 0.0, true, 1000, 1, 0};
+    setEvent(distanceFrame.wheelRevs, 100u, 1000u, 1000u, 7u);
+    distanceFusion.update(distanceFrame, 2100, profile);
+
+    distanceFrame.tickStartMs = 2000;
+    distanceFrame.gpsPos = {0.0, 0.001, true, 2000, 2, 1000};
+    setEvent(distanceFrame.wheelRevs, 102u, 3048u, 2000u, 7u);
+    distanceFusion.update(distanceFrame, 2100, profile);
+    if (std::fabs(distanceFusion.out().wheelDistanceDeltaM - 4.2f) > 0.01f ||
+        std::fabs(distanceFusion.out().gpsDistanceDeltaM - 111.2f) > 1.0f ||
+        std::fabs(distanceFusion.out().distanceDeltaM - 4.2f) > 0.01f ||
+        std::fabs(distanceFusion.out().wheelTotalDistanceM - 4.2f) > 0.01f ||
+        std::fabs(distanceFusion.out().gpsTotalDistanceM - 111.2f) > 1.0f) {
+        std::printf("FAIL: independent GPS/wheel distance estimates were incorrect\n");
+        failures++;
+    }
+
+    // A changed sensor establishes its own counter baseline.
+    distanceFrame.tickStartMs = 3000;
+    setEvent(distanceFrame.wheelRevs, 10u, 1000u, 3000u, 8u);
+    distanceFusion.update(distanceFrame, 2100, profile);
+    if (distanceFusion.out().wheelDistanceDeltaM != 0.0f ||
+        distanceFusion.out().distanceDeltaM != 0.0f) {
+        std::printf("FAIL: changing the wheel source created a distance jump\n");
+        failures++;
+    }
+
+    // Counter wrap is a small positive revolution delta, not a reset jump.
+    distanceFrame.tickStartMs = 4000;
+    setEvent(distanceFrame.wheelRevs, 0xFFFFFFFEu, 2000u, 4000u, 9u);
+    distanceFusion.update(distanceFrame, 2100, profile);
+    distanceFrame.tickStartMs = 5000;
+    setEvent(distanceFrame.wheelRevs, 1u, 5072u, 5000u, 9u);
+    distanceFusion.update(distanceFrame, 2100, profile);
+    if (std::fabs(distanceFusion.out().wheelDistanceDeltaM - 6.3f) > 0.01f ||
+        std::fabs(distanceFusion.out().wheelTotalDistanceM - 10.5f) > 0.01f) {
+        std::printf("FAIL: wrapped wheel counter produced an incorrect distance\n");
+        failures++;
+    }
+
+    // When the wheel source becomes unavailable, the preferred ride distance
+    // switches to the next GPS displacement without mixing both increments.
+    distanceFrame.tickStartMs = 6000;
+    distanceFrame.gpsPos = {0.0, 0.002, true, 6000, 3, 1000};
+    distanceFrame.wheelRevs.valid = false;
+    distanceFusion.update(distanceFrame, 2100, profile);
+    if (std::fabs(distanceFusion.out().gpsDistanceDeltaM - 111.2f) > 1.0f ||
+        distanceFusion.out().wheelDistanceDeltaM != 0.0f ||
+        std::fabs(distanceFusion.out().distanceDeltaM - 111.2f) > 1.0f) {
+        std::printf("FAIL: GPS distance did not take over when wheel data became unavailable\n");
+        failures++;
+    }
+
     std::printf(failures == 0 ? "SMOKE PASS\n" : "SMOKE FAIL (%d)\n", failures);
     return failures == 0 ? 0 : 1;
 }

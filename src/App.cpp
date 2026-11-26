@@ -457,6 +457,10 @@ void App::updateTelemetry() {
     bus.publish(Topic::Location,       loc);
     bus.publish(Topic::DistanceDeltaM, d.distanceDeltaM);
     bus.publish(Topic::TotalDistanceM, d.totalDistanceM);
+    bus.publish(Topic::GpsDistanceDeltaM, d.gpsDistanceDeltaM);
+    bus.publish(Topic::GpsTotalDistanceM, d.gpsTotalDistanceM);
+    bus.publish(Topic::WheelDistanceDeltaM, d.wheelDistanceDeltaM);
+    bus.publish(Topic::WheelTotalDistanceM, d.wheelTotalDistanceM);
     bus.publish(Topic::Battery,        batteryPct);
 
     // BLE channels carry data_record (value + live). Publish the value when

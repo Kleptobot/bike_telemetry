@@ -376,25 +376,22 @@ void FusionEngine::update(const MeasurementFrame& f, uint16_t wheelCircumference
         _out.shiftCount = _shiftCount;
     }
 
-    // --- Stage 15: distance (verbatim, see updateDistance) ---------------------
-    updateDistance(f);
+    // --- Stage 15: independent GPS and wheel distance estimates ---------------
+    updateDistance(f, wheelCircumferenceMm);
 
     _prev = f;
     _hasPrev = true;
 }
 
-// Haversine formula, moved verbatim from App::updateTelemetry. State was
-// App's _lastLocation (a TinyGPSLocation copy) and _lastSeconds (epoch
-// seconds); the validity flag travels as _hasLastPos.
-void FusionEngine::updateDistance(const MeasurementFrame& f) {
+void FusionEngine::updateDistance(const MeasurementFrame& f,
+                                  uint16_t wheelCircumferenceMm) {
     _out.distanceDeltaM = 0.0f;
+    _out.gpsDistanceDeltaM = 0.0f;
+    _out.wheelDistanceDeltaM = 0.0f;
 
-    // Gate on the RTC sample. The original fired when the RTC's epoch second
-    // changed; the frame's sequence number fires per accepted RTC read
-    // (950 ms period). GPS fixes arrive at 1 Hz and unchanged positions
-    // contribute zero, so each fix-to-fix segment is still counted exactly
-    // once either way.
-    if (!_hasPrev || f.rtcNow.seq != _prev.rtcNow.seq) {
+    // Count each committed GPS position once, even though the same fix is
+    // carried through multiple HAL frames.
+    if (!_hasPrev || f.gpsPos.seq != _prev.gpsPos.seq) {
         if (f.gpsPos.valid && _hasLastPos) {
             double deg2rad = M_PI/180.0;
             double theta1 = _lastLat*deg2rad;
@@ -408,12 +405,43 @@ void FusionEngine::updateDistance(const MeasurementFrame& f) {
             double s2 = sin((phi2-phi1)/2.0);
             s2 = s2*s2;
 
-            _out.distanceDeltaM = 2.0*6371000.0*asin(sqrt(s1+c1*s2)); //distance in m
+            _out.gpsDistanceDeltaM =
+                2.0*6371000.0*asin(sqrt(s1+c1*s2));
         }
-        _totalDistanceM += _out.distanceDeltaM;
-        _out.totalDistanceM = _totalDistanceM;
         _lastLat = f.gpsPos.lat;
         _lastLng = f.gpsPos.lng;
         _hasLastPos = f.gpsPos.valid;
     }
+    if (!f.gpsPos.valid) _hasLastPos = false;
+    _gpsTotalDistanceM += _out.gpsDistanceDeltaM;
+    _out.gpsTotalDistanceM = _gpsTotalDistanceM;
+
+    // CSC counters are cumulative and may wrap; unsigned subtraction gives
+    // the revolution delta while the source identity remains unchanged.
+    if (!f.wheelRevs.valid || f.wheelRevs.sourceId == 0) {
+        _hasLastWheelCounter = false;
+    } else if (!_hasLastWheelCounter ||
+               f.wheelRevs.sourceId != _lastWheelSourceId) {
+        _lastWheelCounter = f.wheelRevs.counter;
+        _lastWheelSourceId = f.wheelRevs.sourceId;
+        _hasLastWheelCounter = true;
+    } else {
+        const uint32_t revolutions = f.wheelRevs.counter - _lastWheelCounter;
+        _lastWheelCounter = f.wheelRevs.counter;
+        if (_out.wheelRevsValid && wheelCircumferenceMm > 0) {
+            _out.wheelDistanceDeltaM =
+                (float)revolutions * (float)wheelCircumferenceMm * 0.001f;
+        }
+    }
+    _wheelTotalDistanceM += _out.wheelDistanceDeltaM;
+    _out.wheelTotalDistanceM = _wheelTotalDistanceM;
+
+    // Keep the existing ride-distance topics as a preferred total: wheel
+    // odometry avoids GPS jitter, and GPS remains the fallback.
+    const bool wheelDistanceAvailable =
+        _out.wheelRevsValid && wheelCircumferenceMm > 0;
+    _out.distanceDeltaM = wheelDistanceAvailable
+        ? _out.wheelDistanceDeltaM : _out.gpsDistanceDeltaM;
+    _totalDistanceM += _out.distanceDeltaM;
+    _out.totalDistanceM = _totalDistanceM;
 }

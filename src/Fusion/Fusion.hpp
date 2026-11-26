@@ -44,13 +44,16 @@ struct DerivedChannels {
     float wheelSpeedKmh = 0.0f;
     // Grade: vario converted to km/h over speed, as a percentage.
     float gradePct      = 0.0f;
-    // Per-gate distance increment (metres). Accumulation stays in
-    // TelemetryDataProvider, exactly as before.
+    // Preferred per-tick ride distance: wheel odometry when live and
+    // configured, otherwise GPS displacement.
     float distanceDeltaM = 0.0f;
-    // Accumulated ride distance (metres). Sum of distanceDeltaM since the
-    // last FusionEngine::resetDistance() -- previously accumulated inside
-    // TelemetryDataProvider::update, now lives with the delta's producer.
+    // Preferred accumulated ride distance, reset at the start of a ride.
     float totalDistanceM = 0.0f;
+    // Independent GPS and wheel odometry distance streams, in metres.
+    float gpsDistanceDeltaM = 0.0f;
+    float gpsTotalDistanceM = 0.0f;
+    float wheelDistanceDeltaM = 0.0f;
+    float wheelTotalDistanceM = 0.0f;
     // Ambient temperature: barometer's own sensor when valid, otherwise the
     // RTC's. This fold used to live in HAL::update() -- it is an interpretation
     // (which source to trust), not an acquisition, so it belongs here.
@@ -122,6 +125,8 @@ public:
     // calories, TSS, time-in-zone) reset here too, via FitnessFusion::reset().
     void resetDistance() {
         _totalDistanceM = 0.0f;
+        _gpsTotalDistanceM = 0.0f;
+        _wheelTotalDistanceM = 0.0f;
         _fitness.reset();
         _shiftCount = 0;
         _hasStableGear = false;
@@ -152,10 +157,12 @@ private:
     EventRateState _wheelRate{};
     EventRateState _crankRate{};
 
-    // DistanceTracker state -- moved verbatim from App::updateTelemetry()
-    // (App's _lastLocation TinyGPSLocation copy and its validity flag).
+    // Independent GPS and wheel distance source baselines.
     double _lastLat = 0.0, _lastLng = 0.0;
     bool   _hasLastPos = false;
+    uint32_t _lastWheelCounter = 0;
+    uint32_t _lastWheelSourceId = 0;
+    bool _hasLastWheelCounter = false;
 
     // Low-pass filter state for grade smoothing.
     // The raw grade inherits pressure-rate noise. A first-order EMA smooths
@@ -178,6 +185,8 @@ private:
     float _totalDescentM = 0.0f;
     // Accumulated ride distance (metres); zeroed by resetDistance().
     float _totalDistanceM = 0.0f;
+    float _gpsTotalDistanceM = 0.0f;
+    float _wheelTotalDistanceM = 0.0f;
 
     // --- Gear-shift detection state ---
     float   _stableGear     = 0.0f;   // gear ratio the tracker currently believes
@@ -228,7 +237,7 @@ private:
     float updateEventRate(const EventCount& event, EventRateState& state,
                           uint32_t nowMs, uint32_t staleTimeoutMs,
                           bool& valid);
-    void updateDistance(const MeasurementFrame& f);
+    void updateDistance(const MeasurementFrame& f, uint16_t wheelCircumferenceMm);
 };
 
 #endif /* FUSION_H */
