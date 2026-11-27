@@ -5,7 +5,7 @@
 // TinyGPSPlus instance from SimHAL, so the transport is stubbed out here.
 //
 // The methods that remain are the ones HAL.hpp calls inline (sendCommand from
-// gpsHotStart/gpsSaveNVRAM/setRMCRate and friends) plus the lifecycle hooks.
+// GPS commands) plus the lifecycle hooks.
 // They log rather than doing nothing silently, so a scenario that exercises
 // the GPS settings screen still shows which commands the firmware issued.
 #include "HAL/LC76G.hpp"

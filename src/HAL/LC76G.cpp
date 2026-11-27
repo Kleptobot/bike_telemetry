@@ -56,12 +56,39 @@ void LC76G::processSentence(Sentence s) {
                     decoded = COMMANDS[index].decode(s, numArgs, buffer);
                 }
 
-                if (decoded && it->callback) {
-                    it->callback(numArgs, buffer, it->userContext);
+                if (decoded && it->commandId == GET_NMEA_MSG_RATE && numArgs == -1) {
+                    if (ENABLE_GPS_DEBUG) {
+                        Serial.println("[LC76G] Ignoring echoed PAIR063 query.");
+                    }
+                    return;
                 }
 
-                // Remove expectation
+                if (!decoded) {
+                    if (ENABLE_GPS_DEBUG) {
+                        Serial.print("[LC76G] failed to decode response: ");
+                        Serial.write(s.data, s.length);
+                    }
+                    ResponseCallback callback = it->callback;
+                    void* userContext = it->userContext;
+                    // Callbacks can enqueue commands and reallocate _responses.
+                    _responses.erase(it);
+                    if (callback) callback(0, nullptr, userContext);
+                    return;
+                }
+
+                if (it->commandId == SET_NMEA_MSG_RATE &&
+                    numArgs == 1 && buffer[0] == 1) {
+                    if (ENABLE_GPS_DEBUG) {
+                        Serial.println("[LC76G] NMEA rate update still processing.");
+                    }
+                    return;
+                }
+
+                ResponseCallback callback = it->callback;
+                void* userContext = it->userContext;
+                // Erase before callbacks, which may enqueue commands and reallocate _responses.
                 _responses.erase(it);
+                if (callback) callback(numArgs, buffer, userContext);
                 return;
             }
         }
@@ -433,6 +460,11 @@ void LC76G::sendCommand(CmdId cmdId, ResponseCallback cb = nullptr, void* userCt
             Serial.println("[LC76G] framed sentence too long, dropped");
         }
         return;
+    }
+
+    if (ENABLE_GPS_DEBUG) {
+        Serial.print("[LC76G TX] ");
+        Serial.write(buffer2, length);
     }
 
     queueCommand(reinterpret_cast<const uint8_t*>(buffer2), length);

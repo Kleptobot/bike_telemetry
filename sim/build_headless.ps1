@@ -31,6 +31,10 @@ $flags = @(
 
 $fw = @(
     "$root\src\App.cpp",
+    "$root\src\App\SettingsStore.cpp",
+    "$root\src\App\InputCallbacks.cpp",
+    "$root\src\App\TelemetryPublisher.cpp",
+    "$root\src\App\RideController.cpp",
     "$root\src\main.cpp",
     "$root\src\display\Display.cpp",
     "$root\src\Fusion\AltitudeFusion.cpp",

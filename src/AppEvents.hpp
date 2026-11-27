@@ -5,6 +5,7 @@
 #include <variant>
 #include "HAL/BluetoothInterface.hpp"
 #include "DataModel/TimeDataProvider.hpp"
+#include "DataModel/GpsSettingsProvider.hpp"
 
 enum class AppEventType {
     None,
@@ -23,21 +24,15 @@ enum class AppEventType {
     ScanBluetooth,
     RestoreDefaultsGPS,
     ResetGPS,
-    saveGPSNVRAM,
-    setGPSNMEARate,
+    SaveGPSConfig,
     UnmountSD,
     Sleep,
     SaveBikeStats
 };
 
-struct NMEArateChange {
-    int type;
-    int rate;
-};
-
 struct AppEvent {
     AppEventType type;
-    std::variant<int,float,BluetoothDevice,timeData,NMEArateChange> payload;
+    std::variant<int,float,BluetoothDevice,timeData,GpsSettings> payload;
 };
 
 #endif /* APPEVENTS_H */

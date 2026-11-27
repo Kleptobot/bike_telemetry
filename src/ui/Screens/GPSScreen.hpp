@@ -36,8 +36,7 @@ class GPSScreen : public UIScreen {
         GNSrate{GNSrateLabel.width() + 10, 230, String(_rates[9])},
 
         saveNVRAM{5, 260,"Save NVRAM",epd_bitmap_save},
-        backWidget{15, 280,"Back",epd_bitmap_left},
-        saveWidget{90, 280,"Save",epd_bitmap_save} {
+        backWidget{15, 280,"Back",epd_bitmap_left} {
 
             //attach App events
             restGPS.setOnPress([this] () {
@@ -47,7 +46,11 @@ class GPSScreen : public UIScreen {
                 emitAppEvent({AppEventType::RestoreDefaultsGPS, 0});
             });
             saveNVRAM.setOnPress([this] () {
-                emitAppEvent({AppEventType::saveGPSNVRAM, 0});
+                GpsSettings settings;
+                for (uint8_t i = 0; i < GPS_NMEA_RATE_COUNT; ++i) {
+                    settings.nmeaRates[i] = (uint8_t)_rates[i];
+                }
+                emitAppEvent({AppEventType::SaveGPSConfig, settings});
             });
 
             //register press event callback to send a change screen event
@@ -60,6 +63,10 @@ class GPSScreen : public UIScreen {
         hints.setHint(0, epd_bitmap_left, "back");
         hints.setHint(1, nullptr, "edit");
         hints.setHint(2, epd_bitmap_save, "save");
+        const GpsSettings& settings = model.gpsSettings().get();
+        for (uint8_t i = 0; i < GPS_NMEA_RATE_COUNT; ++i) {
+            _rates[i] = settings.nmeaRates[i];
+        }
     }
 
     void render() override {
@@ -74,7 +81,6 @@ class GPSScreen : public UIScreen {
 
         saveNVRAM.render();
         backWidget.render();
-        saveWidget.render();
         hints.render();
     }
 
@@ -97,8 +103,7 @@ class GPSScreen : public UIScreen {
             GSTrate,
             GNSrate,
             saveNVRAM,
-            back,
-            save };
+            back };
 
         EditField focusField = EditField::resetGPS;
         InputHintsWidget hints{5, 298, 3};
@@ -128,7 +133,6 @@ class GPSScreen : public UIScreen {
 
         SelectableTextIconWidget saveNVRAM;
         SelectableTextIconWidget backWidget;
-        SelectableTextIconWidget saveWidget;
 
          std::reference_wrapper<SelectableTextWidget> rateLabelWidgetRefs[10] = {
             GGArateLabel,
@@ -155,8 +159,6 @@ class GPSScreen : public UIScreen {
             GNSrate};
         
         int _rates[10] = {1,0,0,0,1,0,0,0,0,0};
-        bool prevSelectedRates[10] = {false,false,false,false,false,false,false,false,false,false};
-
         bool anySelected() {
             return  restGPS.isSelected() ||
                     restoreGPSDefaults.isSelected() ||
@@ -171,8 +173,7 @@ class GPSScreen : public UIScreen {
                     ratesWidgetRefs[8].get().isSelected() ||
                     ratesWidgetRefs[9].get().isSelected() ||
                     saveNVRAM.isSelected() ||
-                    backWidget.isSelected() ||
-                    saveWidget.isSelected();
+                    backWidget.isSelected();
         }
 
         void moveFocusUp() {
@@ -216,18 +217,12 @@ class GPSScreen : public UIScreen {
         }
 
         void moveFocusLeft() {
-            switch (focusField) {
-                case EditField::back: focusField = EditField::save; break;
-                case EditField::save: focusField = EditField::back; break;
-                default: break;
-            }
+            if (focusField == EditField::back) focusField = EditField::saveNVRAM;
+            else if (focusField == EditField::saveNVRAM) focusField = EditField::back;
         }
 
         void moveFocusRight() {
-            switch (focusField) {
-                case EditField::back: focusField = EditField::save; break;
-                case EditField::save: focusField = EditField::back; break;
-                default: break;
-            }
+            if (focusField == EditField::back) focusField = EditField::saveNVRAM;
+            else if (focusField == EditField::saveNVRAM) focusField = EditField::back;
         }
 };

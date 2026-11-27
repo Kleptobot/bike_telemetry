@@ -3,14 +3,13 @@
 
 #include "ui/UIManager.hpp"
 #include "HAL/HAL.hpp"
-#include "Fusion/Fusion.hpp"
-#include "Fusion/FtpEstimator.hpp"
-#include "Loggers/TCXLogger.hpp"
-#include "Loggers/FITLogger.hpp"
-#include "Loggers/CSVLogger.hpp"
 #include "AppEvents.hpp"
 #include "DataModel/DataModel.hpp"
 #include "HAL/BluetoothInterface.hpp"
+#include "App/SettingsStore.hpp"
+#include "App/InputCallbacks.hpp"
+#include "App/TelemetryPublisher.hpp"
+#include "App/RideController.hpp"
 
 // Application-level states
 
@@ -37,22 +36,17 @@ public:
     // Called from loop()
     void update();
 
-    // Data from HAL
-    void updateTelemetry();
-    void updateBluetooth(std::vector<BluetoothDevice> devices);
-    void updateGpsEnable(bool state);
-
     // Getters for UI access
     AppState getState() const { return state; }
-    bool getGpsEnableState() const { return _gpsEnableState; }
+    bool getGpsEnableState() const { return _inputCallbacks.gpsEnableState(); }
 
     bool isLogging() const { return state == AppState::LOGGING; }
 
     // FTP estimation from ride data. See FtpEstimator for the protocol
     // (best 20-min avg x 0.95). Returns 0 if no qualifying window yet.
-    uint16_t suggestedFtp() const { return _ftpEstimator.suggestedFtp(); }
-    uint16_t best20MinAvg() const { return _ftpEstimator.best20MinAvg(); }
-    bool ftpHasQualifyingWindow() const { return _ftpEstimator.hasQualifyingWindow(); }
+    uint16_t suggestedFtp() const { return _ride.suggestedFtp(); }
+    uint16_t best20MinAvg() const { return _ride.best20MinAvg(); }
+    bool ftpHasQualifyingWindow() const { return _ride.ftpHasQualifyingWindow(); }
 
     void handleAppEvent(const AppEvent& e);
     
@@ -63,37 +57,20 @@ private:
     App() : model(), ui(*this) {}
     
     std::queue<AppEvent> appEvents;
-    IStorage* _storage = nullptr;
-    ILogger* _logger = nullptr;
-
-    TCXLogger* tcxLogger = nullptr;
-    FITLogger* fitLogger = nullptr;
-    CSVLogger* csvLogger = nullptr;
+    DataModel model;
+    UIManager ui;
+    SettingsStore _settings;
+    InputCallbacks _inputCallbacks;
+    TelemetryPublisher _telemetry;
+    RideController _ride;
 
     AppState state = AppState::BOOT, state_prev = AppState::BOOT;
     uint32_t _lastRenderMillis = 0;
-    int messageType = 0;
-    uint32_t _messageSendMillis = 0;
-    bool startMessageConfig = false;
-
-    bool _gpsEnableState = true;
-    bool validLoc_prev = false;
-    bool _prevGpsPosValid = false;  // frame.gpsPos.valid from the previous tick (resync edge-detect)
-
-    uint8_t lastSecond;
-
-    // Auto-pause state
-    bool _autoPaused = false;      // paused by us (vs manually) - only then auto-resume
-    uint32_t _stopSinceMs = 0;     // timestamp the speed first dropped below threshold
-    uint32_t _moveSinceMs = 0;     // timestamp movement was first detected while auto-paused
-
+    bool _gpsSettingsLoaded = false;
+    bool _gpsRateSyncStarted = false;
     // Idle auto-sleep state
     uint32_t _lastActivityMs = 0;  // timestamp of the last button press/hold
     bool _idleActive = false;      // true while in IDLE, re-arms the countdown on entry
-
-    // Ride timers: elapsed since logging start, moving excludes pauses.
-    float _rideElapsedSec = 0.0f;
-    float _rideMovingSec  = 0.0f;
 
     // Battery: debounced charging state + one-shot low-battery alarm.
     bool _chargingRaw = false;        // latest (undebounced) charger flag
@@ -104,14 +81,6 @@ private:
     // SD-card-removed alarm: one beep per removal while logging.
     bool _sdAlarmLatched = false;
 
-    // Auto-lap anchors (ride distance / moving time at the last lap).
-    float _lastLapDistanceM  = 0.0f;
-    float _lastLapMovingSec  = 0.0f;
-
-    DataModel model;
-    UIManager ui;
-    FusionEngine _fusion;
-    FtpEstimator _ftpEstimator;
     uint32_t _millis, _last_millis, lastGPS;
 
     // Beeper state (see buzz()/updateBuzzer()).
@@ -125,77 +94,17 @@ private:
     void buzz(const uint16_t* patternMs, uint8_t len);
     void updateBuzzer(uint32_t now);
 
-    void saveBiometrics();
-    void loadBiometrics();
-
-    void saveBikeStats();
-    void loadBikeStats();
-
-    // Auto-pause: stop logging automatically when the rider stops, resume
-    // when they get moving again. Speed-based with hysteresis (pause below
-    // 3 km/h, resume above 5 km/h) and time debounce so traffic lights do
-    // not trigger it but real stops do. Cadence confirms movement on resume
-    // (track-stand / rollout with no wheel-sensor speed yet).
-    static constexpr float AUTO_PAUSE_SPEED_KMH   = 3.0f;
-    static constexpr float AUTO_RESUME_SPEED_KMH  = 5.0f;
-    static constexpr float AUTO_RESUME_CADENCE_RPM = 20.0f;
-    static constexpr uint32_t AUTO_PAUSE_DELAY_MS  = 10000;
-    static constexpr uint32_t AUTO_RESUME_DELAY_MS = 3000;
-
     // Default idle-sleep timeout when the stored setting is 0 (see
     // BikeData::idleSleepMinutes).
     static constexpr uint8_t IDLE_SLEEP_DEFAULT_MIN = 5;
-    void updateAutoPause(uint32_t now);
     void updateIdleSleep(const physIO& io, uint32_t now);
 
     // Ride timing / alarms / auto-lap (see App.cpp for details).
-    void updateRideTimers(float dt);
     void updateBatteryAlarm();
     void updateSdAlarm();
     void updateAutoLap();
     static uint8_t vbatToPct(float volts);
 
-    void saveLayout();
-    void loadLayout();
-
-    void saveTime();
-    void loadTime();
-
-    void updateLoggerInstance() {
-            const LoggerType selectedLogger = model.bike().get().logger;
-
-            //delete previously created loggers if they exist
-            if (fitLogger) {
-                delete fitLogger;
-                fitLogger = nullptr;
-            }
-            if (tcxLogger) {
-                delete tcxLogger;
-                tcxLogger = nullptr;
-            }
-            if (csvLogger) {
-                delete csvLogger;
-                csvLogger = nullptr;
-            }
-
-            switch (selectedLogger) {
-                case LoggerType::FIT:
-                    fitLogger = new FITLogger(_storage);
-                    _logger = fitLogger;
-                    Serial.println("FIT logger initialized.");
-                    break;
-                case LoggerType::TCX:
-                    tcxLogger = new TCXLogger(_storage, model);
-                    _logger = tcxLogger;
-                    Serial.println("TCX logger initialized.");
-                    break;
-                case LoggerType::CSV:
-                    csvLogger = new CSVLogger(_storage, model.bus());
-                    _logger = csvLogger;
-                    Serial.println("CSV logger initialized.");
-                    break;
-            }
-    }
 };
 
 #endif /* APP_H */

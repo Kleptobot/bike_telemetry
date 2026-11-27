@@ -93,10 +93,10 @@ Display Edit UI and CSV logger consume that catalog; do not add parallel
 topic/type tables.
 
 **`src/DataModel/DataModel.hpp`** aggregates the persistent providers
-(`time()`, `bio()`, `bike()`, `layout()`, `logger()`, `SD()`, `bluetooth()`)
-plus `bus()` and `gpsTrack()`. Settings JSON files (`layout.txt`, `bikeStats.txt`,
-`biometrics.txt`, `time.txt`) are loaded/saved by `App.cpp` through `IStorage` +
-ArduinoJson — see §6.
+(`time()`, `bio()`, `bike()`, `layout()`, `logger()`, `SD()`, `bluetooth()`,
+`gpsSettings()`) plus `bus()` and `gpsTrack()`. Settings JSON files
+(`layout.txt`, `bikeStats.txt`, `biometrics.txt`, `time.txt`, `gpsConfig.txt`)
+are loaded/saved by `SettingsStore` through `IStorage` + ArduinoJson — see §6.
 
 **Events** (`src/AppEvents.hpp`, `src/UIEvents.hpp`, `src/UIEventBus.hpp`):
 screens never call App directly — they post `AppEvent`s (commands: SaveTime,
@@ -160,16 +160,17 @@ story. Orientation:
 
 ## 6. SD-card file formats (settings)
 
-Settings are JSON-ish text files at the SD root, loaded and saved directly by
-`App.cpp` through `IStorage` + ArduinoJson (there is no `Settings/` directory,
-no `ISettings`, and no `JsonFile.hpp`):
+Settings are JSON-ish text files at the SD root, loaded and saved by
+`SettingsStore` through `IStorage` + ArduinoJson (there is no `Settings/`
+directory, no `ISettings`, and no `JsonFile.hpp`):
 
 | File | Loader / owner | Contents |
 |---|---|---|
-| `layout.txt` | `App::loadLayout()`/`saveLayout()` (`LayoutDataProvider`) | Tile grid layout for the stats screen. |
-| `bikeStats.txt` | `App::loadBikeStats()`/`saveBikeStats()` (`BikeDataProvider`) | Wheel circumference (mm), bike mass, logger format selection, idle-sleep minutes, auto-pause, auto-lap. |
-| `biometrics.txt` | `App::loadBiometrics()`/`saveBiometrics()` (`BioDataProvider`) | Rider mass, birthday, HR zones, FTP, caloric profile. |
-| `time.txt` | `App::loadTime()`/`saveTime()` (`TimeDataProvider`) | UTC offset and time prefs. |
+| `layout.txt` | `SettingsStore::loadLayout()`/`saveLayout()` (`LayoutDataProvider`) | Tile grid layout for the stats screen. |
+| `bikeStats.txt` | `SettingsStore::loadBikeStats()`/`saveBikeStats()` (`BikeDataProvider`) | Wheel circumference (mm), bike mass, logger format selection, idle-sleep minutes, auto-pause, auto-lap. |
+| `biometrics.txt` | `SettingsStore::loadBiometrics()`/`saveBiometrics()` (`BioDataProvider`) | Rider mass, birthday, HR zones, FTP, caloric profile. |
+| `time.txt` | `SettingsStore::loadTime()`/`saveTime()` (`TimeDataProvider`) | UTC offset and time prefs. |
+| `gpsConfig.txt` | `SettingsStore::loadGpsSettings()`/`saveGpsSettings()` (`GpsSettingsProvider`) | Desired NMEA message rates reconciled with LC76G settings. |
 | `devices.txt` | `BluetoothSystem::loadDevices()`/`saveDevices()` | Paired BLE sensors (not a Settings class). |
 
 Ride logs are written by the active logger (`FIT`/`TCX`/`CSV`, chosen in bike

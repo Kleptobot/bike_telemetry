@@ -10,6 +10,7 @@
 #include "BikeDataProvider.hpp"
 #include "DataBus.hpp"
 #include "GpsTrack.hpp"
+#include "GpsSettingsProvider.hpp"
 
 enum class AppState {
     BOOT,
@@ -28,6 +29,7 @@ public:
     LoggerDataProvider& logger() { return _logger; }
     SDStateProvider& SD() { return _SD; }
     BikeDataProvider& bike() { return _bike; }
+    GpsSettingsProvider& gpsSettings() { return _gpsSettings; }
     AppState& app() { return _appState; }
     void setAppState( AppState new_) { _appState = new_; }
 
@@ -47,6 +49,7 @@ public:
     const LoggerDataProvider& logger() const { return _logger; }
     const SDStateProvider& SD() const { return _SD; }
     const BikeDataProvider& bike() const { return _bike; }
+    const GpsSettingsProvider& gpsSettings() const { return _gpsSettings; }
     const AppState& app() const { return _appState; }
 
 private:
@@ -54,6 +57,7 @@ private:
     TimeDataProvider _time;
     BioDataProvider _bio;
     BikeDataProvider _bike;
+    GpsSettingsProvider _gpsSettings;
     LayoutDataProvider _layout;
     LoggerDataProvider _logger;
     SDStateProvider _SD;

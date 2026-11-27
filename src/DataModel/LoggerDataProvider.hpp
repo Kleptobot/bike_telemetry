@@ -16,6 +16,7 @@ public:
 
 private:
     friend class App;
+    friend class RideController;
     void update(const LoggerData& newData) {
         _data = newData;
         ++_version;

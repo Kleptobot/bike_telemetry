@@ -362,10 +362,10 @@ void HAL::sleep() {
     _sleep = true;
 }
 
-void HAL::setNMEArates(uint8_t type, uint8_t rate) {
-    (void)type; (void)rate;   // no radio to configure
+void HAL::reconcileGpsNmeaRates(const uint8_t* rates, bool forceNVRAMSave) {
+    (void)rates;
+    (void)forceNVRAMSave;
+    Serial.println("[sim] GPS NMEA rate reconciliation skipped; no GPS hardware is connected.");
 }
 
 void HAL::onSleep(int, const void*, void*) {}
-void HAL::onPAIRResponse(int, const void*, void*) {}
-void HAL::handlePAIRResponse(int, const void*) {}

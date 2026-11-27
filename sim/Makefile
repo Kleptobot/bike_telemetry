@@ -73,6 +73,10 @@ endif
 # is the real thing.
 FW_SRCS := \
   $(ROOT)/src/App.cpp \
+  $(ROOT)/src/App/SettingsStore.cpp \
+  $(ROOT)/src/App/InputCallbacks.cpp \
+  $(ROOT)/src/App/TelemetryPublisher.cpp \
+  $(ROOT)/src/App/RideController.cpp \
   $(ROOT)/src/main.cpp \
   $(ROOT)/src/display/Display.cpp \
   $(ROOT)/src/Fusion/AltitudeFusion.cpp \
