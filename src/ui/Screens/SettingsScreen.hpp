@@ -6,6 +6,10 @@
 #include "ui/Widgets/InputHints.hpp"
 #include "ui/GFX.h"
 
+#ifndef APP_BUILD_REVISION
+#define APP_BUILD_REVISION "unknown"
+#endif
+
 struct SettingsMenuItem {
     const char* label;
     const uint8_t* icon;
@@ -53,6 +57,11 @@ public:
     void render() override {
         listView.render();
         hints.render();
+        Disp::setCursor(SCREEN_WIDTH - 88, 308);
+        Disp::setTextSize(1);
+        Disp::setTextColor(ST77XX_WHITE);
+        Disp::print("Build ");
+        Disp::print(APP_BUILD_REVISION);
     }
 
     void handleInput(physIO input) override {
