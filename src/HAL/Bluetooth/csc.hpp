@@ -51,29 +51,25 @@ class csc : public BT_Device {
     BLEClientCharacteristic csc_loc   = BLEClientCharacteristic(GATT_SENSOR_LOCATION_UUID);
 
     static std::vector<csc*> _cscDevices;
+    static uint32_t _nextSourceId;
     
     static void csc_notify_callback(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len);
 
     // Body sensor location value is 8 bit
     const char* feat_str[4] = {"other", "Speed", "Cadence", "Speed & Cadence"};
-    const float f32_circ = 2127;
-    // csc objects are heap-allocated via `new csc(MAC)`, so these get no
-    // static zero-init. begin() already zeroed the two presence flags; the
-    // rest were left indeterminate.
+    // csc objects are heap-allocated via `new csc(MAC)`, so initialize all
+    // counter/source state here rather than relying on static zero-init.
     uint32_t u32_WheelCount_Prev = 0;
     uint16_t u16_SpeedEvt_Prev = 0, u16_CrankCount_Prev = 0, u16_CrankEvt_Prev = 0;
     uint8_t u8_feature = 0, u8_location = 0;
     uint32_t millis_at_spd_evt = 0, millis_at_cad_evt = 0;
-    uint32_t exp_next_spd_evt= 0, exp_next_cad_evt=0;
-    uint32_t u32_WheelCount_delta = 0;
-    uint16_t u16_CrankCount_delta = 0, u16_speed_delta = 0, u16_crank_delta = 0;
 
     // Cumulative revolution totals and last-received native event times,
     // maintained for the measurement frame (see HAL/Measurements.hpp).
-    // Bookkeeping only -- no existing behaviour reads them. In-class
-    // initialisers: csc objects are heap-allocated (see comment above).
     uint32_t u32_WheelCount_Total = 0, u32_CrankCount_Total = 0;
     uint16_t u16_SpeedEvt_Last = 0, u16_CrankEvt_Last = 0;
+    uint32_t _sourceId = 0;
+    bool _hasWheelSample = false, _hasCrankSample = false;
     // True until the first packet after construction/discover/reconnect has
     // baselined the Prev counters, so the sensor's whole lifetime count is
     // not injected into the totals.
@@ -94,13 +90,13 @@ class csc : public BT_Device {
     csc(MacAddress MAC){
       this->bt_type = E_Type_BT_Device::bt_csc;
       this->MAC=MAC;
+      if (++_nextSourceId == 0) ++_nextSourceId;
+      _sourceId = _nextSourceId;
       this->begin();
     }
 
   public:
     bool b_speed_present = false, b_cadence_present = false;
-    float raw_wheel_rpm = 0.0f, f32_wheel_rpm = 0.0f;
-    float f32_cadence_raw = 0.0f, f32_cadence = 0.0f;
     virtual ~csc(){};
     
     static void create_csc(MacAddress MAC)
@@ -109,11 +105,10 @@ class csc : public BT_Device {
       _cscDevices.push_back(static_cast<csc*>(btDevices.back().get()));
     };
 
-
-    static data_record getSpeed();
-    static data_record getCadence();
-
     // --- Measurement-frame surface (see HAL/Measurements.hpp) ----------------
+    uint32_t sourceId() const { return _sourceId; }
+    bool hasWheelSample() const { return b_speed_present && _hasWheelSample; }
+    bool hasCrankSample() const { return b_cadence_present && _hasCrankSample; }
     uint32_t wheelRevTotal() const { return u32_WheelCount_Total; }
     uint32_t crankRevTotal() const { return u32_CrankCount_Total; }
     uint16_t lastWheelEvt1024() const { return u16_SpeedEvt_Last; }
@@ -136,8 +131,6 @@ class csc : public BT_Device {
     bool discovered() override;
 
     void disconnect(uint16_t conn_handle, uint8_t reason) override;
-
-    void update(uint32_t now) override;
 };
 
  #endif /* CSC_H */

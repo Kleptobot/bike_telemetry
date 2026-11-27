@@ -1,5 +1,5 @@
 #pragma once
-#include "UI/Widgets/Widget.hpp"
+#include "ui/Widgets/Widget.hpp"
 #include "display/Display.hpp"
 #include "DataModel/DataModel.hpp"
 

@@ -185,6 +185,22 @@ public:
     void toUpperCase() { for (auto& c : _s) c = (char)toupper((unsigned char)c); }
     void toLowerCase() { for (auto& c : _s) c = (char)tolower((unsigned char)c); }
     int indexOf(char c) const { auto p = _s.find(c); return p == std::string::npos ? -1 : (int)p; }
+    int indexOf(const char* s, unsigned int from = 0) const {
+        if (!s) return -1;
+        if (from >= _s.size()) return -1;
+        auto p = _s.find(s, from);
+        return p == std::string::npos ? -1 : (int)p;
+    }
+    int indexOf(const String& s, unsigned int from = 0) const {
+        return indexOf(s.c_str(), from);
+    }
+    void trim() {
+        auto a = _s.find_first_not_of(" \t\r\n");
+        if (a == std::string::npos) { _s.clear(); return; }
+        auto b = _s.find_last_not_of(" \t\r\n");
+        _s = _s.substr(a, b - a + 1);
+    }
+    void reserve(size_t) {} // std::string manages capacity; no-op on host
     long toInt() const { return strtol(_s.c_str(), nullptr, 10); }
     float toFloat() const { return strtof(_s.c_str(), nullptr); }
 

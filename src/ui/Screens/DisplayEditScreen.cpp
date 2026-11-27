@@ -110,8 +110,10 @@ void DisplayEditScreen::handleInput(physIO input) {
 
         case WidgetEditMode::CHANGE_TYPE:
             if (selectedIdx >= 0) {
-                if (input.Up.press) _displays[selectedIdx].setType(++_displays[selectedIdx].type);
-                if (input.Down.press) _displays[selectedIdx].setType(--_displays[selectedIdx].type);
+                if (input.Up.press)
+                    _displays[selectedIdx].setType(nextDisplayTopic(_displays[selectedIdx].type));
+                if (input.Down.press)
+                    _displays[selectedIdx].setType(previousDisplayTopic(_displays[selectedIdx].type));
             }
             if (input.Select.press) returnToSelectMenu();
             break;
@@ -314,7 +316,7 @@ void DisplayEditScreen::createItemAtCursor() {
     item.y0 = _cursorY;
     item.y1 = _cursorY + 1;
 
-    item.setType(TelemetryType::Speed);
+    item.setType(Topic::EstimatedSpeed);
     item.widget.setMode(WidgetSubMode::CHANGE_TYPE);
 
     _displays.push_back(item);

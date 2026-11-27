@@ -39,7 +39,7 @@ void button::process()
             Serial.println("[Button] Button held. Held time: " + String(_heldTime));
         }
     } else {
-        if (_heldTime>_nShortPressTime)
+        if (_heldTime>_nShortPressTime && _heldTime<_nHeldPressTime)
             _short = true;
         _heldTime = 0;
         _releaseTime = current_time - _FETime;

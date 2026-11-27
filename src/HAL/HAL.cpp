@@ -153,6 +153,7 @@ void HAL::update() {
 //   idle/s   -- length polls that found nothing queued
 //   err      -- lifetime state-machine error count (grows on bus trouble)
 //   maxgap   -- worst wait between completed drains, ms
+//   avgGap   -- mean of the most recent 16 completed-drain gaps, ms
 //   bp       -- lifetime ticks where the arbiter held foreign devices off
 //               for the GNSS (rule 3); zero in normal operation
 //   in/sens  -- microseconds of bus time input/sensor passes consumed
@@ -167,13 +168,14 @@ void HAL::debugBusSummary() {
     const uint32_t bytes  = _LC76G.dbgBytesDrained();
     const uint32_t zero   = _LC76G.dbgZeroLenPolls();
 
-    Serial.printf("[i2c] tx=%lu drain=%lu bytes=%lu idle=%lu err=%u maxgap=%lums bp=%lu wedge=%d in=%luus sens=%luus\r\n",
+    Serial.printf("[i2c] tx=%lu drain=%lu bytes=%lu idle=%lu err=%u maxgap=%lums avgGap=%lums bp=%lu wedge=%d in=%luus sens=%luus\r\n",
                   (unsigned long)(tx - _dbgPrevTx),
                   (unsigned long)(cycles - _dbgPrevCycles),
                   (unsigned long)(bytes - _dbgPrevBytes),
                   (unsigned long)(zero - _dbgPrevZero),
                   _LC76G.dbgErrorCount(),
                   (unsigned long)_LC76G.dbgMaxDrainGapMs(),
+                  (unsigned long)_LC76G.dbgAvgDrainGapMs(),
                   (unsigned long)_bus.dbgBackpressureTicks(),
                   (int)s_busWasWedged,
                   (unsigned long)_dbgInBusyUs,
@@ -211,9 +213,147 @@ void HAL::sleep() {
     }
 }
 
-void HAL::setNMEArates(uint8_t type, uint8_t rate) {
-    LC76G::Payload2U8 p = {type, rate};
-    _LC76G.sendCommand(LC76G::SET_NMEA_MSG_RATE,&HAL::onPAIRResponse,this,&p);
+void HAL::reconcileGpsNmeaRates(const uint8_t* rates, bool forceNVRAMSave) {
+    if (rates == nullptr) {
+        Serial.println("[HAL] Cannot reconcile GPS rates: no desired configuration.");
+        return;
+    }
+
+    if (_gpsNmeaSyncActive) {
+        for (uint8_t i = 0; i < GPS_NMEA_RATE_COUNT; ++i) {
+            _gpsNmeaPendingRates[i] = rates[i];
+        }
+        _gpsNmeaSyncPending = true;
+        _gpsNmeaSyncPendingForceSave = forceNVRAMSave;
+        return;
+    }
+
+    beginGpsNmeaRateSync(rates, forceNVRAMSave);
+}
+
+void HAL::beginGpsNmeaRateSync(const uint8_t* rates, bool forceNVRAMSave) {
+    for (uint8_t i = 0; i < GPS_NMEA_RATE_COUNT; ++i) {
+        _gpsNmeaRates[i] = rates[i];
+    }
+    _gpsNmeaRateIndex = 0;
+    _gpsNmeaSyncChanged = false;
+    _gpsNmeaRmcChanged = false;
+    _gpsNmeaSyncForceSave = forceNVRAMSave;
+    _gpsNmeaSyncActive = true;
+    queryGpsNmeaRate();
+}
+
+void HAL::queryGpsNmeaRate() {
+    LC76G::Payload1U8 payload = {_gpsNmeaRateIndex};
+    _LC76G.sendCommand(LC76G::GET_NMEA_MSG_RATE, &HAL::onGpsNmeaRateRead, this, &payload);
+}
+
+void HAL::onGpsNmeaRateRead(int numArgs, const void* payload, void* context) {
+    HAL* self = static_cast<HAL*>(context);
+    if (self->startPendingGpsNmeaRateSync()) return;
+    if (!self->_gpsNmeaSyncActive) return;
+    if (numArgs != 2 || payload == nullptr) {
+        Serial.println("[HAL] Failed to read GPS NMEA rate; configuration sync stopped.");
+        self->_gpsNmeaSyncActive = false;
+        self->startPendingGpsNmeaRateSync();
+        return;
+    }
+
+    const uint8_t* values = static_cast<const uint8_t*>(payload);
+    if (values[0] != self->_gpsNmeaRateIndex) {
+        Serial.println("[HAL] GPS returned an unexpected NMEA message type; configuration sync stopped.");
+        self->_gpsNmeaSyncActive = false;
+        self->startPendingGpsNmeaRateSync();
+        return;
+    }
+
+    if (values[1] == self->_gpsNmeaRates[self->_gpsNmeaRateIndex]) {
+        self->_gpsNmeaRateIndex++;
+        if (self->_gpsNmeaRateIndex < GPS_NMEA_RATE_COUNT) {
+            self->queryGpsNmeaRate();
+        } else {
+            self->finishGpsNmeaRateSync();
+        }
+        return;
+    }
+
+    self->_gpsNmeaSyncChanged = true;
+    self->_gpsNmeaRmcChanged |= self->_gpsNmeaRateIndex == 4;
+    LC76G::Payload2U8 setPayload = {
+        self->_gpsNmeaRateIndex,
+        self->_gpsNmeaRates[self->_gpsNmeaRateIndex]
+    };
+    self->_LC76G.sendCommand(
+        LC76G::SET_NMEA_MSG_RATE, &HAL::onGpsNmeaRateSet, self, &setPayload);
+}
+
+void HAL::onGpsNmeaRateSet(int numArgs, const void* payload, void* context) {
+    HAL* self = static_cast<HAL*>(context);
+    if (self->startPendingGpsNmeaRateSync()) return;
+
+    if (numArgs != 1 || payload == nullptr ||
+        static_cast<const uint8_t*>(payload)[0] != 0) {
+        Serial.println("[HAL] GPS rejected an NMEA rate update; configuration sync stopped.");
+        self->_gpsNmeaSyncActive = false;
+        return;
+    }
+
+    self->_gpsNmeaRateIndex++;
+    if (self->_gpsNmeaRateIndex < GPS_NMEA_RATE_COUNT) {
+        self->queryGpsNmeaRate();
+    } else {
+        self->finishGpsNmeaRateSync();
+    }
+}
+
+void HAL::onGpsNmeaRmcRateSet(int numArgs, const void* payload, void* context) {
+    HAL* self = static_cast<HAL*>(context);
+    if (self->startPendingGpsNmeaRateSync()) return;
+
+    if (payload == nullptr || numArgs != 0) {
+        Serial.println("[HAL] GPS rejected the RMC rate update; configuration sync stopped.");
+        self->_gpsNmeaSyncActive = false;
+        return;
+    }
+
+    self->_gpsNmeaSyncActive = false;
+    self->_LC76G.sendCommand(
+        LC76G::SAVE_TO_NVRAM, &HAL::onGpsNmeaNVRAMSaved, self, nullptr);
+}
+
+void HAL::onGpsNmeaNVRAMSaved(int numArgs, const void* payload, void* context) {
+    HAL* self = static_cast<HAL*>(context);
+    if (self->startPendingGpsNmeaRateSync()) return;
+    if (payload == nullptr || numArgs != 0) {
+        Serial.println("[HAL] GPS NVRAM save failed.");
+    } else {
+        Serial.println("[HAL] GPS NMEA configuration synchronized and saved.");
+    }
+}
+
+void HAL::finishGpsNmeaRateSync() {
+    if (startPendingGpsNmeaRateSync()) return;
+    if (_gpsNmeaRmcChanged || _gpsNmeaSyncForceSave) {
+        LC76G::Payload1Ch1U8 rmcPayload = {"RMC", _gpsNmeaRates[4]};
+        _LC76G.sendCommand(
+            LC76G::SET_NMEA_RATE, &HAL::onGpsNmeaRmcRateSet, this, &rmcPayload);
+        return;
+    }
+
+    _gpsNmeaSyncActive = false;
+    if (_gpsNmeaSyncChanged || _gpsNmeaSyncForceSave) {
+        _LC76G.sendCommand(
+            LC76G::SAVE_TO_NVRAM, &HAL::onGpsNmeaNVRAMSaved, this, nullptr);
+    } else {
+        Serial.println("[HAL] GPS NMEA rates already match the saved configuration.");
+    }
+}
+
+bool HAL::startPendingGpsNmeaRateSync() {
+    if (!_gpsNmeaSyncPending) return false;
+    _gpsNmeaSyncPending = false;
+    beginGpsNmeaRateSync(_gpsNmeaPendingRates, _gpsNmeaSyncPendingForceSave);
+    return true;
 }
 
 void HAL::onSleep(int numArgs, const void* payload, void* context) {
@@ -223,31 +363,6 @@ void HAL::onSleep(int numArgs, const void* payload, void* context) {
     self->inputSystem.setOutput(GPIOB6,false);    //turn off the screen backlight
 }
 
-void HAL::onPAIRResponse(int numArgs, const void* payload, void* context) {
-    auto* self = static_cast<HAL*>(context);
-
-    self->handlePAIRResponse(numArgs, payload);
-}
-
-void HAL::handlePAIRResponse(int numArgs, const void* payload) {
-    // Validate payload before using it
-    if (payload == nullptr || numArgs <= 0) {
-        if (ENABLE_GPS_DEBUG) {
-            Serial.println("[HAL] PAIR response received with no payload");
-        }
-        return;
-    }
-    
-    uint8_t* byte_array = (uint8_t*)payload;
-    if (ENABLE_GPS_DEBUG) {
-        for(int i=0; i<numArgs && i<5; i++) {  // Added bounds check (max 5 bytes)
-            Serial.print("[PAIR] Arg ");
-            Serial.print(i);
-            Serial.print(": ");
-            Serial.println(byte_array[i]);
-        }
-    }
-}
 void HAL::disableAuxRail() {
   // Stop hardware SPI first so it releases its pin drive
   SPI.end();

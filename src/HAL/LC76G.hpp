@@ -15,12 +15,13 @@ class LC76G
     private:
 
     struct Sentence {
-        char data[MAX_NMEA_LEN];
-        uint16_t length;
+        char data[MAX_NMEA_LEN + 1] = {};
+        uint16_t length = 0;
 
-        Sentence(){}
+        Sentence() = default;
         Sentence(uint8_t* buff, uint8_t len) {
             memcpy(data, buff, len);
+            data[len] = '\0';
             length = len;
         }
     };
@@ -71,16 +72,24 @@ class LC76G
         return true;
     }
 
-    // Query reply of the form "$PAIR063,<type>,<rate>*CS" -- two numeric fields
-    // after the talker.
-    static bool decode_2u8(Sentence response, int& numArgs, void* payload) {
+    // The LC76G echoes the one-field query before replying with
+    // "$PAIR063,<type>,<rate>". Mark the echo so it does not satisfy the query.
+    static bool decode_nmea_rate(Sentence response, int& numArgs, void* payload) {
         uint8_t* byte_array = (uint8_t*)payload;
-        unsigned int a = 0, b = 0;
-        numArgs = sscanf(response.data,"%*[^,],%u,%u",&a,&b);
-        if (numArgs != 2) return false;
-        byte_array[0] = (uint8_t)a;
-        byte_array[1] = (uint8_t)b;
-        return true;
+        unsigned int type = 0, rate = 0;
+        numArgs = sscanf(response.data, "%*[^,],%u,%u", &type, &rate);
+        if (numArgs == 2) {
+            if (type > UINT8_MAX || rate > UINT8_MAX) return false;
+            byte_array[0] = (uint8_t)type;
+            byte_array[1] = (uint8_t)rate;
+            return true;
+        }
+
+        if (numArgs == 1) {
+            numArgs = -1;
+            return true;
+        }
+        return false;
     }
 
     // %[^,] rather than %s: the fields are comma-separated, and %s would run
@@ -149,8 +158,8 @@ class LC76G
 
     inline static const CommandDef COMMANDS[] = {
         {PAIR_LOW_POWER_ENTRY_RTC_MODE, "PAIR650", &build_no_args, nullptr, nullptr, 200 },
-        {GET_NMEA_MSG_RATE, "PAIR063", &build_1u8, "$PAIR063", &decode_2u8, 90000 },
-        {SET_NMEA_MSG_RATE, "PAIR062", &build_2u8, "PAIR001,062", &decode_1u8, 90000 },
+        {GET_NMEA_MSG_RATE, "PAIR063", &build_1u8, "$PAIR063", &decode_nmea_rate, 90000 },
+        {SET_NMEA_MSG_RATE, "PAIR062", &build_2u8, "$PAIR001,062", &decode_1u8, 90000 },
         {GET_NAVIGATION_MODE, "PAIR081", &build_no_args, "$PAIR081", &decode_1u8, 90000 },
         {SET_NAVIGATION_MODE, "PAIR080", &build_1u8, "$PAIR001,080", &decode_none, 90000 },
         {GET_STATIC_THRESHOLD, "PAIR071", &build_no_args, "$PAIR071", &decode_1u8, 90000 },
@@ -161,9 +170,9 @@ class LC76G
         {GNSS_SUBSYS_HOT_START, "PAIR004", &build_no_args, nullptr, nullptr, 200 },
         {GNSS_SUBSYS_WARM_START, "PAIR005", &build_no_args, nullptr, nullptr, 200 },
         {GNSS_SUBSYS_COLD_START, "PAIR006", &build_no_args, nullptr, nullptr, 200 },
-        {SET_NMEA_RATE, "PQTMCFGMSGRATE,W", &build_1char_1u8, nullptr, nullptr, 10000 },
+        {SET_NMEA_RATE, "PQTMCFGMSGRATE,W", &build_1char_1u8, "$PQTMCFGMSGRATE,OK", &decode_none, 10000 },
         {GET_NMEA_RATE, "PQTMCFGMSGRATE,R", &build_1char, "$PQTMCFGMSGRATE,OK", nullptr, 10000 },
-        {SAVE_TO_NVRAM, "PAIR511", &build_no_args, "PAIR001,511,1", nullptr, 10000 }
+        {SAVE_TO_NVRAM, "PAIR511", &build_no_args, "$PAIR001,511,1", nullptr, 10000 }
 
     };
 
@@ -235,11 +244,17 @@ class LC76G
     // completed buffer drains -- the number the sensor sampling budget has to
     // keep bounded, or the module's internal buffer backs up and NMEA
     // corrupts (the empirical "faster sensors broke the GPS" failure).
+    // dbgAvgDrainGapMs is the mean of the most recent 16 completed-drain gaps.
     uint32_t dbgTxCount()       const { return _dbgTxCount; }      // every Wire read/write
     uint32_t dbgDrainCycles()   const { return _dbgDrainCycles; }  // buffer reads with len > 0
     uint32_t dbgBytesDrained()  const { return _dbgBytesDrained; }
     uint32_t dbgZeroLenPolls()  const { return _dbgZeroLenPolls; }   // probes that found nothing
     uint32_t dbgMaxDrainGapMs() const { return _dbgMaxDrainGapMs; }
+    uint32_t dbgAvgDrainGapMs() const {
+        return _drainGapWindowCount
+            ? _drainGapWindowSumMs / _drainGapWindowCount
+            : 0;
+    }
     uint8_t  dbgErrorCount()    const { return _errorCount; }
 
     // Milliseconds since the state machine last STARTED a bus cycle (any
@@ -333,6 +348,10 @@ class LC76G
     // Bus instrumentation accumulators (see the dbg* getters above).
     uint32_t _dbgTxCount = 0, _dbgDrainCycles = 0, _dbgBytesDrained = 0;
     uint32_t _dbgZeroLenPolls = 0, _dbgMaxDrainGapMs = 0, _lastDrainOkMs = 0;
+    static constexpr uint8_t DRAIN_GAP_WINDOW_SIZE = 16;
+    uint32_t _drainGapWindowMs[DRAIN_GAP_WINDOW_SIZE] = {};
+    uint32_t _drainGapWindowSumMs = 0;
+    uint8_t _drainGapWindowCount = 0, _drainGapWindowNext = 0;
     uint32_t _lastCycleStartMs = 0;   // arbiter backpressure signal (see above)
 
     bool _CR = false;

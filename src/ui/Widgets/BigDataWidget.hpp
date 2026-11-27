@@ -1,51 +1,27 @@
 #pragma once
-#include "UI/Widgets/Widget.hpp"
-#include "Display/Display.hpp"
-#include "UI/GFX.h"
+#include "ui/Widgets/Widget.hpp"
+#include "display/Display.hpp"
+#include "ui/GFX.h"
 #include "HAL/SensorData.hpp"
 #include "DataModel/DataModel.hpp"
 #include "DataModel/DataBus.hpp"
 
 class BigDataWidget : public Widget {
 public:
-    BigDataWidget(int x, int y, int w, int h, TelemetryType type=TelemetryType::Speed)
+    BigDataWidget(int x, int y, int w, int h, Topic topic=Topic::EstimatedSpeed)
         : Widget(x, y),
-        _type(type),
-        _busTopic(topicForType(type)),
+        _topic(topic),
         _subscribed(false) {
         _width = w;
         _height= h;
-        unitStr = String(labelForType(_type));
+        const TopicMetadata* info = topicMetadata(_topic);
+        unitStr = info ? String(info->units) : "";
 
-        // Find the largest integer-part text size where everything still fits the footprint.
+        // Find a starting text size; formatValue() refits it to the actual value.
         // Decimal/unit text is always drawn at decimalSizeFor(intSize), roughly 1/3 the integer size.
-        int16_t bx, by;
-        bestSize = 1;
-
-        for (uint8_t s = 1; s <= MAX_BIG_TEXT_SIZE; s++) {
-            uint8_t decSize = decimalSizeFor(s);
-
-            Disp::setTextSize(s);
-            Disp::getTextBounds("888", 0, 0, &bx, &by, &intW, &intH);
-
-            Disp::setTextSize(decSize);
-            Disp::getTextBounds(".*", 0, 0, &bx, &by, &decW, &decH);
-            Disp::getTextBounds(unitStr, 0, 0, &bx, &by, &unitW, &unitH);
-
-            uint16_t totalW = intW + max(decW, unitW);
-            uint16_t stackedH = decH + UNIT_GAP_PX + unitH;
-            uint16_t totalH = max(intH, stackedH);
-
-            if (totalW > _width || totalH > _height) break;   // this size no longer fits — stop, keep previous
-            bestSize = s;
-        }
-        
-        Disp::setTextSize(bestSize);
-        Disp::getTextBounds("888", 0, 0, &bx, &by, &intW, &intH);
-        uint8_t decSize = decimalSizeFor(bestSize);
-        Disp::setTextSize(decSize);
-        Disp::getTextBounds(".*", 0, 0, &bx, &by, &decW, &decH);
-        Disp::getTextBounds(unitStr, 0, 0, &bx, &by, &unitW, &unitH);
+        // Time tiles render mm:ss, so measure with a 5-char sample, not "888".
+        const char* intSample = isTimeType() ? "88:88" : "888";
+        fitTextLayout(intSample, ".*");
     }
     
 
@@ -66,7 +42,8 @@ public:
             Disp::fillRect(_x, _y, _width, _height, ST77XX_BLACK);
             return;
         }
-        if (_type == TelemetryType::Undefined) {
+        const TopicMetadata* info = topicMetadata(_topic);
+        if (!info) {
             Disp::fillRect(_x, _y, _width, _height, ST77XX_BLACK);
             return;
         }
@@ -74,7 +51,8 @@ public:
         Disp::fillRect(_x, _y, _width, _height, ST77XX_BLACK);   // clear stale pixels from a differently-sized previous value
         Disp::setTextColor(_color);
 
-        if (_type == TelemetryType::Location) {
+        if (info->displayFormat == TopicDisplayFormat::Location) {
+            if (_width < LOCATION_MIN_WIDTH_PX || _height < LOCATION_MIN_HEIGHT_PX) return;
             Disp::setTextSize(1);
             Disp::setCursor(_x, _y);
             if (!_locationValue.valid) {
@@ -89,16 +67,15 @@ public:
             return;
         }
 
-        if (_type == TelemetryType::Coasting ||
-            _type == TelemetryType::HrZone || _type == TelemetryType::PowerZone) {
+        if (isStatusType()) {
             // State rendered as text, not a number: centred, size 2.
             Disp::setTextSize(2);
             int16_t bx, by;
             uint16_t w, h;
-            Disp::getTextBounds(_coastText, 0, 0, &bx, &by, &w, &h);
+            Disp::getTextBounds(_statusText, 0, 0, &bx, &by, &w, &h);
             Disp::setCursor(_x + (_width - (int16_t)w) / 2,
                             _y + (_height - (int16_t)h) / 2);
-            Disp::print(_coastText);
+            Disp::print(_statusText);
             return;
         }
 
@@ -108,7 +85,16 @@ public:
         uint8_t decSize = decimalSizeFor(bestSize);
 
         // Integer part: top-left anchored at widget origin
-        int intY = _y + (_height - intH) / 2;
+        const bool hasDecimal = decStr.length() != 0;
+        const uint16_t stackedContentH = hasDecimal ? decH : intH;
+        const uint16_t stackedH = unitStr.length() == 0
+                                      ? 0
+                                      : stackedContentH + UNIT_GAP_PX + unitH;
+        const uint16_t totalH = max(intH, stackedH);
+        const int verticalOffset = (_height > static_cast<int>(totalH))
+                                       ? (_height - static_cast<int>(totalH)) / 2
+                                       : 0;
+        int intY = _y + verticalOffset;
         Disp::setTextSize(bestSize);
         Disp::setCursor(_x, intY);
         Disp::print(intStr);
@@ -119,9 +105,12 @@ public:
         Disp::setCursor(decX, intY);
         Disp::print(decStr);
 
-        // Units: directly below the decimal part, same x, small gap
-        int unitY = intY + decH + UNIT_GAP_PX;
-        Disp::setCursor(decX, unitY);
+        // Units sit under the decimal part, or centered under whole numbers.
+        int unitX = decStr.length() == 0
+                        ? _x + (max(intW, unitW) - unitW) / 2
+                        : decX;
+        int unitY = intY + (hasDecimal ? decH : intH) + UNIT_GAP_PX;
+        Disp::setCursor(unitX, unitY);
         Disp::print(unitStr);
 
         if (_drawRightEdge) {
@@ -137,21 +126,21 @@ public:
         }
 
         if (ENABLE_INVALIDATE_DEBUG) {
-            String debugOutput = "For type: " + String(toString(_type)) + " Value: " + String(_value);
+            String debugOutput = "For type: " + String(topicDisplayName(_topic)) + " Value: " + String(_value);
             Serial.println("[BigDataWidget] " + debugOutput);
         }
     }
 
     void setColor(uint16_t color) { _color = color; }
 
-    // Polling path for widget types without a float DataBus subscription:
-    // Distance/TotalDist (floats, just not subscribed), Location (struct),
-    // Coasting (bool rendered as text), GpsSats (uint8 storage).
+    // Float topics are subscribed; other storage types and formatted statuses
+    // are read here using the same metadata as CSV serialization.
     void poll(const DataBus& bus) {
-        if (_type == TelemetryType::Undefined) return;
+        const TopicMetadata* info = topicMetadata(_topic);
+        if (!info) return;
 
-        if (_type == TelemetryType::Location) {
-            const location_data& lv = bus.get<location_data>(Topic::Location);
+        if (info->displayFormat == TopicDisplayFormat::Location) {
+            const location_data& lv = bus.get<location_data>(_topic);
             if (lv != _locationValue) {
                 _locationValue = lv;
                 _color = lv.valid ? ST77XX_GREEN : ST77XX_RED;
@@ -160,39 +149,58 @@ public:
             return;
         }
 
-        if (_type == TelemetryType::Coasting) {
-            const bool coasting = bus.get<bool>(Topic::Coasting);
-            const char* text = coasting ? "COAST" : "PEDAL";
-            if (_coastText != text) {
-                _coastText = text;
-                _color = coasting ? ST77XX_ORANGE : ST77XX_GREEN;
-                invalidate();
-            }
+        if (info->displayFormat == TopicDisplayFormat::BooleanStatus ||
+            info->displayFormat == TopicDisplayFormat::CoastingStatus) {
+            const bool value = bus.get<bool>(_topic);
+            setStatusText(value ? info->trueText : info->falseText,
+                          colorFor(value ? info->trueColor : info->falseColor));
             return;
         }
 
-        if (_type == TelemetryType::HrZone || _type == TelemetryType::PowerZone) {
-            const uint8_t zone = (_type == TelemetryType::HrZone)
-                                     ? bus.get<uint8_t>(Topic::HrZone)
-                                     : bus.get<uint8_t>(Topic::PowerZone);
-            const char tag = (_type == TelemetryType::HrZone) ? 'Z' : 'P';
-            const String text = (zone >= 1 && zone <= 5) ? String(tag) + String((int)zone)
-                                                         : String("--");
-            if (_coastText != text) {
-                _coastText = text;
-                _color = ST77XX_WHITE;
-                invalidate();
+        if (info->displayFormat == TopicDisplayFormat::HrZone ||
+            info->displayFormat == TopicDisplayFormat::PowerZone) {
+            const uint8_t zone = bus.get<uint8_t>(_topic);
+            const String text = (zone >= 1 && zone <= 5)
+                                    ? String(info->zonePrefix) + String(static_cast<int>(zone))
+                                    : String("--");
+            setStatusText(text.c_str(), ST77XX_WHITE);
+            return;
+        }
+
+        if (info->displayFormat == TopicDisplayFormat::GpsQuality) {
+            const uint8_t quality = bus.get<uint8_t>(_topic);
+            const char* text = info->qualityPoorText;
+            TopicColor color = info->qualityPoorColor;
+            if (quality == 0) {
+                text = info->qualityGoodText;
+                color = info->qualityGoodColor;
+            } else if (quality == 1) {
+                text = info->qualityFairText;
+                color = info->qualityFairColor;
             }
+            setStatusText(text, colorFor(color));
             return;
         }
 
         float newVal = 0.0f;
-        switch (_type) {
-            case TelemetryType::Distance:  newVal = bus.get<float>(Topic::DistanceDeltaM); break;
-            case TelemetryType::TotalDist: newVal = bus.get<float>(Topic::TotalDistanceM) / 1000.0f; break; // m -> km
-            case TelemetryType::GpsSats:   newVal = (float)bus.get<uint8_t>(Topic::GpsSats); break;
-            default: return;  // subscribed types are handled by the callback
+        switch (info->valueKind) {
+            case TopicValueKind::Float:
+                newVal = bus.get<float>(_topic);
+                break;
+            case TopicValueKind::UInt8:
+                newVal = static_cast<float>(bus.get<uint8_t>(_topic));
+                break;
+            case TopicValueKind::UInt32:
+                newVal = static_cast<float>(bus.get<uint32_t>(_topic));
+                break;
+            case TopicValueKind::Int16:
+                newVal = static_cast<float>(bus.get<int16_t>(_topic));
+                break;
+            case TopicValueKind::Bool:
+            case TopicValueKind::Location:
+                return;
         }
+        newVal *= info->displayScale;
 
         if (newVal != _value) {
             _value = newVal;
@@ -220,7 +228,9 @@ public:
     static void busCallback(const void* data, void* ctx) {
         BigDataWidget* self = reinterpret_cast<BigDataWidget*>(ctx);
         if (self && data) {
-            const float newValue = *reinterpret_cast<const float*>(data);
+            const TopicMetadata* info = topicMetadata(self->_topic);
+            if (!info) return;
+            const float newValue = *reinterpret_cast<const float*>(data) * info->displayScale;
             // Change-gated: only reformat/re-invalidate when the value really
             // changed. The callback fires at loop rate (App publishes every
             // tick), so unconditional dirtying here made every render flush
@@ -235,15 +245,16 @@ public:
         }
     }
 
-    // Subscribe to the DataBus topic corresponding to this widget's TelemetryType.
+    // Subscribe to float-valued topics; metadata defines their bus type.
     // The callback only sets a dirty flag - it does NOT call invalidate()
     // because the callback runs synchronously during DataBus::publish(),
     // which may be in a context where display operations are unsafe.
     void subscribe(DataBus& bus) {
-        if (_busTopic == Topic::TopicCount) return;  // No topic mapping
+        const TopicMetadata* info = topicMetadata(_topic);
+        if (!info || info->valueKind != TopicValueKind::Float) return;
         if (_subscribed) return;  // Already subscribed
 
-        _subscribed = bus.subscribe(_busTopic, &BigDataWidget::busCallback, this);
+        _subscribed = bus.subscribe(_topic, &BigDataWidget::busCallback, this);
         if (_subscribed) _bus = &bus;
     }
 
@@ -253,7 +264,7 @@ public:
     // std::vector that is clear()ed and rebuilt on every screen entry.
     ~BigDataWidget() override {
         if (_subscribed && _bus) {
-            _bus->unsubscribe(_busTopic, &BigDataWidget::busCallback, this);
+            _bus->unsubscribe(_topic, &BigDataWidget::busCallback, this);
             _subscribed = false;
             _bus = nullptr;
         }
@@ -262,15 +273,16 @@ public:
 private:
     static constexpr uint8_t MAX_BIG_TEXT_SIZE = 10;
     static constexpr uint8_t UNIT_GAP_PX = 2;
+    static constexpr uint16_t LOCATION_MIN_WIDTH_PX = 13 * 6;
+    static constexpr uint16_t LOCATION_MIN_HEIGHT_PX = 2 * 8;
 
-    TelemetryType _type;
-    Topic _busTopic;       // Mapped DataBus topic for this TelemetryType
+    Topic _topic;
     bool _subscribed = false;
     bool _dirty = false;   // Set by callback when value changes; cleared by update()
     DataBus* _bus = nullptr;  // Bus this widget is subscribed to (for unsubscribe)
     float _value = NAN;    // NaN sentinel: first publish always differs (see busCallback)
     location_data _locationValue;
-    String _coastText = "";   // Coasting tile: "PEDAL" / "COAST"
+    String _statusText = "";
     String _units;
     uint16_t _color = ST77XX_WHITE;
     
@@ -281,6 +293,34 @@ private:
     bool _drawRightEdge = false;
     bool _drawBottomEdge = false;
     static constexpr uint16_t EDGE_LINE_COLOR = 0x4208;   // dim grey
+
+    bool isStatusType() const {
+        const TopicMetadata* info = topicMetadata(_topic);
+        if (!info) return false;
+        return info->displayFormat == TopicDisplayFormat::BooleanStatus ||
+               info->displayFormat == TopicDisplayFormat::CoastingStatus ||
+               info->displayFormat == TopicDisplayFormat::HrZone ||
+               info->displayFormat == TopicDisplayFormat::PowerZone ||
+               info->displayFormat == TopicDisplayFormat::GpsQuality;
+    }
+
+    static uint16_t colorFor(TopicColor color) {
+        switch (color) {
+            case TopicColor::White: return ST77XX_WHITE;
+            case TopicColor::Green: return ST77XX_GREEN;
+            case TopicColor::Orange: return ST77XX_ORANGE;
+            case TopicColor::Red: return ST77XX_RED;
+        }
+        return ST77XX_WHITE;
+    }
+
+    void setStatusText(const char* text, uint16_t color) {
+        if (_statusText != text || _color != color) {
+            _statusText = text;
+            _color = color;
+            invalidate();
+        }
+    }
     
     String formatLocationValue(double value) const {
         uint16_t maxLen = 9;
@@ -307,93 +347,87 @@ private:
         return s > 0 ? s : 1;
     }
 
+    void fitTextLayout(const String& integerText, const String& decimalText) {
+        int16_t bx, by;
+        bestSize = 1;
+        for (uint8_t s = 1; s <= MAX_BIG_TEXT_SIZE; s++) {
+            const uint8_t decSize = decimalSizeFor(s);
+            uint16_t candidateIntW, candidateIntH;
+            uint16_t candidateDecW, candidateDecH;
+            uint16_t candidateUnitW, candidateUnitH;
+
+            Disp::setTextSize(s);
+            Disp::getTextBounds(integerText, 0, 0, &bx, &by, &candidateIntW, &candidateIntH);
+            Disp::setTextSize(decSize);
+            Disp::getTextBounds(decimalText, 0, 0, &bx, &by, &candidateDecW, &candidateDecH);
+            Disp::getTextBounds(unitStr, 0, 0, &bx, &by, &candidateUnitW, &candidateUnitH);
+
+            const uint16_t totalW = decimalText.length() == 0
+                                        ? max(candidateIntW, candidateUnitW)
+                                        : candidateIntW + max(candidateDecW, candidateUnitW);
+            const bool hasDecimal = decimalText.length() != 0;
+            const uint16_t stackedContentH = hasDecimal ? candidateDecH : candidateIntH;
+            const uint16_t stackedH = unitStr.length() == 0
+                                          ? 0
+                                          : stackedContentH + UNIT_GAP_PX + candidateUnitH;
+            const uint16_t totalH = max(candidateIntH, stackedH);
+            const bool fits = totalW <= _width && totalH <= _height;
+
+            if (s == 1 || fits) {
+                bestSize = s;
+                intW = candidateIntW;
+                intH = candidateIntH;
+                decW = candidateDecW;
+                decH = candidateDecH;
+                unitW = candidateUnitW;
+                unitH = candidateUnitH;
+            }
+            if (!fits) break;
+        }
+    }
+
     String padIntPart(int intPart) const {
         String s = String(intPart);
         while (s.length() < 3) s = " " + s;
         return s;
     }
 
-    // Units label comes from the shared type table in TelemetryType.hpp --
-    // one source of truth for the vocabulary.
-    const char* labelForType(TelemetryType t) const {
-        return unitsForType(t);
+    uint8_t decimalsForType() const {
+        const TopicMetadata* info = topicMetadata(_topic);
+        return info ? info->decimals : 1;
     }
 
-    // Decimal places to display for each type. Types not listed default to 1.
-    uint8_t decimalsForType(TelemetryType t) const {
-        switch (t) {
-            case TelemetryType::GearRatio:
-            case TelemetryType::Accel:
-            case TelemetryType::GpsHdop:
-            case TelemetryType::Torque:
-            case TelemetryType::BatteryVolts:
-            case TelemetryType::IntensityFactor:
-                return 2;
-            case TelemetryType::Ascent:
-            case TelemetryType::Descent:
-            case TelemetryType::GpsCourse:
-            case TelemetryType::Calories:
-            case TelemetryType::NormalizedPower:
-            case TelemetryType::Tss:
-                return 0;
-            default:
-                return 1;
-        }
-    }
-
-    // Rebuild intStr/decStr from _value honouring decimalsForType().
+    // Rebuild intStr/decStr from _value honouring the topic metadata.
     // Shared by the subscription path (update(float)) and the polling path
     // (poll()), which used to duplicate this block.
     void formatValue() {
+        // Time types render as mm:ss (up to hours via minutes: 75:30).
+        if (isTimeType()) {
+            uint32_t total = (uint32_t)max(0.0f, _value);
+            uint32_t mm = total / 60, ss = total % 60;
+            intStr = (mm < 10 ? "0" : "") + String(mm) + ":" + (ss < 10 ? "0" : "") + String(ss);
+            decStr = "";
+            fitTextLayout(intStr, decStr);
+            return;
+        }
         int intPart = (int)_value;
-        const uint8_t decimals = decimalsForType(_type);
+        const uint8_t decimals = decimalsForType();
         intStr = padIntPart(intPart);
         if (decimals == 0) {
             decStr = "";
+            fitTextLayout(intStr, decStr);
             return;
         }
         int scale = 1;
         for (uint8_t i = 1; i < decimals; i++) scale *= 10;
         int decPart = abs((int)((_value - intPart) * 10.0f * scale));
         decStr = "." + String(decPart);
+        fitTextLayout(intStr, decStr);
     }
-    // Map TelemetryType to a DataBus Topic for SUBSCRIPTION (float-backed
-    // storage only -- the callback casts the slot to float). Types with
-    // non-float storage or special rendering return TopicCount and go
-    // through poll() instead: Location (struct), Coasting (bool),
-    // GpsSats (uint8).
-    static Topic topicForType(TelemetryType t) {
-        switch (t) {
-            // Derived
-            case TelemetryType::Speed:       return Topic::SelectedSpeed;
-            case TelemetryType::Altitude:    return Topic::FusedAltitude;
-            case TelemetryType::BaroAlt:     return Topic::BaroAlt;
-            case TelemetryType::Grade:       return Topic::SmoothedGrade;
-            case TelemetryType::Vario:       return Topic::Vario;
-            case TelemetryType::GearRatio:   return Topic::GearRatio;
-            case TelemetryType::Energy:      return Topic::Energy;
-            case TelemetryType::Accel:       return Topic::Acceleration;
-            case TelemetryType::EstPower:    return Topic::EstimatedPower;
-            case TelemetryType::Ascent:      return Topic::TotalAscent;
-            case TelemetryType::Descent:     return Topic::TotalDescent;
-            case TelemetryType::Calories:    return Topic::Calories;
-            case TelemetryType::NormalizedPower: return Topic::NormalizedPower;
-            case TelemetryType::IntensityFactor: return Topic::IntensityFactor;
-            case TelemetryType::Tss:         return Topic::Tss;
-            // Measured
-            case TelemetryType::Cadence:     return Topic::Cadence;
-            case TelemetryType::HeartRate:   return Topic::HeartRate;
-            case TelemetryType::Power:       return Topic::PowerMeter;
-            case TelemetryType::Temperature: return Topic::Temperature;
-            case TelemetryType::GpsSpeed:    return Topic::GpsSpeed;
-            case TelemetryType::GpsAlt:      return Topic::GpsAltitude;
-            case TelemetryType::GpsCourse:   return Topic::GpsCourse;
-            case TelemetryType::GpsHdop:     return Topic::GpsHdop;
-            case TelemetryType::PedalBalance: return Topic::PedalBalance;
-            case TelemetryType::Torque:      return Topic::TorqueNm;
-            case TelemetryType::BatteryVolts: return Topic::BatteryVolts;
-            // Distance/TotalDist are floats but poll (cheap, low rate)
-            default: return Topic::TopicCount;
-        }
+    bool isTimeType() const {
+        const TopicMetadata* info = topicMetadata(_topic);
+        return info && (info->displayFormat == TopicDisplayFormat::ElapsedTime ||
+                        info->displayFormat == TopicDisplayFormat::MovingTime);
     }
+
 };

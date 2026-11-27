@@ -49,6 +49,7 @@ public:
     time_t now() const {return _now;}
     int16_t batt() const {return _nBattPercentage;}
     imu_data imu() const {return _imu;}
+    bool imuValid() const {return _imuValid;}
     dps_data dps() const {return dps_dat;}
     void setTime(struct tm date);
 
@@ -120,6 +121,7 @@ private:
     // Measurement-frame stamping state (see HAL/Measurements.hpp)
     uint16_t _imuSeq = 0, _dpsSeq = 0, _rtcSeq = 0, _batSeq = 0;
     uint16_t _imuDtMs = 0, _dpsDtMs = 0, _rtcDtMs = 0, _batDtMs = 0;
+    bool _imuValid = false;
     uint32_t _dpsOkTime = 0;    // millis() of last successful pressure/temperature fetch
     float    _vBatVolts = 0.0f;
     bool     _charging = false;

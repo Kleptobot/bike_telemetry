@@ -1,6 +1,61 @@
 #include "Fusion.hpp"
 #include <cmath>
 
+float FusionEngine::updateEventRate(const EventCount& event,
+                                    EventRateState& state,
+                                    uint32_t nowMs,
+                                    uint32_t staleTimeoutMs,
+                                    bool& valid) {
+    valid = false;
+    if (!event.valid || event.sourceId == 0) {
+        state = EventRateState{};
+        return 0.0f;
+    }
+
+    if (!state.hasBaseline || state.sourceId != event.sourceId) {
+        state = EventRateState{};
+        state.sourceId = event.sourceId;
+        state.previousCounter = event.counter;
+        state.previousEventTime = event.evtTime1024;
+        state.lastEventMs = event.tsMs;
+        state.hasBaseline = true;
+    } else if (event.counter != state.previousCounter ||
+               event.evtTime1024 != state.previousEventTime) {
+        state.revolutionDelta = event.counter - state.previousCounter;
+        state.eventTimeDelta =
+            (uint16_t)(event.evtTime1024 - state.previousEventTime);
+        state.previousCounter = event.counter;
+        state.previousEventTime = event.evtTime1024;
+        state.lastEventMs = event.tsMs;
+        state.hasRate = state.eventTimeDelta > 0;
+    }
+
+    const int32_t signedAgeMs = (int32_t)(nowMs - state.lastEventMs);
+    if (signedAgeMs > (int32_t)staleTimeoutMs) {
+        state.filteredRpm = 0.0f;
+        return 0.0f;
+    }
+
+    valid = true;
+    if (!state.hasRate || state.eventTimeDelta == 0) return 0.0f;
+
+    const uint32_t elapsedSinceEvent = signedAgeMs > 0
+        ? (uint32_t)signedAgeMs : 0;
+    const float expectedIntervalMs =
+        (float)state.eventTimeDelta * (1000.0f / 1024.0f);
+    float adjustedEventTime = (float)state.eventTimeDelta;
+    if ((float)elapsedSinceEvent > expectedIntervalMs) {
+        adjustedEventTime +=
+            ((float)elapsedSinceEvent - expectedIntervalMs) * 1.024f;
+    }
+
+    const float estimatedRpm = adjustedEventTime > 0.0f
+        ? 61440.0f * (float)state.revolutionDelta / adjustedEventTime
+        : 0.0f;
+    state.filteredRpm += 0.01f * (estimatedRpm - state.filteredRpm);
+    return state.filteredRpm;
+}
+
 void FusionEngine::update(const MeasurementFrame& f, uint16_t wheelCircumferenceMm,
                           const FitnessProfile& profile) {
     const bool firstTick = !_hasPrev;
@@ -22,37 +77,22 @@ void FusionEngine::update(const MeasurementFrame& f, uint16_t wheelCircumference
         if (f.baroPressurePa.valid) {
             const float baroAlt = _alt.computeAltitudeFromPressure(
                 f.baroPressurePa.value, f.baroTempC.value);
-            // Surface the un-filtered baro altitude for diagnostics: it is
-            // the input the whole filter anchors to, and the three-way
-            // comparison with GpsAlt and the fused Altitude shows which
-            // anchor (P0_local, baro_bias_z or est_vel_z) is off.
+            // Surface the un-filtered baro altitude for diagnostics. Compare
+            // it with GPS and fused altitude to inspect P0_local, baro_bias_z,
+            // and the altitude correction lag independently.
             // Before P0 is GPS-calibrated this is standard-atmosphere.
             _out.baroAltitudeM = baroAlt;
             _out.baroAltitudeValid = _alt.seaLevelPressureCalibrated();
             if (_alt.seaLevelPressureCalibrated()) {
-                _alt.altitudeDPSUpdate(baroAlt);
+                _alt.altitudeDPSUpdate(
+                    baroAlt, (float)f.baroPressurePa.dtMs / 1000.0f);
             }
         } else {
             _out.baroAltitudeValid = false;
         }
     }
 
-    // --- Stage 2: IMU integration --------------------------------------------
-    // Was HAL's onIMU callback. The sign flip is the board's mounting
-    // convention: the filter wants accZ positive-up and the LSM6DS3 frame
-    // the HAL reads is positive-down.
-    if (firstTick || f.imu.seq != _prev.imu.seq) {
-        // dt is the interval stamped at acquisition (Sample::dtMs) rather
-        // than a micros() diff taken at consumption time -- the same value,
-        // but deterministic and host-testable. AltitudeFusion's dt clamp
-        // (kept verbatim) rescales anything over 0.1 s down to 0.01 s, which
-        // at the current 1 Hz IMU rate means integration runs at 1/100
-        // scale; that is today's on-device behaviour, preserved on purpose.
-        _alt.altitudeIMUUpdate(-1.0f * f.imu.value.f32_acc_z,
-                               (float)f.imu.dtMs / 1000.0f);
-    }
-
-    // --- Stage 3: GPS correction on each new altitude commit ------------------
+    // --- Stage 2: GPS correction on each new altitude commit ------------------
     // Was HAL's age-shrink detection; a sequence-number change is the same
     // event (AgeSeqTracker notes a commit exactly when age() shrinks).
     // The validity gate is load-bearing: before the first fix the frame
@@ -67,7 +107,20 @@ void FusionEngine::update(const MeasurementFrame& f, uint16_t wheelCircumference
         _alt.altitudeGPSCorrect((float)f.gpsAltM.value);
     }
 
-    // --- Stage 4: baro calibration from GPS (was HAL's 1 Hz HDOP block) -------
+    // --- Stage 2b: short-term IMU vertical-motion update -----------------------
+    // Runs on each accepted, timestamped IMU sample. The altitude and vario
+    // estimators use measured dt rather than nominal polling period because
+    // I2C arbitration can delay successful reads.
+    if (f.imu.valid &&
+        (firstTick || f.imu.seq != _prev.imu.seq) &&
+        f.imu.dtMs > 0) {
+        const imu_data& imu = f.imu.value;
+        _alt.altitudeIMUUpdate(imu.f32_acc_x, imu.f32_acc_y,
+                               imu.f32_acc_z,
+                               (float)f.imu.dtMs / 1000.0f);
+    }
+
+    // --- Stage 3: baro calibration from GPS (was HAL's 1 Hz HDOP block) -------
     // Runs on each new altitude commit instead of on a 1 Hz poll; the
     // calibrator's own 30 s cooldown and 5-sample stability history make the
     // cadence equivalent, with distinct fixes rather than repeated identical
@@ -84,10 +137,13 @@ void FusionEngine::update(const MeasurementFrame& f, uint16_t wheelCircumference
         }
     }
 
-    // --- Stage 5: altitude / vario outputs ------------------------------------
-    // Exactly the fallback getAltitude() and altVelocity() used to perform.
+    // --- Stage 4: altitude / vario outputs ------------------------------------
+    _out.baroSeaLevelPressurePa = _alt.seaLevelPressure();
+    _out.baroPressureCalibrated = _alt.seaLevelPressureCalibrated();
     _out.varioMs    = _alt.rise();
     _out.varioValid = f.baroPressurePa.valid;
+    _out.imuVerticalAccelerationMs2 = _alt.imuVerticalAcceleration();
+    _out.imuVerticalVelocityMs = _alt.imuVerticalVelocity();
     if (f.baroPressurePa.valid) {
         _out.altitudeM     = _alt.altitude();
         _out.altitudeValid = true;
@@ -108,24 +164,27 @@ void FusionEngine::update(const MeasurementFrame& f, uint16_t wheelCircumference
         _out.temperatureC = 0.0f;
     }
 
-    // --- Stage 6: speed selection (verbatim from App::updateTelemetry) --------
+    // --- Stage 6: wheel and best-available speed -------------------------------
     _out.speedKmh = 0.0f;
+    _out.wheelRpm = updateEventRate(f.wheelRevs, _wheelRate, f.tickStartMs,
+                                    CSC_WHEEL_STALE_TIMEOUT_MS,
+                                    _out.wheelRevsValid);
+    _out.wheelRpmValid = _out.wheelRevsValid;
+    _out.wheelSpeedKmh = 0.0f;
     // Treat a zero circumference as "no wheel data" rather than computing a
     // speed of zero from it. Without this, an unconfigured circumference
-    // silently suppressed the GPS fallback: wheelRPM.live is true whenever a
-    // CSC sensor is connected, so the first branch was taken and produced 0.
-    if (f.wheelRpmFiltered.live && wheelCircumferenceMm > 0) {
-        _out.speedKmh = f.wheelRpmFiltered.value * wheelCircumferenceMm * 0.00006;
+    // silently suppressed the GPS fallback.
+    if (_out.wheelRpmValid && wheelCircumferenceMm > 0) {
+        _out.wheelSpeedKmh = _out.wheelRpm * wheelCircumferenceMm * 0.00006f;
+        _out.speedKmh = _out.wheelSpeedKmh;
     } else if (f.gpsSpeedKmh.valid) {
         _out.speedKmh = (float)f.gpsSpeedKmh.value;
     }
 
     // --- Stage 7: grade --------------------------------------------------------
     // The raw grade is vario (m/s -> km/h) / speed (km/h) * 100 for percent.
-    // vario comes from IMU integration and is inherently noisy, so the raw
-    // grade can swing wildly (readings in the hundreds). Apply a first-order
-    // low-pass filter to smooth the output without disturbing the fusion
-    // filter's internal state.
+    // Pressure-rate noise can still make grade jump, so apply a first-order
+    // low-pass filter without disturbing the altitude fusion state.
     //
     // Minimum speed for meaningful grade calculation (km/h). Below this,
     // raw grade is forced to 0 -- dividing by near-zero speed would produce
@@ -149,19 +208,20 @@ void FusionEngine::update(const MeasurementFrame& f, uint16_t wheelCircumference
     _out.gradePct = _filteredGradePct;
 
     // --- Stage 8: cadence ------------------------------------------------------
-    // Derive cadence in RPM from the crank EventCount. The HAL already
-    // pre-computes cadenceRpmFiltered from the CSC parser; we just surface it.
-    _out.cadenceValid = f.cadenceRpmFiltered.live;
-    _out.cadenceRpm = f.cadenceRpmFiltered.live ? f.cadenceRpmFiltered.value : 0.0f;
+    // Derive cadence from the crank counter and its native 1/1024 s event clock.
+    _out.cadenceRpm = updateEventRate(f.crankRevs, _crankRate, f.tickStartMs,
+                                      CSC_CRANK_STALE_TIMEOUT_MS,
+                                      _out.crankRevsValid);
+    _out.cadenceValid = _out.crankRevsValid;
 
     // --- Stage 9: gear ratio ---------------------------------------------------
     // Gear ratio = wheel RPM / crank RPM. Both must be live and cadence must
     // be above minimum (avoid division by near-zero when coasting/stopped).
     _out.gearRatioValid = false;
     _out.gearRatio = 0.0f;
-    if (f.wheelRpmFiltered.live && f.cadenceRpmFiltered.live &&
-        f.cadenceRpmFiltered.value >= GEAR_RATIO_MIN_CADENCE_RPM) {
-        _out.gearRatio = f.wheelRpmFiltered.value / f.cadenceRpmFiltered.value;
+    if (_out.wheelRpmValid && _out.cadenceValid &&
+        _out.cadenceRpm >= GEAR_RATIO_MIN_CADENCE_RPM) {
+        _out.gearRatio = _out.wheelRpm / _out.cadenceRpm;
         _out.gearRatioValid = true;
     }
 
@@ -243,30 +303,95 @@ void FusionEngine::update(const MeasurementFrame& f, uint16_t wheelCircumference
         _out.hrZone           = fit.hrZone;
         _out.powerZone        = fit.powerZone;
         _out.normalizedPowerW = fit.normalizedPowerW;
+        _out.avg3sPowerW      = fit.avg3sPowerW;
         _out.intensityFactor  = fit.intensityFactor;
         _out.tss              = fit.tss;
         for (int i = 0; i < 5; i++) _out.timeInZoneSec[i] = fit.timeInZoneSec[i];
     }
 
-    // --- Stage 15: distance (verbatim, see updateDistance) ---------------------
-    updateDistance(f);
+    // --- Stage 14c: watts per kg -------------------------------------------------
+    // Best available power over rider mass; 0 when neither source is live.
+    {
+        const float power = f.powerWatts.live ? f.powerWatts.value : _out.estPowerWatts;
+        const float riderMass = profile.riderMassKg;
+        _out.wattsPerKg = (power > 0.0f && riderMass > 0.0f) ? power / riderMass : 0.0f;
+    }
+
+    // --- Stage 14d: VAM (vertical ascent rate) ------------------------------------
+    // vario in m/s -> m/h. Gated on speed so stoplight vario noise doesn't
+    // read as climbing.
+    _out.vamMph = (_out.varioValid && _out.speedKmh > GRADE_MIN_SPEED_KMH)
+                  ? _out.varioMs * 3600.0f : 0.0f;
+
+    // --- Stage 14e: GNSS quality ---------------------------------------------------
+    // Asymmetric hysteresis: demoting needs several consecutive degraded
+    // samples, promotion is immediate (fail loud, recover fast).
+    {
+        uint8_t rawQ = 0;   // Good
+        if (!f.gpsPos.valid ||
+            (f.gpsHdop.valid && f.gpsHdop.value > GPS_POOR_HDOP) ||
+            (f.gpsSatsUsed.valid && f.gpsSatsUsed.value < GPS_POOR_SATS)) {
+            rawQ = 2;       // Poor
+        } else if ((f.gpsHdop.valid && f.gpsHdop.value > GPS_FAIR_HDOP) ||
+                   (f.gpsSatsUsed.valid && f.gpsSatsUsed.value < GPS_FAIR_SATS)) {
+            rawQ = 1;       // Fair
+        }
+
+        if (rawQ > _gpsQuality) {
+            if (++_gpsDegradeTicks >= GPS_DEGRADE_TICKS) {
+                _gpsQuality = rawQ;
+                _gpsDegradeTicks = 0;
+            }
+        } else {
+            _gpsQuality = rawQ;
+            _gpsDegradeTicks = 0;
+        }
+        _out.gpsQuality = _gpsQuality;
+    }
+
+    // --- Stage 14f: gear-shift detection -------------------------------------------
+    // A confirmed shift is a sustained gear-ratio step away from the tracked
+    // stable value (see GEAR_SHIFT_* constants). Tracks the stable ratio so
+    // each cassette/chainring position is a new reference, not a drift.
+    {
+        bool shifted = false;
+        if (_out.gearRatioValid) {
+            if (!_hasStableGear) {
+                _stableGear = _out.gearRatio;
+                _hasStableGear = true;
+                _shiftConfirmTicks = 0;
+            } else if (fabsf(_out.gearRatio - _stableGear) >= GEAR_SHIFT_DELTA) {
+                if (++_shiftConfirmTicks >= GEAR_SHIFT_CONFIRM_TICKS) {
+                    _stableGear = _out.gearRatio;
+                    _shiftConfirmTicks = 0;
+                    _shiftCount++;
+                    shifted = true;
+                }
+            } else {
+                _stableGear = _out.gearRatio;
+                _shiftConfirmTicks = 0;
+            }
+        }
+        _out.gearShifted = shifted;
+        _out.shiftCount = _shiftCount;
+    }
+
+    // --- Stage 15: independent GPS and wheel distance estimates ---------------
+    updateDistance(f, wheelCircumferenceMm);
 
     _prev = f;
     _hasPrev = true;
 }
 
-// Haversine formula, moved verbatim from App::updateTelemetry. State was
-// App's _lastLocation (a TinyGPSLocation copy) and _lastSeconds (epoch
-// seconds); the validity flag travels as _hasLastPos.
-void FusionEngine::updateDistance(const MeasurementFrame& f) {
+void FusionEngine::updateDistance(const MeasurementFrame& f,
+                                  uint16_t wheelCircumferenceMm) {
     _out.distanceDeltaM = 0.0f;
+    _out.gpsDistanceDeltaM = 0.0f;
+    _out.wheelDistanceDeltaM = 0.0f;
 
-    // Gate on the RTC sample. The original fired when the RTC's epoch second
-    // changed; the frame's sequence number fires per accepted RTC read
-    // (950 ms period). GPS fixes arrive at 1 Hz and unchanged positions
-    // contribute zero, so each fix-to-fix segment is still counted exactly
-    // once either way.
-    if (!_hasPrev || f.rtcNow.seq != _prev.rtcNow.seq) {
+    // Count each committed GPS position once, even though the same fix is
+    // carried through multiple HAL frames.
+    if (!_hasPrev || f.gpsPos.seq != _prev.gpsPos.seq) {
         if (f.gpsPos.valid && _hasLastPos) {
             double deg2rad = M_PI/180.0;
             double theta1 = _lastLat*deg2rad;
@@ -280,12 +405,43 @@ void FusionEngine::updateDistance(const MeasurementFrame& f) {
             double s2 = sin((phi2-phi1)/2.0);
             s2 = s2*s2;
 
-            _out.distanceDeltaM = 2.0*6371000.0*asin(sqrt(s1+c1*s2)); //distance in m
+            _out.gpsDistanceDeltaM =
+                2.0*6371000.0*asin(sqrt(s1+c1*s2));
         }
-        _totalDistanceM += _out.distanceDeltaM;
-        _out.totalDistanceM = _totalDistanceM;
         _lastLat = f.gpsPos.lat;
         _lastLng = f.gpsPos.lng;
         _hasLastPos = f.gpsPos.valid;
     }
+    if (!f.gpsPos.valid) _hasLastPos = false;
+    _gpsTotalDistanceM += _out.gpsDistanceDeltaM;
+    _out.gpsTotalDistanceM = _gpsTotalDistanceM;
+
+    // CSC counters are cumulative and may wrap; unsigned subtraction gives
+    // the revolution delta while the source identity remains unchanged.
+    if (!f.wheelRevs.valid || f.wheelRevs.sourceId == 0) {
+        _hasLastWheelCounter = false;
+    } else if (!_hasLastWheelCounter ||
+               f.wheelRevs.sourceId != _lastWheelSourceId) {
+        _lastWheelCounter = f.wheelRevs.counter;
+        _lastWheelSourceId = f.wheelRevs.sourceId;
+        _hasLastWheelCounter = true;
+    } else {
+        const uint32_t revolutions = f.wheelRevs.counter - _lastWheelCounter;
+        _lastWheelCounter = f.wheelRevs.counter;
+        if (_out.wheelRevsValid && wheelCircumferenceMm > 0) {
+            _out.wheelDistanceDeltaM =
+                (float)revolutions * (float)wheelCircumferenceMm * 0.001f;
+        }
+    }
+    _wheelTotalDistanceM += _out.wheelDistanceDeltaM;
+    _out.wheelTotalDistanceM = _wheelTotalDistanceM;
+
+    // Keep the existing ride-distance topics as a preferred total: wheel
+    // odometry avoids GPS jitter, and GPS remains the fallback.
+    const bool wheelDistanceAvailable =
+        _out.wheelRevsValid && wheelCircumferenceMm > 0;
+    _out.distanceDeltaM = wheelDistanceAvailable
+        ? _out.wheelDistanceDeltaM : _out.gpsDistanceDeltaM;
+    _totalDistanceM += _out.distanceDeltaM;
+    _out.totalDistanceM = _totalDistanceM;
 }

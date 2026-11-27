@@ -1,13 +1,13 @@
 #pragma once
-#include "UI/Widgets/Widget.hpp"
+#include "ui/Widgets/Widget.hpp"
 #include "SelectableText.hpp"
-#include "Display/Display.hpp"
+#include "display/Display.hpp"
 #include "DataModel/DataModel.hpp"
-#include "UI/GFX.h"
+#include "ui/GFX.h"
 
 class DisplayEditWidget : public Widget {
 public:
-    DisplayEditWidget(int x, int y, TelemetryType type=TelemetryType::Undefined)
+    DisplayEditWidget(int x, int y, Topic type=Topic::TopicCount)
         : Widget(x, y)
         { setType(type); }
 
@@ -39,13 +39,18 @@ public:
         _menuLast = _menu;
         if (_inMode) drawModeArrows();
         _inModeLast = _inMode;
+
+        _lastRenderX = _x;
+        _lastRenderY = _y;
+        _lastRenderW = _width;
+        _lastRenderH = _height;
     }
 
     void setMode(WidgetSubMode m) {
         if (_mode != m) {
             _mode = m;
             switch (_mode) {
-                case WidgetSubMode::CHANGE_TYPE: setText(toString(_type)); break;
+                case WidgetSubMode::CHANGE_TYPE: setText(topicDisplayName(_type)); break;
                 case WidgetSubMode::MOVE: setText("Move"); break;
                 case WidgetSubMode::RESIZE: setText("Resize"); break;
                 case WidgetSubMode::DONE: setText("Done"); break;
@@ -54,16 +59,16 @@ public:
         }
     };
 
-    void setType(TelemetryType type) {
+    void setType(Topic type) {
         if (type != _type) {
             _type = type;
             if (_mode == WidgetSubMode::CHANGE_TYPE) {
-                setText(toString(_type));
+                setText(topicDisplayName(_type));
             }
         }
     }
 
-    const TelemetryType& type() const { return _type; }
+    const Topic& type() const { return _type; }
 
     void drawUpArrow() {
         Disp::fillTriangle(_x + _width/2, _y, _x + _width/2 + 8, _y + 8, _x + _width/2 - 8, _y + 8, ST77XX_WHITE);
@@ -127,7 +132,7 @@ public:
     }
 
 private:
-    TelemetryType _type = TelemetryType::Undefined;
+    Topic _type = Topic::TopicCount;
     WidgetSubMode _mode = WidgetSubMode::CHANGE_TYPE;
     bool _menu = false, _menuLast = false;;
     bool _inMode = false, _inModeLast = false;
@@ -142,28 +147,43 @@ private:
 
     void calcTextCoords() {
         int16_t x1, y1;
-        uint16_t w =0,  h = 0;
+        uint16_t w = 0, h = 0;
 
         _size = 0;
         uint16_t prevW = 0, prevH = 0;
+        int16_t prevX1 = 0, prevY1 = 0;
+        const int availableW = max(1, _width - 6);
+        const int availableH = max(1, _height - 6);
+
         while (_size < MAX_TEXT_SIZE) {
             Disp::setTextSize(_size + 1);
             Disp::getTextBounds(_text, 0, 0, &x1, &y1, &w, &h);
-            if (w >= _width || h >= _height) break;   // this size doesn't fit — stop, use previous
+            if (w > availableW || h > availableH) break;
             _size++;
             prevW = w; prevH = h;
+            prevX1 = x1;
+            prevY1 = y1;
         }
         w = prevW; h = prevH;
 
-        int hx = w/2;
-        int hy = h/2;
+        if (_size == 0) {
+            _size = 1;
+            Disp::setTextSize(_size);
+            Disp::getTextBounds(_text, 0, 0, &x1, &y1, &w, &h);
+            prevW = w; prevH = h;
+            prevX1 = x1;
+            prevY1 = y1;
+        }
 
-        _offsetX = _width/2 - hx;
-        _offsetY = _height/2 - hy;
+        // getTextBounds reports a top offset (often negative) and the glyph
+        // height.  Offset by both or text becomes visually above/below centre.
+        _offsetX = (_width - (int)prevW) / 2 - prevX1;
+        _offsetY = (_height - (int)prevH) / 2 - prevY1;
     }
 
     void printTextCentered() {
-        Disp::setTextSize(_size > 0 ? _size : 1);
+        Disp::setTextSize(_size);
+        Disp::setTextColor(ST77XX_WHITE);
         Disp::setCursor(_x + _offsetX, _y + _offsetY);
         Disp::print(_text);
     }

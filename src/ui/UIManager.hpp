@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include "UIEventBus.hpp"
 
-#include "UI/Screens/UIScreen.hpp"
+#include "ui/Screens/UIScreen.hpp"
 #include "HAL/InputInterface.hpp"
 #include "display/Display.hpp"
 

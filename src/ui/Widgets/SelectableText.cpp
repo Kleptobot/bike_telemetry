@@ -1,5 +1,5 @@
 #include "SelectableText.hpp"
-#include "Display/Display.hpp"
+#include "display/Display.hpp"
 
 void SelectableTextWidget::render() {
     if (!visible) return;

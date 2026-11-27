@@ -22,9 +22,9 @@ Everything else is compiled from the real source and runs unmodified:
   scenario altitude, so the real estimator computes what the tiles show
 - the entire Bluetooth stack, **including the CSC/CPS/HRM measurement parsers**
 
-The vendored libraries (`Adafruit_GFX`, `ArduinoJson`, `TinyGPSPlus`) are linked
-straight out of `.pio/libdeps`, not copied, so the simulator cannot drift from
-the firmware build.
+The vendored libraries (`Adafruit_GFX`, `ArduinoJson`, `TinyGPSPlus`, and
+`LibYxml`) are used straight out of `.pio/libdeps`, not copied, so the
+simulator cannot drift from the firmware build.
 
 GPS is driven by generating **real NMEA sentences** (with correct checksums) and
 feeding them through the real `TinyGPSPlus`, so fix acquisition, speed and
@@ -146,6 +146,13 @@ configurations, copy them elsewhere and use `--sd DIR`.
 `devices.txt` behave exactly as on the device — and a simulated ride writes a
 genuine `.fit` file you can open in Garmin Connect, Strava or the FIT SDK.
 That is a considerably stronger check on the logger than any assertion.
+
+The Log Summary screen streams summary metrics from FIT record/lap/session
+messages, TCX XML, and CSV rows. CSV trackpoint rows include every DataBus
+signal (with `Location` split into latitude, longitude, and validity columns),
+while retaining the original leading column names. New CSV logs also include a
+versioned final summary row for duration, distance, and lap count; legacy CSVs
+remain readable for metrics present in their rows.
 
 ## Injecting BLE measurements
 

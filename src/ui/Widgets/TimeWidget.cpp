@@ -1,5 +1,5 @@
 #include "TimeWidget.hpp"
-#include "Display/Display.hpp"
+#include "display/Display.hpp"
 #include "DebugConfig.hpp"
 
 void TimeWidget::handleInput(physIO input) {

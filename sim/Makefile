@@ -28,11 +28,12 @@ LIBDEPS  := $(ROOT)/.pio/libdeps/seeed-xiao-afruitnrf52-nrf52840-sense
 GFX      := $(LIBDEPS)/Adafruit GFX Library
 AJSON    := $(LIBDEPS)/ArduinoJson/src
 TINYGPS  := $(LIBDEPS)/TinyGPSPlus/src
+YXML     := $(LIBDEPS)/LibYxml
 
 BUILD    := build
 BIN      := $(BUILD)/obike-sim
 
-INCLUDES := -Istubs -Ihost -I$(ROOT)/src -I"$(GFX)" -I"$(AJSON)" -I"$(TINYGPS)"
+INCLUDES := -Istubs -Ihost -I$(ROOT)/src -I"$(GFX)" -I"$(AJSON)" -I"$(TINYGPS)" -I"$(YXML)"
 CXXFLAGS := -std=gnu++17 -DARDUINO=10800 -g -O1 -Wall -Wextra -Wno-unused-parameter $(INCLUDES)
 LDFLAGS  :=
 
@@ -72,6 +73,10 @@ endif
 # is the real thing.
 FW_SRCS := \
   $(ROOT)/src/App.cpp \
+  $(ROOT)/src/App/SettingsStore.cpp \
+  $(ROOT)/src/App/InputCallbacks.cpp \
+  $(ROOT)/src/App/TelemetryPublisher.cpp \
+  $(ROOT)/src/App/RideController.cpp \
   $(ROOT)/src/main.cpp \
   $(ROOT)/src/display/Display.cpp \
   $(ROOT)/src/Fusion/AltitudeFusion.cpp \
@@ -89,14 +94,19 @@ FW_SRCS := \
   $(ROOT)/src/HAL/Bluetooth/hrm.cpp \
   $(ROOT)/src/Loggers/FITLogger.cpp \
   $(ROOT)/src/Loggers/FITWriter.cpp \
+  $(ROOT)/src/Loggers/FitLogParser.cpp \
   $(ROOT)/src/Loggers/TCXLogger.cpp \
+  $(ROOT)/src/Loggers/TcxLogParser.cpp \
   $(ROOT)/src/Loggers/CSVLogger.cpp \
+  $(ROOT)/src/Loggers/CsvLogParser.cpp \
   $(ROOT)/src/Map/TileLoader.cpp \
   $(ROOT)/src/ui/UIManager.cpp \
   $(ROOT)/src/ui/Screens/BikeStatsScreen.cpp \
   $(ROOT)/src/ui/Screens/BiometricsScreen.cpp \
   $(ROOT)/src/ui/Screens/DisplayEditScreen.cpp \
   $(ROOT)/src/ui/Screens/GPSScreen.cpp \
+  $(ROOT)/src/ui/Screens/LogListScreen.cpp \
+  $(ROOT)/src/ui/Screens/LogSummaryScreen.cpp \
   $(ROOT)/src/ui/Screens/TimeEditScreen.cpp \
   $(ROOT)/src/ui/Widgets/DateWidget.cpp \
   $(ROOT)/src/ui/Widgets/DurationWidget.cpp \
@@ -116,7 +126,7 @@ STUB_SRCS := \
 
 HOST_SRCS := host/SimHAL.cpp host/SimLC76G.cpp host/main.cpp
 
-LIB_SRCS := "$(GFX)/Adafruit_GFX.cpp" "$(TINYGPS)/TinyGPS++.cpp"
+LIB_SRCS := "$(GFX)/Adafruit_GFX.cpp" "$(TINYGPS)/TinyGPS++.cpp" "$(YXML)/yxml.c"
 
 # LIB_SRCS is kept OUT of the prerequisite list: those paths contain spaces
 # ("Adafruit GFX Library"), which make cannot express as prerequisites. They

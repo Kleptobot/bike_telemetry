@@ -1,10 +1,14 @@
 #pragma once
 #include <vector>
-#include "UI/Screens/UIScreen.hpp"
-#include "UI/Widgets/ListView.hpp"
-#include "UI/Widgets/SelectableTextIcon.hpp"
-#include "UI/Widgets/InputHints.hpp"
-#include "UI/GFX.h"
+#include "ui/Screens/UIScreen.hpp"
+#include "ui/Widgets/ListView.hpp"
+#include "ui/Widgets/SelectableTextIcon.hpp"
+#include "ui/Widgets/InputHints.hpp"
+#include "ui/GFX.h"
+
+#ifndef APP_BUILD_REVISION
+#define APP_BUILD_REVISION "unknown"
+#endif
 
 struct SettingsMenuItem {
     const char* label;
@@ -16,14 +20,15 @@ class SettingsScreen : public UIScreen {
 public:
     SettingsScreen(DataModel& model)
         : UIScreen(model),
-          listView(5, 5, 4) {
+          listView(5, 5, 7) {
         // Define your settings options statically
         _items = {
             {"Bluetooth",   epd_bitmap_bluetooth_large,     ScreenID::Bluetooth},
             {"GPS",         epd_bitmap_antenna_large,       ScreenID::GPSSettings}, 
             {"Time",        epd_bitmap_clock_large,         ScreenID::TimeMenu},
             {"Biometrics",  epd_bitmap_heart_large,         ScreenID::Biometrics},
-            {"Bike Stats",  epd_bitmap_heart_large,         ScreenID::BikeStats},
+            {"Bike Stats",  epd_bitmap_sliders_32,          ScreenID::BikeStats},
+            {"Logs",        epd_bitmap_running_man_32,      ScreenID::LogList},
             {"Display",     epd_bitmap_disp_edit,           ScreenID::DisplayEdit},
             {"Unmount SD",  epd_bitmap_icons8_micro_sd_32,  ScreenID::UnmountSD},
             {"Back",        epd_bitmap_left_arrow_large,    ScreenID::MainMenu}
@@ -52,6 +57,11 @@ public:
     void render() override {
         listView.render();
         hints.render();
+        Disp::setCursor(SCREEN_WIDTH - 88, 308);
+        Disp::setTextSize(1);
+        Disp::setTextColor(ST77XX_WHITE);
+        Disp::print("Build ");
+        Disp::print(APP_BUILD_REVISION);
     }
 
     void handleInput(physIO input) override {

@@ -22,10 +22,16 @@
 enum class Topic : uint8_t {
     // Fusion outputs
     FusedAltitude,
-    Vario,
-    SelectedSpeed,
+    Vario,                 // float: vertical velocity (m/s)
+    EstimatedSpeed,
+    WheelSpeed,
     SmoothedGrade,
     Cadence,
+    WheelRpm,
+    WheelRevs,
+    WheelRevsValid,
+    CrankRevs,
+    CrankRevsValid,
     GearRatio,
     Energy,
     Acceleration,
@@ -33,6 +39,17 @@ enum class Topic : uint8_t {
     TotalAscent,
     TotalDescent,
     Coasting,
+
+    // New derived signals (batch: timing, display power, analytics)
+    ElapsedSec,      // float: seconds since logging started (incl. pauses)
+    MovingSec,       // float: seconds actively logging (pauses excluded)
+    Avg3sPower,      // float: 3 s rolling average power (meter or estimate)
+    WattsPerKg,      // float: current power / rider mass
+    Vam,             // float: vertical ascent rate, m/h
+    BatteryCharging, // bool: charger reports charging (debounced)
+    GpsQuality,      // uint8_t: 0 = Good, 1 = Fair, 2 = Poor
+    ShiftCount,      // uint32_t: detected gear shifts this ride
+    GearShifted,     // bool: shift event on this tick
 
     // Fitness (from FitnessFusion; ride-scoped, reset with distance)
     Calories,        // float: kcal accumulated this ride
@@ -47,12 +64,25 @@ enum class Topic : uint8_t {
     Location,        // location_data: valid + lat/lng (24 bytes, fits a slot)
     DistanceDeltaM,  // float: per-tick distance increment (metres)
     TotalDistanceM,  // float: accumulated ride distance (metres)
+    GpsDistanceDeltaM, // float: Haversine distance increment (metres)
+    GpsTotalDistanceM, // float: accumulated GPS distance (metres)
+    WheelDistanceDeltaM, // float: wheel-revolution distance increment (metres)
+    WheelTotalDistanceM, // float: accumulated wheel distance (metres)
     GpsSpeed,        // float: GPS-reported ground speed (km/h)
     GpsAltitude,     // float: GPS-reported altitude (metres)
     GpsCourse,       // float: GPS course over ground (degrees)
     GpsSats,         // uint8_t: satellites used in the fix
     GpsHdop,         // float: horizontal dilution of precision
     BaroAlt,         // float: raw baro altitude from P0_local, before bias trim
+
+    // Raw onboard IMU channels
+    ImuValid,        // bool: at least one successful IMU sample has been acquired
+    ImuAccelX,       // float: acceleration in g
+    ImuAccelY,       // float: acceleration in g
+    ImuAccelZ,       // float: acceleration in g
+    ImuGyroX,        // float: angular velocity in degrees/second
+    ImuGyroY,        // float: angular velocity in degrees/second
+    ImuGyroZ,        // float: angular velocity in degrees/second
 
     // Power-meter extensions (decoded by the CPS parser, previously dropped)
     PedalBalance,    // float: left/right pedal balance (percent left)
@@ -65,8 +95,270 @@ enum class Topic : uint8_t {
     HeartRate,       // float: bpm
     PowerMeter,      // float: watts
 
+    // Altitude-fusion diagnostics
+    BaroPressurePa,          // float: raw barometer pressure, Pa
+    BaroPressureValid,       // bool: raw pressure sample is valid
+    BaroTemperatureC,        // float: raw barometer temperature, Celsius
+    BaroTemperatureValid,    // bool: raw barometer temperature is valid
+    BaroSeaLevelPressurePa,  // float: local sea-level pressure used for altitude, Pa
+    BaroPressureCalibrated,  // bool: local sea-level pressure has been calibrated
+    ImuSampleIntervalMs,     // float: observed interval between IMU samples, ms
+    ImuVerticalAcceleration, // float: gravity-normalised vertical acceleration, m/s2
+    ImuVerticalVelocity,     // float: complementary-filter vertical velocity, m/s
+
     TopicCount  // Must be last; used for array sizing
 };
+
+enum class TopicValueKind : uint8_t {
+    Float,
+    Bool,
+    UInt8,
+    UInt32,
+    Int16,
+    Location
+};
+
+enum class TopicDisplayFormat : uint8_t {
+    Number,
+    ElapsedTime,
+    MovingTime,
+    Location,
+    BooleanStatus,
+    CoastingStatus,
+    HrZone,
+    PowerZone,
+    GpsQuality
+};
+
+enum class TopicColor : uint8_t {
+    White,
+    Green,
+    Orange,
+    Red
+};
+
+// The DataBus topic catalog is the source of truth for display and CSV
+// interpretation as well as storage type. The catalog order is also the
+// stable CSV column order (time is emitted separately).
+struct TopicMetadata {
+    Topic topic;
+    const char* displayName;
+    const char* units;
+    const char* csvName;
+    TopicValueKind valueKind;
+    TopicDisplayFormat displayFormat;
+    uint8_t decimals;
+    float displayScale;
+    const char* csvName2 = nullptr;
+    const char* csvDeferredName = nullptr;
+    const char* trueText = "ON";
+    const char* falseText = "OFF";
+    const char* qualityGoodText = "GOOD";
+    const char* qualityFairText = "FAIR";
+    const char* qualityPoorText = "POOR";
+    char zonePrefix = 'Z';
+    TopicColor trueColor = TopicColor::Green;
+    TopicColor falseColor = TopicColor::Red;
+    TopicColor qualityGoodColor = TopicColor::Green;
+    TopicColor qualityFairColor = TopicColor::Orange;
+    TopicColor qualityPoorColor = TopicColor::Red;
+};
+
+constexpr TopicMetadata numericTopic(Topic topic, const char* name,
+                                     const char* units, const char* csvName,
+                                     TopicValueKind valueKind = TopicValueKind::Float,
+                                     uint8_t decimals = 1, float displayScale = 1.0f) {
+    return {topic, name, units, csvName, valueKind, TopicDisplayFormat::Number,
+            decimals, displayScale};
+}
+
+constexpr TopicMetadata timedTopic(Topic topic, const char* name,
+                                   const char* csvName, TopicDisplayFormat format) {
+    return {topic, name, "", csvName, TopicValueKind::Float, format, 0, 1.0f};
+}
+
+constexpr TopicMetadata locationTopic() {
+    TopicMetadata info{Topic::Location, "Location", "", "latitude",
+                       TopicValueKind::Location, TopicDisplayFormat::Location,
+                       1, 1.0f};
+    info.csvName2 = "longitude";
+    info.csvDeferredName = "locationvalid";
+    return info;
+}
+
+constexpr TopicMetadata booleanTopic(Topic topic, const char* name,
+                                    const char* csvName, const char* trueText,
+                                    const char* falseText, TopicColor trueColor,
+                                    TopicColor falseColor,
+                                    TopicDisplayFormat format = TopicDisplayFormat::BooleanStatus) {
+    TopicMetadata info{topic, name, "", csvName, TopicValueKind::Bool, format, 0, 1.0f};
+    info.trueText = trueText;
+    info.falseText = falseText;
+    info.trueColor = trueColor;
+    info.falseColor = falseColor;
+    return info;
+}
+
+constexpr TopicMetadata zoneTopic(Topic topic, const char* name,
+                                  const char* csvName, char prefix) {
+    TopicMetadata info{topic, name, "", csvName, TopicValueKind::UInt8,
+                       prefix == 'Z' ? TopicDisplayFormat::HrZone : TopicDisplayFormat::PowerZone,
+                       0, 1.0f};
+    info.zonePrefix = prefix;
+    return info;
+}
+
+constexpr TopicMetadata gpsQualityTopic() {
+    return {Topic::GpsQuality, "GPSQuality", "", "gpsquality",
+            TopicValueKind::UInt8, TopicDisplayFormat::GpsQuality, 0, 1.0f,
+            nullptr, nullptr, "ON", "OFF", "GOOD", "FAIR", "POOR", 'Z',
+            TopicColor::Green, TopicColor::Red, TopicColor::Green,
+            TopicColor::Orange, TopicColor::Red};
+}
+
+// Keep this catalog complete with Topic. Its order preserves the familiar CSV
+// columns first and also defines the type-selection order in DisplayEdit.
+static constexpr TopicMetadata kTopicMetadata[] = {
+    locationTopic(),
+    numericTopic(Topic::FusedAltitude, "Altitude", "m  ", "altitude"),
+    numericTopic(Topic::EstimatedSpeed, "EstimatedSpeed", "km/h", "estimatedspeed"),
+    numericTopic(Topic::WheelSpeed, "WheelSpeed", "km/h", "wheelspeed"),
+    numericTopic(Topic::HeartRate, "HeartRate", "bpm", "heartrate"),
+    numericTopic(Topic::Cadence, "Cadence", "rpm", "cadence"),
+    numericTopic(Topic::WheelRpm, "WheelRpm", "rpm", "wheelrpm"),
+    numericTopic(Topic::WheelRevs, "WheelRevs", "rev", "wheelrevs", TopicValueKind::UInt32, 0),
+    booleanTopic(Topic::WheelRevsValid, "WheelValid", "wheelrevsvalid", "LIVE", "STALE",
+                 TopicColor::Green, TopicColor::Red),
+    numericTopic(Topic::CrankRevs, "CrankRevs", "rev", "crankrevs", TopicValueKind::UInt32, 0),
+    booleanTopic(Topic::CrankRevsValid, "CrankValid", "crankrevsvalid", "LIVE", "STALE",
+                 TopicColor::Green, TopicColor::Red),
+    numericTopic(Topic::PowerMeter, "Power", "W  ", "power"),
+    numericTopic(Topic::Calories, "Calories", "kcal", "calories", TopicValueKind::Float, 0),
+    numericTopic(Topic::NormalizedPower, "NP", "W  ", "normalizedpower", TopicValueKind::Float, 0),
+    numericTopic(Topic::IntensityFactor, "IF", "x  ", "intensityfactor", TopicValueKind::Float, 2),
+    numericTopic(Topic::Tss, "TSS", "pts", "tss", TopicValueKind::Float, 0),
+    zoneTopic(Topic::HrZone, "HrZone", "hrzone", 'Z'),
+    zoneTopic(Topic::PowerZone, "PowerZone", "powerzone", 'P'),
+    numericTopic(Topic::TotalDistanceM, "TotalDist", "km ", "distance", TopicValueKind::Float, 1, 0.001f),
+    numericTopic(Topic::GpsTotalDistanceM, "GpsTotalDist", "km ", "gpstotaldistance", TopicValueKind::Float, 1, 0.001f),
+    numericTopic(Topic::WheelTotalDistanceM, "WheelTotalDist", "km ", "wheeltotaldistance", TopicValueKind::Float, 1, 0.001f),
+
+    numericTopic(Topic::Vario, "Vario", "m/s", "vario"),
+    numericTopic(Topic::SmoothedGrade, "Grade", "%  ", "grade"),
+    numericTopic(Topic::GearRatio, "GearRatio", "x  ", "gearratio", TopicValueKind::Float, 2),
+    numericTopic(Topic::Energy, "Energy", "kJ ", "energy"),
+    numericTopic(Topic::Acceleration, "Accel", "m/s2", "acceleration", TopicValueKind::Float, 2),
+    numericTopic(Topic::EstimatedPower, "EstPower", "W~ ", "estimatedpower"),
+    numericTopic(Topic::TotalAscent, "Ascent", "up ", "totalascent", TopicValueKind::Float, 0),
+    numericTopic(Topic::TotalDescent, "Descent", "dn ", "totaldescent", TopicValueKind::Float, 0),
+    booleanTopic(Topic::Coasting, "Coasting", "coasting", "COAST", "PEDAL",
+                 TopicColor::Orange, TopicColor::Green, TopicDisplayFormat::CoastingStatus),
+    timedTopic(Topic::ElapsedSec, "Elapsed", "elapsedsec", TopicDisplayFormat::ElapsedTime),
+    timedTopic(Topic::MovingSec, "Moving", "movingsec", TopicDisplayFormat::MovingTime),
+    numericTopic(Topic::Avg3sPower, "AvgPwr", "W  ", "avg3spower"),
+    numericTopic(Topic::WattsPerKg, "W/kg", "    ", "wattsperkg"),
+    numericTopic(Topic::Vam, "VAM", "m/h ", "vam", TopicValueKind::Float, 0),
+    booleanTopic(Topic::BatteryCharging, "Charging", "batterycharging", "CHG", "IDLE",
+                 TopicColor::Orange, TopicColor::White),
+    gpsQualityTopic(),
+    numericTopic(Topic::ShiftCount, "ShiftCount", "shft", "shiftcount", TopicValueKind::UInt32, 0),
+    booleanTopic(Topic::GearShifted, "ShiftEvent", "gearshifted", "SHIFT", "-----",
+                 TopicColor::Orange, TopicColor::White),
+    booleanTopic(Topic::GpsValid, "GPSValid", "gpsvalid", "FIX", "NOFIX",
+                 TopicColor::Green, TopicColor::Red),
+    numericTopic(Topic::DistanceDeltaM, "Distance", "m  ", "distancedelta"),
+    numericTopic(Topic::GpsDistanceDeltaM, "GpsDistDelta", "m  ", "gpsdistancedelta"),
+    numericTopic(Topic::WheelDistanceDeltaM, "WheelDistDelta", "m  ", "wheeldistancedelta"),
+    numericTopic(Topic::GpsSpeed, "GpsSpeed", "km/h", "gpsspeed"),
+    numericTopic(Topic::GpsAltitude, "GpsAlt", "m  ", "gpsaltitude"),
+    numericTopic(Topic::GpsCourse, "GpsCourse", "deg", "gpscourse", TopicValueKind::Float, 0),
+    numericTopic(Topic::GpsSats, "GpsSats", "sat", "gpssats", TopicValueKind::UInt8, 0),
+    numericTopic(Topic::GpsHdop, "GpsHdop", "dop", "gpshdop", TopicValueKind::Float, 2),
+    numericTopic(Topic::BaroAlt, "BaroAlt", "m  ", "baroalt"),
+    booleanTopic(Topic::ImuValid, "IMUValid", "imuvalid", "READY", "N/A",
+                 TopicColor::Green, TopicColor::Red),
+    numericTopic(Topic::ImuAccelX, "AccelX", "g   ", "imuaccelx"),
+    numericTopic(Topic::ImuAccelY, "AccelY", "g   ", "imuaccely"),
+    numericTopic(Topic::ImuAccelZ, "AccelZ", "g   ", "imuaccelz"),
+    numericTopic(Topic::ImuGyroX, "GyroX", "d/s ", "imugyrox"),
+    numericTopic(Topic::ImuGyroY, "GyroY", "d/s ", "imugyroy"),
+    numericTopic(Topic::ImuGyroZ, "GyroZ", "d/s ", "imugyroz"),
+    numericTopic(Topic::PedalBalance, "PedalBalance", "%L ", "pedalbalance"),
+    numericTopic(Topic::TorqueNm, "Torque", "Nm ", "torque", TopicValueKind::Float, 2),
+    numericTopic(Topic::Battery, "Battery", "%  ", "battery", TopicValueKind::Int16, 0),
+    numericTopic(Topic::BatteryVolts, "BattVolts", "V  ", "batteryvolts", TopicValueKind::Float, 2),
+    numericTopic(Topic::Temperature, "Temperature", "C  ", "temperature"),
+    numericTopic(Topic::BaroPressurePa, "BaroPressure", "Pa ", "baropressurepa", TopicValueKind::Float, 1),
+    booleanTopic(Topic::BaroPressureValid, "BaroPressureValid", "baropressurevalid", "VALID", "INVALID",
+                 TopicColor::Green, TopicColor::Red),
+    numericTopic(Topic::BaroTemperatureC, "BaroTemperature", "C  ", "barotemperaturec", TopicValueKind::Float, 2),
+    booleanTopic(Topic::BaroTemperatureValid, "BaroTempValid", "barotemperaturevalid", "VALID", "INVALID",
+                 TopicColor::Green, TopicColor::Red),
+    numericTopic(Topic::BaroSeaLevelPressurePa, "BaroP0", "Pa ", "barop0pa", TopicValueKind::Float, 1),
+    booleanTopic(Topic::BaroPressureCalibrated, "BaroCalibrated", "baropressurecalibrated", "CAL", "UNCAL",
+                 TopicColor::Green, TopicColor::Orange),
+    numericTopic(Topic::ImuSampleIntervalMs, "ImuInterval", "ms ", "imusampleintervalms", TopicValueKind::Float, 1),
+    numericTopic(Topic::ImuVerticalAcceleration, "ImuVAccel", "m/s2", "imuverticalacceleration"),
+    numericTopic(Topic::ImuVerticalVelocity, "ImuVVelo", "m/s ", "imuverticalvelocity"),
+};
+
+static constexpr size_t kTopicMetadataCount =
+    sizeof(kTopicMetadata) / sizeof(kTopicMetadata[0]);
+
+constexpr bool everyTopicHasOneMetadataEntry() {
+    const size_t topicCount = static_cast<size_t>(Topic::TopicCount);
+    if (kTopicMetadataCount != topicCount) return false;
+    for (size_t topic = 0; topic < topicCount; ++topic) {
+        size_t matches = 0;
+        for (size_t i = 0; i < kTopicMetadataCount; ++i) {
+            if (static_cast<size_t>(kTopicMetadata[i].topic) == topic) ++matches;
+        }
+        if (matches != 1) return false;
+    }
+    return true;
+}
+
+static_assert(everyTopicHasOneMetadataEntry(),
+              "Every DataBus topic must have exactly one metadata entry.");
+
+inline const TopicMetadata* topicMetadata(Topic topic) {
+    for (const TopicMetadata& info : kTopicMetadata) {
+        if (info.topic == topic) return &info;
+    }
+    return nullptr;
+}
+
+inline const char* topicDisplayName(Topic topic) {
+    const TopicMetadata* info = topicMetadata(topic);
+    return info ? info->displayName : "-";
+}
+
+inline Topic topicFromDisplayName(const String& name) {
+    for (const TopicMetadata& info : kTopicMetadata) {
+        if (name == info.displayName) return info.topic;
+    }
+    return Topic::TopicCount;
+}
+
+inline Topic nextDisplayTopic(Topic topic) {
+    size_t i = 0;
+    for (; i < kTopicMetadataCount; ++i) {
+        if (kTopicMetadata[i].topic == topic) break;
+    }
+    return kTopicMetadata[i < kTopicMetadataCount
+                              ? (i + 1) % kTopicMetadataCount
+                              : 0].topic;
+}
+
+inline Topic previousDisplayTopic(Topic topic) {
+    size_t i = 0;
+    for (; i < kTopicMetadataCount; ++i) {
+        if (kTopicMetadata[i].topic == topic) break;
+    }
+    return kTopicMetadata[i < kTopicMetadataCount
+                              ? (i + kTopicMetadataCount - 1) % kTopicMetadataCount
+                              : kTopicMetadataCount - 1].topic;
+}
 
 // Maximum subscribers per topic. Fixed at compile time to avoid heap allocation.
 static constexpr size_t MAX_SUBSCRIBERS_PER_TOPIC = 4;

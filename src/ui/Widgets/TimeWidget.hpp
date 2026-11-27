@@ -1,6 +1,6 @@
 #pragma once
 
-#include "UI/Widgets/Widget.hpp"
+#include "ui/Widgets/Widget.hpp"
 #include "SelectableText.hpp"
 #include "DataModel/TimeDataProvider.hpp"
 

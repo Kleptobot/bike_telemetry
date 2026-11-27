@@ -53,23 +53,30 @@ inline void fillSample(Sample<T>& dst, T value, bool valid, uint32_t tsMs, uint1
 // counters and event clock, NOT a rate smeared off them. Deriving speed or
 // distance from these is a fusion-layer job; counter delta over event-time
 // delta is the exact answer with no main-loop sampling aliasing.
+// The grace windows allow two events at the minimum useful rates of 3 wheel
+// RPM and 5 crank RPM, respectively; a single missed prediction is not stale.
+static constexpr uint32_t CSC_WHEEL_STALE_TIMEOUT_MS = 40000;
+static constexpr uint32_t CSC_CRANK_STALE_TIMEOUT_MS = 24000;
+
 struct EventCount {
     uint32_t counter{0};       // cumulative revolutions (free-running; subtract to difference)
     uint16_t evtTime1024{0};   // last native event time, 1/1024 s units per the BLE spec
-    bool     valid{false};
+    bool     valid{false};     // source supports this channel and a baseline was received
     uint32_t tsMs{0};          // millis() of the notification that carried this event
     uint16_t seq{0};           // low 16 bits of counter: changes on every revolution
     uint16_t dtMs{0};          // 0: use the sensor's own 1/1024 s event clock instead
+    uint32_t sourceId{0};      // identifies the CSC device across primary-source changes
 };
 
 inline void fillEventCount(EventCount& dst, uint32_t counter, uint16_t evtTime1024,
-                           bool valid, uint32_t tsMs) {
+                           bool valid, uint32_t tsMs, uint32_t sourceId = 0) {
     dst.counter     = counter;
     dst.evtTime1024 = evtTime1024;
     dst.valid       = valid;
     dst.tsMs        = tsMs;
     dst.seq         = (uint16_t)counter;
     dst.dtMs        = 0;
+    dst.sourceId    = sourceId;
 }
 
 // --- GNSS --------------------------------------------------------------------
@@ -81,7 +88,8 @@ class AgeSeqTracker {
     // Call once per tick with the element's current age(). Returns true when
     // a newer value was committed since the previous tick.
     bool note(uint32_t ageMs, uint32_t nowMs) {
-        if (ageMs < _prevAge) {
+        const bool changed = ageMs < _prevAge;
+        if (changed) {
             if (_lastMs != 0 && nowMs > _lastMs) {
                 const uint32_t dt = nowMs - _lastMs;
                 _dtMs = dt > 65000 ? 65000u : (uint16_t)dt;
@@ -90,10 +98,9 @@ class AgeSeqTracker {
             }
             _lastMs  = nowMs;
             ++_seq;
-            _prevAge = ageMs;
-            return true;
         }
-        return false;
+        _prevAge = ageMs;
+        return changed;
     }
     uint16_t seq()    const { return _seq; }
     uint16_t dtMs()   const { return _dtMs; }
@@ -152,12 +159,6 @@ struct MeasurementFrame {
     // Drivetrain
     EventCount wheelRevs;            // exact cumulative wheel revolutions (primary CSC device)
     EventCount crankRevs;            // exact cumulative crank revolutions (primary CSC device)
-    // Legacy aggregates: filtered and averaged below the boundary inside the
-    // CSC parser (documented provenance). Kept so migration is incremental;
-    // the raw counters above are the future-facing source.
-    data_record wheelRpmFiltered{};
-    data_record cadenceRpmFiltered{};
-
     // Power / bio / electrical
     data_record powerWatts{};        // cps parser
     data_record torqueNm{};          // decoded today, previously dropped at the boundary

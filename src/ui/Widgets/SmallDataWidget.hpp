@@ -1,7 +1,7 @@
 #pragma once
-#include "UI/Widgets/Widget.hpp"
-#include "Display/Display.hpp"
-#include "UI/GFX.h"
+#include "ui/Widgets/Widget.hpp"
+#include "display/Display.hpp"
+#include "ui/GFX.h"
 
 class SmallDataWidget : public Widget {
     public:

@@ -1,0 +1,115 @@
+#pragma once
+#include <memory>
+#include "ui/Screens/UIScreen.hpp"
+#include "ui/Screens/LogViewer.hpp"
+#include "ui/Widgets/SelectableTextIcon.hpp"
+#include "ui/Widgets/SelectableText.hpp"
+#include "ui/Widgets/InputHints.hpp"
+#include "Loggers/LogParser.hpp"
+#include "HAL/HAL.hpp"
+
+// Summary of one saved ride, read and parsed from the log the user picked on
+// LogListScreen (handed over via logViewerSelect/logViewerSelected). Parsing
+// runs incrementally in update() across frames so a large CSV never blocks the
+// UI loop; the metrics render once parsing completes.
+class LogSummaryScreen : public UIScreen {
+public:
+    LogSummaryScreen(DataModel& model)
+        : UIScreen(model),
+          titleWidget(6, 6, _file),
+          subtitleWidget(6, 20, "Reading..."),
+          dateWidget(6, 34, "Date"),
+          durationWidget(6, 48, "Duration",1),
+          distanceWidget(6, 62, "Distance",1),
+          lapsWidget(6, 76, "Laps",1),
+          avgSpeedWidget(6, 90, "Avg Speed",1),
+          maxSpeedWidget(6, 104, "Max Speed",1),
+          avgHrWidget(6, 118, "Avg HR",1),
+          maxHrWidget(6, 132, "Max HR",1),
+          avgPwrWidget(6, 146, "Avg Power",1),
+          maxPwrWidget(6, 160, "Max Power",1),
+          avgCadWidget(6, 174, "Avg Cadence",1),
+          caloriesWidget(6, 188, "Calories",1),
+          npWidget(6, 202, "NP",1),
+          tssWidget(6, 216, "TSS",1),
+
+          backWidget(5, 280, "Back", epd_bitmap_left),
+          deleteWidget(130, 280, "Del", epd_bitmap_bin_16) {
+        backWidget.setOnPress([this]() {
+            emitUIEvent(UIEventType::ChangeScreen, ScreenID::LogList);
+        });
+        // Body lives in deleteCurrentLog() (LogSummaryScreen.cpp): it is too
+        // security/correctness-sensitive (close-then-remove, post-remove
+        // verification) to hide inside a constructor lambda.
+        deleteWidget.setOnPress([this]() {
+            deleteCurrentLog();
+        });
+    }
+
+    void onEnter() override;
+
+    // Close the log file: an open File32 across screens keeps SdFat cache
+    // state alive while the host may rewrite the card over USB MSC.
+    void onExit() override;
+    void update(float dt) override;
+    void render() override;
+    void handleInput(const physIO input) override;
+
+private:
+    // Declared BEFORE every widget: the constructor's initializer list passes
+    // _file to titleWidget, and reading a member that has not been constructed
+    // yet is undefined behaviour (it only worked because the fresh heap chunk
+    // was usually zeroed -- an empty String copy).
+    String _file;
+
+    SelectableTextWidget titleWidget;
+    SelectableTextWidget subtitleWidget;
+
+    SelectableTextWidget dateWidget;
+    SelectableTextWidget durationWidget;
+    SelectableTextWidget distanceWidget;
+    SelectableTextWidget lapsWidget;
+    SelectableTextWidget avgSpeedWidget;
+    SelectableTextWidget maxSpeedWidget;
+    SelectableTextWidget avgHrWidget;
+    SelectableTextWidget maxHrWidget;
+    SelectableTextWidget avgPwrWidget;
+    SelectableTextWidget maxPwrWidget;
+    SelectableTextWidget avgCadWidget;
+    SelectableTextWidget caloriesWidget;
+    SelectableTextWidget npWidget;
+    SelectableTextWidget tssWidget;
+
+    SelectableTextIconWidget backWidget;
+    SelectableTextIconWidget deleteWidget;
+    InputHintsWidget hints{5, 298, 2};
+    std::unique_ptr<LogParser> _parser;
+    bool _parsing = false;
+    bool _ok      = false;
+    bool _delFailed = false;   // last Del press failed; shown until next action
+
+    // ---- subtitle / stat-row refresh bookkeeping (see update()) ----
+    int      _subtitleCode = -1;  // last state rendered into subtitleWidget
+    uint32_t _lastRowsMs = 0;     // last time the stat rows were rebuilt
+    String   _padded[13];         // padded row labels, built once per onEnter
+
+    // Rebuild the parser after open() or a failed delete (allocation-guarded).
+    bool openParser();
+    // Del-button action: close-then-remove, verify against a fresh mount.
+    void deleteCurrentLog();
+    // Push RideStats into the row widgets (throttled by _lastRowsMs).
+    void refreshRows();
+    // One-time label padding for the value column (was fmtRow's inner loop).
+    String padLabel(const char* label);
+    String rowText(int row, const String& value);
+    static String fmtDuration(uint32_t sec);
+    static String fmtDistance(float m);
+    static String fmt1(float v);
+    static String fmt0(float v);
+
+    enum class FocusField { Back, Delete };
+    FocusField focusField = FocusField::Back;
+
+    void moveFocusLeft();
+    void moveFocusRight();
+};

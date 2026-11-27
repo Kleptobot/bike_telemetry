@@ -1,14 +1,14 @@
 #pragma once
 
 #include <string>
-#include "UI/Screens/UIScreen.hpp"
-#include "UI/Widgets/DateWidget.hpp"
-#include "UI/Widgets/TimeWidget.hpp"
+#include "ui/Screens/UIScreen.hpp"
+#include "ui/Widgets/DateWidget.hpp"
+#include "ui/Widgets/TimeWidget.hpp"
 #include "HAL/InputInterface.hpp"
-#include "UI/Widgets/SelectableTextIcon.hpp"
-#include "UI/Widgets/InputHints.hpp"
-#include "UI/GFX.h"
-#include "Display/Display.hpp"
+#include "ui/Widgets/SelectableTextIcon.hpp"
+#include "ui/Widgets/InputHints.hpp"
+#include "ui/GFX.h"
+#include "display/Display.hpp"
 
 class BikeStatsScreen : public UIScreen {
     public:

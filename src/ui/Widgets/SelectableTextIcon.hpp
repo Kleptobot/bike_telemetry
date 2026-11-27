@@ -1,6 +1,6 @@
 #pragma once
 #include <Arduino.h>
-#include "UI/Widgets/Widget.hpp"
+#include "ui/Widgets/Widget.hpp"
 #include "display/Display.hpp"
 
 struct IconText {

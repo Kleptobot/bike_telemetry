@@ -1,5 +1,5 @@
 #include "SelectableTextIcon.hpp"
-#include "Display/Display.hpp"
+#include "display/Display.hpp"
 
 void SelectableTextIconWidget::render() {
     if (!visible) return;

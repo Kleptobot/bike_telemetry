@@ -8,6 +8,7 @@ $libroot = Join-Path $root ".pio\libdeps\seeed-xiao-afruitnrf52-nrf52840-sense"
 $gfx     = Join-Path $libroot "Adafruit GFX Library"
 $ajson   = Join-Path $libroot "ArduinoJson\src"
 $tinygps = Join-Path $libroot "TinyGPSPlus\src"
+$yxml    = Join-Path $libroot "LibYxml"
 
 $cxx = "C:\Users\willn\AppData\Local\Microsoft\WinGet\Packages\BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\mingw64\bin\g++.exe"
 
@@ -24,11 +25,16 @@ $flags = @(
     "-I$root\src",
     "-I$gfx",
     "-I$ajson",
-    "-I$tinygps"
+    "-I$tinygps",
+    "-I$yxml"
 )
 
 $fw = @(
     "$root\src\App.cpp",
+    "$root\src\App\SettingsStore.cpp",
+    "$root\src\App\InputCallbacks.cpp",
+    "$root\src\App\TelemetryPublisher.cpp",
+    "$root\src\App\RideController.cpp",
     "$root\src\main.cpp",
     "$root\src\display\Display.cpp",
     "$root\src\Fusion\AltitudeFusion.cpp",
@@ -46,11 +52,17 @@ $fw = @(
     "$root\src\HAL\Bluetooth\hrm.cpp",
     "$root\src\Loggers\FITLogger.cpp",
     "$root\src\Loggers\FITWriter.cpp",
+    "$root\src\Loggers\FitLogParser.cpp",
     "$root\src\Loggers\TCXLogger.cpp",
+    "$root\src\Loggers\TcxLogParser.cpp",
     "$root\src\Loggers\CSVLogger.cpp",
+    "$root\src\Loggers\CsvLogParser.cpp",
+    "$yxml\\yxml.c",
     "$root\src\Map\TileLoader.cpp",
     "$root\src\ui\UIManager.cpp",
     "$root\src\ui\Screens\BikeStatsScreen.cpp",
+    "$root\src\ui\Screens\LogListScreen.cpp",
+    "$root\src\ui\Screens\LogSummaryScreen.cpp",
     "$root\src\ui\Screens\BiometricsScreen.cpp",
     "$root\src\ui\Screens\DisplayEditScreen.cpp",
     "$root\src\ui\Screens\GPSScreen.cpp",

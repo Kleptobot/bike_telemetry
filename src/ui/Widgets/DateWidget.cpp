@@ -1,5 +1,5 @@
 #include "DateWidget.hpp"
-#include "Display/Display.hpp"
+#include "display/Display.hpp"
 
 void DateWidget::handleInput(physIO input) {
 

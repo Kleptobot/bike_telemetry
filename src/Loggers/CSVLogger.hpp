@@ -2,13 +2,15 @@
 #define CSVLogger_H
 
 #include <Arduino.h>
+#include "DataModel/DataBus.hpp"
 #include "ILogger.hpp"
 #include "HAL/StorageInterface.hpp"
 #include "SdFat.h"
 
 class CSVLogger : public ILogger {
 public:
-    explicit CSVLogger(IStorage* storage) : _storage(storage) {}
+    CSVLogger(IStorage* storage, const DataBus& bus)
+        : _storage(storage), _bus(bus) {}
 
     void startLogging(const timeData& currentTime) override;
     void addTrackpoint(const Trackpoint& tp, const timeData& currentTime) override;
@@ -23,8 +25,10 @@ public:
 
 private:
     IStorage* _storage;
+    const DataBus& _bus;
     File32 file;
     char _filename[64];  // _startTime/_currentTime inherited from ILogger
+    float _lastDistanceM = 0;
 
     void writeHeader();
 };

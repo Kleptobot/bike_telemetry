@@ -39,6 +39,8 @@ static ScreenID parseScreen(const char* name) {
         {"BikeStats", ScreenID::BikeStats}, {"GPS",      ScreenID::GPSSettings},
         {"Time",      ScreenID::TimeMenu},  {"Display",  ScreenID::DisplayEdit},
         {"UnmountSD", ScreenID::UnmountSD},
+        {"LogList",   ScreenID::LogList},
+        {"LogSummary",ScreenID::LogSummary},
     };
     for (const auto& e : k)
         if (strcmp(name, e.n) == 0) return e.id;
@@ -111,7 +113,7 @@ static int runHeadless(int frames, int stepMs, const char* outDir,
                    "alt=%6.1f tmp=%5.1f dist=%7.1f grd=%5.1f "
                    "kcal=%6.0f np=%5.0f if=%4.2f tss=%5.1f z=%u/%u bat=%3d\n",
                    millis() / 1000u,
-                   bus.get<float>(Topic::SelectedSpeed),
+                   bus.get<float>(Topic::EstimatedSpeed),
                    bus.get<float>(Topic::Cadence),
                    bus.get<float>(Topic::PowerMeter),
                    bus.get<float>(Topic::HeartRate),

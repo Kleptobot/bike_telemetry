@@ -1,12 +1,12 @@
 #pragma once
-#include "UI/Screens/UIScreen.hpp"
-#include "UI/Widgets/BatteryWidget.hpp"
-#include "UI/Widgets/BigDataWidget.hpp"
-#include "UI/Widgets/SmallDataWidget.hpp"
-#include "UI/Widgets/IconWidget.hpp"
-#include "UI/Widgets/TimeWidget.hpp"
-#include "UI/Widgets/DurationWidget.hpp"
-#include "UI/GFX.h"
+#include "ui/Screens/UIScreen.hpp"
+#include "ui/Widgets/BatteryWidget.hpp"
+#include "ui/Widgets/BigDataWidget.hpp"
+#include "ui/Widgets/SmallDataWidget.hpp"
+#include "ui/Widgets/IconWidget.hpp"
+#include "ui/Widgets/TimeWidget.hpp"
+#include "ui/Widgets/DurationWidget.hpp"
+#include "ui/GFX.h"
 
 // Icon layout: the icons sit on a drawn D-pad cross (a switch shape) in the
 // free band below the data grid, so the mapping to the physical 5-position
@@ -103,7 +103,7 @@ public:
         // Update numeric displays.
         // Widgets subscribed to DataBus receive updates via callbacks.
         // Their update(float dt) processes the dirty flag and updates display strings.
-        // Non-subscribed widgets (Location, Distance, TotalDist) poll the bus.
+        // Non-float topics and display-converted values poll the bus.
         const DataBus& bus = model.bus();
 
         // Always call update(float dt) on subscribed widgets so they process dirty flag
@@ -115,8 +115,14 @@ public:
             }
         }
 
-        //display if gps has a valid location
-        gpsIcon.setVisible(bus.get<bool>(Topic::GpsValid));
+        // GPS status icon is always visible and colour-coded: white = good
+        // fix, orange = fair, red = poor quality or no fix at all.
+        const bool gpsValid = bus.get<bool>(Topic::GpsValid);
+        const uint8_t gpsQuality = bus.get<uint8_t>(Topic::GpsQuality);
+        gpsIcon.setVisible(true);
+        gpsIcon.setColor(!gpsValid || gpsQuality >= 2 ? ST77XX_RED
+                        : gpsQuality == 1            ? ST77XX_ORANGE
+                                                     : ST77XX_WHITE);
 
         //display the current time
         timeWidget.update(dt);
