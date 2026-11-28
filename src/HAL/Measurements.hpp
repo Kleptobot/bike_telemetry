@@ -114,6 +114,13 @@ class AgeSeqTracker {
 };
 
 // Commit timestamp for a TinyGPS++ sub-object: millis() minus its age().
+// Default GGA/RMC output is 1 Hz; tolerate two missed updates before expiring data.
+static constexpr uint32_t GPS_SAMPLE_STALE_TIMEOUT_MS = 3000;
+
+inline bool gpsSampleIsFresh(bool parserValid, uint32_t ageMs) {
+    return parserValid && ageMs <= GPS_SAMPLE_STALE_TIMEOUT_MS;
+}
+
 inline uint32_t gpsAgeToTs(bool valid, uint32_t ageMs, uint32_t nowMs) {
     if (!valid || ageMs >= nowMs) return 0;
     return nowMs - ageMs;
@@ -184,54 +191,69 @@ struct MeasurementFrame {
 // (month(), day(), hour(), ...) are not const-qualified, so a const reference
 // cannot call them.
 inline void fillGps(MeasurementFrame& f, TinyGPSPlus& gps, uint32_t nowMs, GpsTrackers& trk) {
-    const bool locValid = gps.location.isValid();
+    const uint32_t locAgeMs = gps.location.age();
+    const bool locValid = gpsSampleIsFresh(gps.location.isValid(), locAgeMs);
     f.gpsPos.lat   = gps.location.lat();
     f.gpsPos.lng   = gps.location.lng();
     f.gpsPos.valid = locValid;
-    f.gpsPos.tsMs  = gpsAgeToTs(locValid, gps.location.age(), nowMs);
-    trk.loc.note(gps.location.age(), nowMs);
+    f.gpsPos.tsMs  = gpsAgeToTs(locValid, locAgeMs, nowMs);
+    trk.loc.note(locAgeMs, nowMs);
     f.gpsPos.seq   = trk.loc.seq();
     f.gpsPos.dtMs  = trk.loc.dtMs();
 
-    trk.alt.note(gps.altitude.age(), nowMs);
-    fillSample(f.gpsAltM, gps.altitude.meters(), gps.altitude.isValid(),
-               gpsAgeToTs(gps.altitude.isValid(), gps.altitude.age(), nowMs),
+    const uint32_t altAgeMs = gps.altitude.age();
+    const bool altValid = gpsSampleIsFresh(gps.altitude.isValid(), altAgeMs);
+    trk.alt.note(altAgeMs, nowMs);
+    fillSample(f.gpsAltM, gps.altitude.meters(), altValid,
+               gpsAgeToTs(altValid, altAgeMs, nowMs),
                trk.alt.seq(), trk.alt.dtMs());
 
-    trk.spd.note(gps.speed.age(), nowMs);
-    fillSample(f.gpsSpeedKmh, gps.speed.kmph(), gps.speed.isValid(),
-               gpsAgeToTs(gps.speed.isValid(), gps.speed.age(), nowMs),
+    const uint32_t speedAgeMs = gps.speed.age();
+    const bool speedValid = gpsSampleIsFresh(gps.speed.isValid(), speedAgeMs);
+    trk.spd.note(speedAgeMs, nowMs);
+    fillSample(f.gpsSpeedKmh, gps.speed.kmph(), speedValid,
+               gpsAgeToTs(speedValid, speedAgeMs, nowMs),
                trk.spd.seq(), trk.spd.dtMs());
 
-    trk.crs.note(gps.course.age(), nowMs);
-    fillSample(f.gpsCourseDeg, gps.course.deg(), gps.course.isValid(),
-               gpsAgeToTs(gps.course.isValid(), gps.course.age(), nowMs),
+    const uint32_t courseAgeMs = gps.course.age();
+    const bool courseValid = gpsSampleIsFresh(gps.course.isValid(), courseAgeMs);
+    trk.crs.note(courseAgeMs, nowMs);
+    fillSample(f.gpsCourseDeg, gps.course.deg(), courseValid,
+               gpsAgeToTs(courseValid, courseAgeMs, nowMs),
                trk.crs.seq(), trk.crs.dtMs());
 
-    trk.hdop.note(gps.hdop.age(), nowMs);
-    fillSample(f.gpsHdop, gps.hdop.hdop(), gps.hdop.isValid(),
-               gpsAgeToTs(gps.hdop.isValid(), gps.hdop.age(), nowMs),
+    const uint32_t hdopAgeMs = gps.hdop.age();
+    const bool hdopValid = gpsSampleIsFresh(gps.hdop.isValid(), hdopAgeMs);
+    trk.hdop.note(hdopAgeMs, nowMs);
+    fillSample(f.gpsHdop, gps.hdop.hdop(), hdopValid,
+               gpsAgeToTs(hdopValid, hdopAgeMs, nowMs),
                trk.hdop.seq(), trk.hdop.dtMs());
 
-    trk.sats.note(gps.satellites.age(), nowMs);
-    fillSample(f.gpsSatsUsed, (uint8_t)gps.satellites.value(), gps.satellites.isValid(),
-               gpsAgeToTs(gps.satellites.isValid(), gps.satellites.age(), nowMs),
+    const uint32_t satsAgeMs = gps.satellites.age();
+    const bool satsValid = gpsSampleIsFresh(gps.satellites.isValid(), satsAgeMs);
+    trk.sats.note(satsAgeMs, nowMs);
+    fillSample(f.gpsSatsUsed, (uint8_t)gps.satellites.value(), satsValid,
+               gpsAgeToTs(satsValid, satsAgeMs, nowMs),
                trk.sats.seq(), trk.sats.dtMs());
 
-    trk.utcTime.note(gps.time.age(), nowMs);
+    const uint32_t timeAgeMs = gps.time.age();
+    const bool timeValid = gpsSampleIsFresh(gps.time.isValid(), timeAgeMs);
+    trk.utcTime.note(timeAgeMs, nowMs);
     fillSample(f.gpsUtcTimeHMS,
                (uint32_t)gps.time.hour() * 10000u + (uint32_t)gps.time.minute() * 100u
                                                           + (uint32_t)gps.time.second(),
-               gps.time.isValid(),
-               gpsAgeToTs(gps.time.isValid(), gps.time.age(), nowMs),
+               timeValid,
+               gpsAgeToTs(timeValid, timeAgeMs, nowMs),
                trk.utcTime.seq(), trk.utcTime.dtMs());
 
-    trk.utcDate.note(gps.date.age(), nowMs);
+    const uint32_t dateAgeMs = gps.date.age();
+    const bool dateValid = gpsSampleIsFresh(gps.date.isValid(), dateAgeMs);
+    trk.utcDate.note(dateAgeMs, nowMs);
     fillSample(f.gpsUtcDateYMD,
                (uint32_t)gps.date.year() * 10000u + (uint32_t)gps.date.month() * 100u
                                                           + (uint32_t)gps.date.day(),
-               gps.date.isValid(),
-               gpsAgeToTs(gps.date.isValid(), gps.date.age(), nowMs),
+               dateValid,
+               gpsAgeToTs(dateValid, dateAgeMs, nowMs),
                trk.utcDate.seq(), trk.utcDate.dtMs());
 }
 
