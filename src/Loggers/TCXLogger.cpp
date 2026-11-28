@@ -1,9 +1,10 @@
 #include "common/FsApiConstants.h"
 #include "TCXLogger.hpp"
 
-void TCXLogger::startLogging(const timeData& currentTime) {
+bool TCXLogger::startLogging(const timeData& currentTime) {
     initTimer(currentTime);
     laps.clear();
+    _started = false;
     laps.push_back({currentTime, 0, 0, 0, 0, 0, 0});
     resetTotals();
     snprintf(_filename, sizeof(_filename), "/%04d%02d%02d_%02d%02d%02d.tcx",
@@ -13,7 +14,7 @@ void TCXLogger::startLogging(const timeData& currentTime) {
     Serial.println(_filename);
 
     if (file.isOpen()) {
-        file.close();
+        if (!file.close()) return false;
     }
 
     //open the first lap file
@@ -22,13 +23,16 @@ void TCXLogger::startLogging(const timeData& currentTime) {
     if (!file.open(lap_name, O_WRITE | O_CREAT | O_TRUNC)) {
         Serial.print("Error opening file: ");
         Serial.println(lap_name);
+        return false;
     }
+    _started = true;
+    return !file.getWriteError();
 };
 
-void TCXLogger::writeLapHeader(uint16_t lapIndex, File32 *file) {
-    if (!file->isOpen()) {
+bool TCXLogger::writeLapHeader(uint16_t lapIndex, File32 *file) {
+    if (!file || !file->isOpen() || lapIndex >= laps.size()) {
         Serial.println("Error file not open: ");
-        return;
+        return false;
     }
     char time[32];
 
@@ -80,9 +84,11 @@ void TCXLogger::writeLapHeader(uint16_t lapIndex, File32 *file) {
     file->println("          </LX>\n");
     file->println("        </Extensions>\n");
     file->println("        <Track>");
+    return !file->getWriteError();
 };
 
-void TCXLogger::addTrackpoint(const Trackpoint& tp, const timeData& currentTime) {
+bool TCXLogger::addTrackpoint(const Trackpoint& tp, const timeData& currentTime) {
+    if (!_started || !file.isOpen() || file.getWriteError() || laps.empty()) return false;
 
     char time[32];
     sprintf(time, "%d-%02d-%02dT%02d:%02d:%02d", currentTime.year(), currentTime.month(), currentTime.day(), currentTime.hour(), currentTime.minute(), currentTime.second());
@@ -122,6 +128,7 @@ void TCXLogger::addTrackpoint(const Trackpoint& tp, const timeData& currentTime)
     file.println("            </Extensions>");
     file.println("          </Trackpoint>");
     file.flush();
+    if (file.getWriteError()) return false;
 
     _currentTime = currentTime;
 
@@ -129,13 +136,14 @@ void TCXLogger::addTrackpoint(const Trackpoint& tp, const timeData& currentTime)
     if(totalPoints >= points_per_chunk) {
         totalPoints = 0;
         laps.back().parts++;
-        file.close();
+        if (!file.close()) return false;
 
         memset(lap_name,0,32);
         snprintf(lap_name, sizeof(lap_name), "/lap_%u_%u", (unsigned)(laps.size()-1), (unsigned)laps.back().parts);
         if (!file.open(lap_name, O_WRITE | O_APPEND | O_CREAT)) {
             Serial.print("Error opening file: ");
             Serial.println(lap_name);
+            return false;
         }
     }
     
@@ -153,60 +161,63 @@ void TCXLogger::addTrackpoint(const Trackpoint& tp, const timeData& currentTime)
     laps.back().totalTss = tp.tss;
     laps.back().lastNormalizedPower = tp.normalizedPower;
     laps.back().lastIntensityFactor = tp.intensityFactor;
+    return !file.getWriteError();
 };
 
 void TCXLogger::resetTotals() { totalPoints = 0; };
 
-void TCXLogger::newLap(const timeData& currentTime) {
+bool TCXLogger::newLap(const timeData& currentTime) {
+    if (!_started || !file.isOpen() || file.getWriteError()) return false;
+    if (!file.close()) return false;
+
     totalPoints = 0;
     resetTotals();
     laps.push_back({currentTime, 1, 1, 0, 0, 0, 0});
     laps.back().activeAtStart = activeAt(currentTime);
-    file.close();
 
     memset(lap_name,0,32);
     snprintf(lap_name, sizeof(lap_name), "/lap_%u_%u", (unsigned)(laps.size()-1), (unsigned)laps.back().parts);
     if (!file.open(lap_name, O_WRITE | O_APPEND | O_CREAT)) {
         Serial.print("Error opening file: ");
         Serial.println(lap_name);
+        return false;
     }
+    _currentTime = currentTime;
+    return !file.getWriteError();
 };
 
-void TCXLogger::dataTransfer(File32 *from, File32 *to) {
-    bool bReading=true, bWriting=false;
-
-    while(bReading || bWriting) {
-        if (bReading) {
-            memset(buffer, 0, sizeof(buffer)); // Clear buffer
-            bytesRead = from->read(buffer, sizeof(buffer)-1); // Leave space for null-terminator
-            if (bytesRead > 0) {
-                bWriting = true; // Data is available to write
-            } else {
-                // Finished reading
-                bReading = false; // Set reading to false only after confirming no more data
-            }
-        }
-
-        // Check if we are writing
-        if (bWriting) {
-            // Open the destination file for appending
-            to->write(buffer, bytesRead);
-            bWriting = false; // Reset writing flag after writing
+bool TCXLogger::dataTransfer(File32 *from, File32 *to) {
+    if (!from || !to || !from->isOpen() || !to->isOpen()) return false;
+    while (true) {
+        memset(buffer, 0, sizeof(buffer));
+        const int readCount = from->read(buffer, sizeof(buffer) - 1);
+        if (readCount < 0) return false;
+        if (readCount == 0) break;
+        if (to->write(buffer, static_cast<size_t>(readCount)) !=
+                static_cast<size_t>(readCount) ||
+            to->getWriteError()) {
+            return false;
         }
     }
     to->flush();
+    return !to->getWriteError();
 }
 
 bool TCXLogger::finaliseLogging() {
+    if (!_started) return false;
+
     Serial.println("TCX::finaliseLogging entry");
     Serial.flush();
 
     File32 final_file;
+    bool success = true;
     if (file.isOpen()) {
         Serial.println("TCX::closing active lap file");
         Serial.flush();
         file.flush();
-        file.close();
+        const bool writesSucceeded = !file.getWriteError();
+        const bool closeSucceeded = file.close();
+        if (!writesSucceeded || !closeSucceeded) success = false;
     }
 
     int lapSize = laps.size();
@@ -217,10 +228,15 @@ bool TCXLogger::finaliseLogging() {
     Serial.print("TCX::opening final file ");
     Serial.println(_filename);
     Serial.flush();
+    if (!success) {
+        _started = false;
+        return false;
+    }
     if (!final_file.open(_filename, O_WRITE | O_CREAT | O_TRUNC)) {
         Serial.print("TCX::open final file failed: ");
         Serial.println(_filename);
         Serial.flush();
+        _started = false;
         return false;
     }
 
@@ -237,14 +253,15 @@ bool TCXLogger::finaliseLogging() {
     final_file.println("  <Activities>");
     final_file.println("    <Activity Sport=\"Biking\">");
     final_file.print("      <Id>");final_file.print(_startTime.toString());final_file.println("</Id>");
+    if (final_file.getWriteError()) success = false;
 
     Serial.println("Processing laps...");
-    for(int i=0;i<lapSize;i++) {
+    for(int i=0;i<lapSize && success;i++) {
         char lapString[40];
         sprintf(lapString,"processing lap %d of %d", i+1, lapSize);
         Serial.println(lapString);
-        writeLapHeader(i, &final_file);
-        for(int j=0;j<=laps[i].parts;j++) { 
+        success = writeLapHeader(i, &final_file);
+        for(int j=0;j<=laps[i].parts && success;j++) {
             //transfer lap_%d_%d, i,j to _filename
             memset(lap_name, 0 , 32);
             snprintf(lap_name, sizeof(lap_name), "/lap_%d_%d", i, j);
@@ -252,31 +269,51 @@ bool TCXLogger::finaliseLogging() {
             File32 lap_file;
             if (!lap_file.open(lap_name, O_READ)) {
                 Serial.print("Error opening lap file: "); Serial.println(lap_name);
-                return false;
+                success = false;
+                break;
             }
             Serial.print("Copying lap chunk: "); Serial.println(lap_name);
-            memset(buffer, 0, sizeof(buffer)); // Clear buffer
-            while ((bytesRead = lap_file.read(buffer, sizeof(buffer)-1)) > 0) {
-                uint16_t written = final_file.write(buffer, bytesRead);
-                memset(buffer, 0, sizeof(buffer)); // Clear buffer
-                if (written != bytesRead) {
-                    Serial.print("Write error for "); Serial.println(lap_name);
+            uint32_t remaining = lap_file.fileSize();
+            while (remaining > 0) {
+                const size_t chunkSize = remaining < sizeof(buffer) - 1
+                    ? remaining : sizeof(buffer) - 1;
+                const int readCount = lap_file.read(buffer, chunkSize);
+                if (readCount != static_cast<int>(chunkSize)) {
+                    success = false;
                     break;
                 }
+                const size_t written = final_file.write(buffer, chunkSize);
+                memset(buffer, 0, sizeof(buffer)); // Clear buffer
+                if (written != chunkSize || final_file.getWriteError()) {
+                    Serial.print("Write error for "); Serial.println(lap_name);
+                    success = false;
+                    break;
+                }
+                remaining -= static_cast<uint32_t>(readCount);
             }
-            lap_file.close();
+            if (!lap_file.close()) success = false;
             final_file.flush();
-            if (!_storage->remove(lap_name)) {
+            if (final_file.getWriteError()) success = false;
+            if (success && !_storage->remove(lap_name)) {
                 Serial.print("Failed to remove lap file: "); Serial.println(lap_name);
+                success = false;
             }
         }
-        final_file.println("        </Track>");
-        final_file.println("      </Lap>"); // Close the Lap element
+        if (success) {
+            final_file.println("        </Track>");
+            final_file.println("      </Lap>"); // Close the Lap element
+            if (final_file.getWriteError()) success = false;
+        }
     }
-    final_file.println("    </Activity>");
-    final_file.println("  </Activities>");
-    final_file.println("</TrainingCenterDatabase>");
-    final_file.close();
+    if (success) {
+        final_file.println("    </Activity>");
+        final_file.println("  </Activities>");
+        final_file.println("</TrainingCenterDatabase>");
+        final_file.flush();
+        if (final_file.getWriteError()) success = false;
+    }
+    if (!final_file.close()) success = false;
 
-    return true;
+    _started = false;
+    return success;
 };

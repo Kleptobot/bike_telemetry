@@ -59,7 +59,8 @@ public:
     explicit FitWriter(IStorage* storage) : _storage(storage) {}
 
     bool open(const String& path);
-    void close(); // patches header size, writes trailing CRC, closes file
+    bool close(); // patches header size, writes trailing CRC, closes file
+    bool hasError() const { return _error; }
 
     // Writes a definition message (call once per local type before first use,
     // or again if the field layout changes).
@@ -82,6 +83,7 @@ private:
     File32 _file;
     uint32_t _dataSize = 0; // bytes written after header, before CRC
     uint16_t _crc = 0;
+    bool _error = false;
 
     void rawWrite(const uint8_t* buf, size_t n);
     static uint16_t crc16Update(uint16_t crc, uint8_t byte);

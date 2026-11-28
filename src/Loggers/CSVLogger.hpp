@@ -12,9 +12,9 @@ public:
     CSVLogger(IStorage* storage, const DataBus& bus)
         : _storage(storage), _bus(bus) {}
 
-    void startLogging(const timeData& currentTime) override;
-    void addTrackpoint(const Trackpoint& tp, const timeData& currentTime) override;
-    void newLap(const timeData& currentTime) override;
+    bool startLogging(const timeData& currentTime) override;
+    bool addTrackpoint(const Trackpoint& tp, const timeData& currentTime) override;
+    bool newLap(const timeData& currentTime) override;
     bool finaliseLogging() override;
 
     const timeDuration elapsed_Total() const override { return _currentTime - _startTime; }
@@ -30,7 +30,7 @@ private:
     char _filename[64];  // _startTime/_currentTime inherited from ILogger
     float _lastDistanceM = 0;
 
-    void writeHeader();
+    bool writeHeader();
 };
 
 #endif /* CSVLogger_H */

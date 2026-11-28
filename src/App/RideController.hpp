@@ -24,14 +24,14 @@ public:
                TelemetryPublisher& telemetry, SettingsStore& settings);
     void configureLogger();
 
-    void update(AppState state, AppState previousState);
+    bool update(AppState state, AppState previousState);
     void updateTimers(float dt, AppState state);
 
     void start(AppState& state);
     void stop(AppState& state);
     void pause(AppState& state);
     void resume(AppState& state);
-    void newLap(AppState state);
+    bool newLap(AppState state);
 
     bool shouldAutoLap(AppState state);
     AutoPauseAction updateAutoPause(AppState state, uint32_t now);
@@ -55,6 +55,7 @@ private:
     TCXLogger* _tcxLogger = nullptr;
     CSVLogger* _csvLogger = nullptr;
     FtpEstimator _ftpEstimator;
+    bool _loggerActive = false;
 
     float _rideElapsedSec = 0.0f;
     float _rideMovingSec = 0.0f;
@@ -66,6 +67,8 @@ private:
     bool _autoPaused = false;
     uint32_t _stopSinceMs = 0;
     uint32_t _moveSinceMs = 0;
+
+    void failLogger(const char* operation);
 
     static constexpr float AUTO_PAUSE_SPEED_KMH = 3.0f;
     static constexpr float AUTO_RESUME_SPEED_KMH = 5.0f;

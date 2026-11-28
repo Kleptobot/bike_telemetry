@@ -27,9 +27,9 @@ public:
     // storage must outlive the FitLogger.
     explicit FITLogger(IStorage* storage) : _writer(storage) {}
  
-    void startLogging(const timeData& currentTime) override;
-    void addTrackpoint(const Trackpoint& tp, const timeData& currentTime) override;
-    void newLap(const timeData& currentTime) override;
+    bool startLogging(const timeData& currentTime) override;
+    bool addTrackpoint(const Trackpoint& tp, const timeData& currentTime) override;
+    bool newLap(const timeData& currentTime) override;
     bool finaliseLogging() override;
  
     const timeDuration elapsed_Total() const override { return _currentTime - _startTime; }

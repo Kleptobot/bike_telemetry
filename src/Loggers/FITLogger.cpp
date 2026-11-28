@@ -91,29 +91,25 @@ void FITLogger::writeDefinitionsOnce() {
     _definitionsWritten = true;
 }
 
-void FITLogger::startLogging(const timeData& currentTime) {
-    _startTime = currentTime;
-    _pauseAnchor = currentTime;
-    _currentTime = currentTime;
-        _lastDistanceM = 0;
+bool FITLogger::startLogging(const timeData& currentTime) {
+    initTimer(currentTime);
+    _lastDistanceM = 0;
     _lapStartDistanceM = 0;
     _lastCalories = 0;
     _lapStartCalories = 0;
     _definitionsWritten = false;
+    _open = false;
     laps.clear();
 
-    // TODO: match your existing filename scheme (date/time-based, etc.)
     String path = "/activity_" + String(static_cast<unsigned long>(currentTime.unixtime())) + ".fit";
     _open = _writer.open(path);
     if (!_open) {
-        // Every write below is a no-op on a closed File32, so without this the
-        // whole ride was silently discarded and finaliseLogging() would then
-        // seek and patch a header that was never written.
         Serial.print("[FITLogger] failed to open "); Serial.println(path);
-        return;
+        return false;
     }
 
     writeDefinitionsOnce();
+    if (_writer.hasError()) return false;
 
     uint32_t nowFit = toFitTimestamp(currentTime.unixtime());
 
@@ -123,12 +119,13 @@ void FITLogger::startLogging(const timeData& currentTime) {
     _writer.writeU16(0);           // product (your own ID once registered)
     _writer.writeU32(0);           // serial number -- consider using chip UID
     _writer.writeU32(nowFit);      // time_created
+    if (_writer.hasError()) return false;
 
-    newLap(currentTime); // implicitly start lap 0, matching typical TCX flow
+    return newLap(currentTime); // implicitly start lap 0, matching typical TCX flow
 }
 
-void FITLogger::addTrackpoint(const Trackpoint& tp, const timeData& currentTime) {
-    _currentTime = currentTime;
+bool FITLogger::addTrackpoint(const Trackpoint& tp, const timeData& currentTime) {
+    if (!_open || _writer.hasError() || laps.empty()) return false;
     uint32_t ts = toFitTimestamp(currentTime.unixtime());
 
     // altitude field is scale 5, offset 500 per FIT profile: stored = (m + 500) * 5
@@ -147,9 +144,7 @@ void FITLogger::addTrackpoint(const Trackpoint& tp, const timeData& currentTime)
         _writer.writeU16(tp.power > 0 ? static_cast<uint16_t>(tp.power) : 0xFFFF);
     // calories field 15: scale 10 (kcal x 10), per FIT profile
         _writer.writeU16(static_cast<uint16_t>(tp.calories * 10.0));
-    _lastCalories = tp.calories;
-
-    _lastDistanceM = tp.distance;
+    if (_writer.hasError()) return false;
 
     Lap& lap = laps.back();
     lap.parts++;
@@ -166,9 +161,14 @@ void FITLogger::addTrackpoint(const Trackpoint& tp, const timeData& currentTime)
     // lap.totalDistance is finalized (as a delta from lap start) when the
     // lap closes -- see writeLapMessage / newLap below -- since distance on
     // Trackpoint is cumulative-for-the-whole-activity, not per-lap.
+    _currentTime = currentTime;
+    _lastCalories = tp.calories;
+    _lastDistanceM = tp.distance;
+    return true;
 }
 
-void FITLogger::newLap(const timeData& currentTime) {
+bool FITLogger::newLap(const timeData& currentTime) {
+    if (!_open || _writer.hasError()) return false;
     uint32_t endFit = toFitTimestamp(currentTime.unixtime());
 
     if (!laps.empty()) {
@@ -180,6 +180,7 @@ void FITLogger::newLap(const timeData& currentTime) {
         closingLap.totalCalories = static_cast<float>(_lastCalories - _lapStartCalories);
         if (closingLap.totalCalories < 0) closingLap.totalCalories = 0;
         writeLapMessage(closingLap, toFitTimestamp(closingLap.startTime.unixtime()), endFit);
+        if (_writer.hasError()) return false;
     }
 
     Lap lap{};
@@ -195,6 +196,8 @@ void FITLogger::newLap(const timeData& currentTime) {
 
     _lapStartDistanceM = _lastDistanceM;
     _lapStartCalories = _lastCalories;
+    _currentTime = currentTime;
+    return !_writer.hasError();
 }
 
 void FITLogger::writeLapMessage(const Lap& lap, uint32_t startTimeFit, uint32_t endTimeFit) {
@@ -253,7 +256,8 @@ bool FITLogger::finaliseLogging() {
     writeSessionMessage(endFit);
     writeActivityMessage(endFit);
 
-    _writer.close();
+    const bool writesSucceeded = !_writer.hasError();
+    const bool closeSucceeded = _writer.close();
     _open = false;
-    return true;
+    return writesSucceeded && closeSucceeded;
 }

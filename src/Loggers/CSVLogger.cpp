@@ -39,7 +39,7 @@ void writeDeferredCsvValue(File32& file, const DataBus& bus,
 
 } // namespace
 
-void CSVLogger::startLogging(const timeData& currentTime) {
+bool CSVLogger::startLogging(const timeData& currentTime) {
     _startTime = currentTime;
     _pauseAnchor = currentTime;
     _currentTime = currentTime;
@@ -48,7 +48,7 @@ void CSVLogger::startLogging(const timeData& currentTime) {
     laps.push_back({currentTime, 0, 0, 0, 0, 0, 0});
 
     if (file.isOpen()) {
-        file.close();
+        if (!file.close()) return false;
     }
 
     snprintf(_filename, sizeof(_filename), "/%04d%02d%02d_%02d%02d%02d.csv",
@@ -58,17 +58,18 @@ void CSVLogger::startLogging(const timeData& currentTime) {
     if (!file.open(_filename, O_WRITE | O_CREAT | O_TRUNC)) {
         Serial.print("Error opening CSV file: ");
         Serial.println(_filename);
-        return;
+        return false;
     }
 
-    writeHeader();
+    const bool headerWritten = writeHeader();
     file.flush();
+    return headerWritten && !file.getWriteError();
 }
 
-void CSVLogger::writeHeader() {
+bool CSVLogger::writeHeader() {
     if (!file.isOpen()) {
         Serial.println("Error file not open: ");
-        return;
+        return false;
     }
     file.print("time");
     for (const TopicMetadata& info : kTopicMetadata) {
@@ -87,12 +88,13 @@ void CSVLogger::writeHeader() {
     }
     file.println();
     file.flush();
+    return !file.getWriteError();
 }
 
-void CSVLogger::addTrackpoint(const Trackpoint& tp, const timeData& currentTime) {
+bool CSVLogger::addTrackpoint(const Trackpoint& tp, const timeData& currentTime) {
     if (!file.isOpen()) {
         Serial.println("Error file not open: ");
-        return;
+        return false;
     }
     file.print(currentTime.toString());
     for (const TopicMetadata& info : kTopicMetadata) {
@@ -107,6 +109,7 @@ void CSVLogger::addTrackpoint(const Trackpoint& tp, const timeData& currentTime)
     }
     file.println();
     file.flush();
+    if (file.getWriteError()) return false;
 
     _currentTime = currentTime;
 
@@ -117,23 +120,26 @@ void CSVLogger::addTrackpoint(const Trackpoint& tp, const timeData& currentTime)
 
     laps.back().totalDistance = tp.distance;
     _lastDistanceM = tp.distance;
+    return true;
 }
 
-void CSVLogger::newLap(const timeData& currentTime) {
+bool CSVLogger::newLap(const timeData& currentTime) {
+    if (!file.isOpen() || file.getWriteError()) return false;
     laps.push_back({currentTime, 1, 1, 0, 0, 0, 0});
+    return true;
 }
 
 bool CSVLogger::finaliseLogging() {
-    if (file.isOpen()) {
-        const long elapsedSeconds = elapsed_Total().totalSeconds();
-        file.print("#summary,1,");
-        file.print(elapsedSeconds > 0 ? static_cast<uint32_t>(elapsedSeconds) : 0);
-        file.print(",");
-        file.print(_lastDistanceM, 2);
-        file.print(",");
-        file.println(static_cast<unsigned long>(laps.size()));
-        file.flush();
-        file.close();
-    }
-    return true;
+    if (!file.isOpen()) return false;
+    const long elapsedSeconds = elapsed_Total().totalSeconds();
+    file.print("#summary,1,");
+    file.print(elapsedSeconds > 0 ? static_cast<uint32_t>(elapsedSeconds) : 0);
+    file.print(",");
+    file.print(_lastDistanceM, 2);
+    file.print(",");
+    file.println(static_cast<unsigned long>(laps.size()));
+    file.flush();
+    const bool writesSucceeded = !file.getWriteError();
+    const bool closeSucceeded = file.close();
+    return writesSucceeded && closeSucceeded;
 }

@@ -20,6 +20,7 @@ void RideController::configureLogger() {
     _fitLogger = nullptr;
     _tcxLogger = nullptr;
     _csvLogger = nullptr;
+    _loggerActive = false;
 
     switch (selectedLogger) {
         case LoggerType::FIT:
@@ -81,11 +82,15 @@ void RideController::resume(AppState& state) {
     }
 }
 
-void RideController::newLap(AppState state) {
-    if (_logger && (state == AppState::LOGGING || state == AppState::PAUSED)) {
-        _logger->newLap(_model->time().get());
-        Serial.println("[RideController] New lap.");
+bool RideController::newLap(AppState state) {
+    if (state != AppState::LOGGING && state != AppState::PAUSED) return true;
+    if (!_logger || !_loggerActive ||
+        !_logger->newLap(_model->time().get())) {
+        failLogger("new lap");
+        return false;
     }
+    Serial.println("[RideController] New lap.");
+    return true;
 }
 
 bool RideController::shouldAutoLap(AppState state) {
@@ -152,8 +157,18 @@ AutoPauseAction RideController::updateAutoPause(AppState state, uint32_t now) {
     return AutoPauseAction::None;
 }
 
-void RideController::update(AppState state, AppState previousState) {
-    if (!_model || !_telemetry || !_settings) return;
+void RideController::failLogger(const char* operation) {
+    Serial.print("[RideController] Logger ");
+    Serial.print(operation);
+    Serial.println(" failed; stopping the ride.");
+    if (_logger && !_logger->finaliseLogging()) {
+        Serial.println("[RideController] Logger finalization also failed.");
+    }
+    _loggerActive = false;
+}
+
+bool RideController::update(AppState state, AppState previousState) {
+    if (!_model || !_telemetry || !_settings) return true;
     const timeData& currentTime = _model->time().get();
     const DataBus& bus = _model->bus();
     const uint8_t second = currentTime.second();
@@ -161,7 +176,11 @@ void RideController::update(AppState state, AppState previousState) {
     if (state == AppState::IDLE) {
         if ((previousState == AppState::LOGGING || previousState == AppState::PAUSED) && _logger) {
             Serial.println("[RideController] Finalizing logger.");
-            _logger->finaliseLogging();
+            const bool finalised = _loggerActive && _logger->finaliseLogging();
+            _loggerActive = false;
+            if (!finalised) {
+                Serial.println("[RideController] Logger finalization failed.");
+            }
 
             if (_ftpEstimator.hasQualifyingWindow()) {
                 uint16_t rideFtp = _ftpEstimator.suggestedFtp();
@@ -176,47 +195,55 @@ void RideController::update(AppState state, AppState previousState) {
             }
         }
         _telemetry->resetDistance();
-        return;
+        return true;
     }
 
     if (state == AppState::LOGGING) {
         if (previousState != AppState::LOGGING && previousState != AppState::PAUSED) {
-            if (_logger) _logger->startLogging(currentTime);
+            if (!_logger || !_logger->startLogging(currentTime)) {
+                failLogger("start");
+                return false;
+            }
+            _loggerActive = true;
             _telemetry->resetDistance();
             _ftpEstimator.reset();
         }
 
-        if (_logger) {
-            _model->logger().update({_logger->elapsed_Total(), _logger->elapsed_Lap()});
+        if (!_logger || !_loggerActive) {
+            failLogger("state");
+            return false;
         }
+        _model->logger().update({_logger->elapsed_Total(), _logger->elapsed_Lap()});
 
         if (!_lastSecondValid || second != _lastSecond) {
-            if (_logger) {
-                const location_data& loc = bus.get<location_data>(Topic::Location);
-                Trackpoint tp;
-                tp.latitude = loc.latitude;
-                tp.longitude = loc.longitude;
-                tp.altitude = bus.get<float>(Topic::FusedAltitude);
-                tp.speed = bus.get<float>(Topic::EstimatedSpeed);
-                tp.heartrate = bus.get<float>(Topic::HeartRate);
-                tp.power = bus.get<float>(Topic::PowerMeter);
-                tp.cadence = bus.get<float>(Topic::Cadence);
-                tp.distance = bus.get<float>(Topic::TotalDistanceM);
-                tp.calories = bus.get<float>(Topic::Calories);
-                tp.normalizedPower = bus.get<float>(Topic::NormalizedPower);
-                tp.intensityFactor = bus.get<float>(Topic::IntensityFactor);
-                tp.tss = bus.get<float>(Topic::Tss);
-                tp.hrZone = bus.get<uint8_t>(Topic::HrZone);
-                tp.powerZone = bus.get<uint8_t>(Topic::PowerZone);
-                _logger->addTrackpoint(tp, currentTime);
-
-                const float powerWatts = bus.get<float>(Topic::PowerMeter) > 0.0f
-                    ? bus.get<float>(Topic::PowerMeter)
-                    : bus.get<float>(Topic::EstimatedPower);
-                _ftpEstimator.addSample((uint16_t)(powerWatts > 0.0f ? powerWatts + 0.5f : 0.0f));
+            const location_data& loc = bus.get<location_data>(Topic::Location);
+            Trackpoint tp;
+            tp.latitude = loc.latitude;
+            tp.longitude = loc.longitude;
+            tp.altitude = bus.get<float>(Topic::FusedAltitude);
+            tp.speed = bus.get<float>(Topic::EstimatedSpeed);
+            tp.heartrate = bus.get<float>(Topic::HeartRate);
+            tp.power = bus.get<float>(Topic::PowerMeter);
+            tp.cadence = bus.get<float>(Topic::Cadence);
+            tp.distance = bus.get<float>(Topic::TotalDistanceM);
+            tp.calories = bus.get<float>(Topic::Calories);
+            tp.normalizedPower = bus.get<float>(Topic::NormalizedPower);
+            tp.intensityFactor = bus.get<float>(Topic::IntensityFactor);
+            tp.tss = bus.get<float>(Topic::Tss);
+            tp.hrZone = bus.get<uint8_t>(Topic::HrZone);
+            tp.powerZone = bus.get<uint8_t>(Topic::PowerZone);
+            if (!_logger->addTrackpoint(tp, currentTime)) {
+                failLogger("trackpoint write");
+                return false;
             }
+
+            const float powerWatts = bus.get<float>(Topic::PowerMeter) > 0.0f
+                ? bus.get<float>(Topic::PowerMeter)
+                : bus.get<float>(Topic::EstimatedPower);
+            _ftpEstimator.addSample((uint16_t)(powerWatts > 0.0f ? powerWatts + 0.5f : 0.0f));
         }
     }
     _lastSecondValid = true;
     _lastSecond = second;
+    return true;
 }

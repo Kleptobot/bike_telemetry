@@ -30,17 +30,18 @@ class TCXLogger : public ILogger {
     char _filename[32];  // _startTime/_currentTime inherited from ILogger
 
     int totalPoints=0;
+    bool _started = false;
 
-    void writeLapHeader(uint16_t lapIndex, File32 *file);
+    bool writeLapHeader(uint16_t lapIndex, File32 *file);
     void resetTotals();
-    void dataTransfer(File32 *from, File32 *to);
+    bool dataTransfer(File32 *from, File32 *to);
       
   public:
     explicit TCXLogger(IStorage* storage, DataModel& model) : _storage(storage), _model(model) {};
 
-    void startLogging(const timeData& currentTime);
-    void addTrackpoint(const Trackpoint& tp, const timeData& currentTime);
-    void newLap(const timeData& currentTime);
+    bool startLogging(const timeData& currentTime) override;
+    bool addTrackpoint(const Trackpoint& tp, const timeData& currentTime) override;
+    bool newLap(const timeData& currentTime) override;
     bool finaliseLogging();
 
     const timeDuration elapsed_Total() const {return activeTotal();};

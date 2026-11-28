@@ -68,9 +68,9 @@ public:
         return activeTotal() - laps.back().activeAtStart;
     }
 
-    virtual void startLogging(const timeData& currentTime) =0 ;
-    virtual void addTrackpoint(const Trackpoint& tp, const timeData& currentTime) = 0;
-    virtual void newLap(const timeData& currentTime) = 0;
+    virtual bool startLogging(const timeData& currentTime) = 0;
+    virtual bool addTrackpoint(const Trackpoint& tp, const timeData& currentTime) = 0;
+    virtual bool newLap(const timeData& currentTime) = 0;
     virtual bool finaliseLogging() = 0;
     virtual const timeDuration elapsed_Total() const = 0;
     virtual const timeDuration elapsed_Lap() const = 0;

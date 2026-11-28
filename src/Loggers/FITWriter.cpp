@@ -21,17 +21,33 @@ uint16_t FitWriter::crc16Update(uint16_t crc, uint8_t byte) {
 }
 
 void FitWriter::rawWrite(const uint8_t* buf, size_t n) {
-    _file.write(buf, n);
+    if (_error || !_file.isOpen()) {
+        _error = true;
+        return;
+    }
+    if (_file.write(buf, n) != n || _file.getWriteError()) {
+        _error = true;
+        return;
+    }
     _dataSize += n;
 }
 
 bool FitWriter::open(const String& path) {
+    if (_file.isOpen() && !close()) return false;
+    _error = false;
+    _dataSize = 0;
+    if (!_storage) {
+        _error = true;
+        return false;
+    }
+
     // O_RDWR (not just O_WRITE) is required because close() seeks back to
     // patch the header's data_size field after all messages are written.
     _file = _storage->openFile(path.c_str(), O_RDWR | O_CREAT | O_TRUNC);
-    if (!_file) return false;
-
-    _dataSize = 0;
+    if (!_file) {
+        _error = true;
+        return false;
+    }
 
     // Write a placeholder 14-byte header; data_size gets patched in close().
     uint8_t header[14] = {0};
@@ -53,7 +69,11 @@ bool FitWriter::open(const String& path) {
     // known once all messages are written. close() recomputes the CRC in
     // one pass over the FINAL on-disk bytes (real header + all data), which
     // is the only way to guarantee the stored CRC matches what's on disk.
-    _file.write(header, 14);
+    if (_file.write(header, sizeof(header)) != sizeof(header) || _file.getWriteError()) {
+        _error = true;
+        _file.close();
+        return false;
+    }
 
     return true;
 }
@@ -100,16 +120,26 @@ void FitWriter::writeString(const char* s, uint8_t fieldSize) {
     rawWrite(buf, len);
 }
 
-void FitWriter::close() {
+bool FitWriter::close() {
+    if (!_file.isOpen()) {
+        _error = true;
+        return false;
+    }
+
+    bool success = !_error && !_file.getWriteError();
     // _dataSize is exactly "bytes written after the 14-byte header", so the
     // end-of-data position is always 14 + _dataSize.
     const uint32_t endOfDataPos = 14 + _dataSize;
 
     // Patch data_size (bytes 4-7 of header) now that we know the total.
-    _file.seekSet(4);
+    if (success && !_file.seekSet(4)) success = false;
     uint8_t sizeBytes[4];
     memcpy(sizeBytes, &_dataSize, 4);
-    _file.write(sizeBytes, 4);
+    if (success &&
+        (_file.write(sizeBytes, sizeof(sizeBytes)) != sizeof(sizeBytes) ||
+         _file.getWriteError())) {
+        success = false;
+    }
 
     // Compute the CRC in a single pass over the FINAL on-disk bytes (header
     // with the real data_size already patched in, plus all data messages).
@@ -117,27 +147,36 @@ void FitWriter::close() {
     // guarantees the CRC matches exactly what ends up on disk, regardless
     // of when data_size becomes known. Read back in fixed-size chunks
     // rather than the whole file at once to keep RAM usage bounded.
-    _file.seekSet(0);
+    if (success && !_file.seekSet(0)) success = false;
     uint16_t crc = 0;
     uint8_t buf[64];
     uint32_t remaining = endOfDataPos;
-    while (remaining > 0) {
+    while (success && remaining > 0) {
         size_t chunkLen = remaining < sizeof(buf) ? remaining : sizeof(buf);
         int n = _file.read(buf, chunkLen);
-        if (n <= 0) break; // read error -- shouldn't happen, but don't spin
+        if (n != static_cast<int>(chunkLen)) {
+            success = false;
+            break;
+        }
         for (int i = 0; i < n; ++i) {
             crc = crc16Update(crc, buf[i]);
         }
         remaining -= n;
     }
-    _crc = crc;
+    if (success) _crc = crc;
 
     // Return to end-of-data before appending the trailing CRC.
-    _file.seekSet(endOfDataPos);
+    if (success && !_file.seekSet(endOfDataPos)) success = false;
 
     uint8_t crcBytes[2];
     memcpy(crcBytes, &_crc, 2);
-    _file.write(crcBytes, 2);
+    if (success &&
+        (_file.write(crcBytes, sizeof(crcBytes)) != sizeof(crcBytes) ||
+         _file.getWriteError())) {
+        success = false;
+    }
 
-    _file.close();
+    if (!_file.close()) success = false;
+    _error = !success;
+    return success;
 }

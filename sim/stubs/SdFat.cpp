@@ -16,9 +16,11 @@
 FsDateTime::callback_t FsDateTime::_cb = nullptr;
 
 static std::string g_sdRoot = "sdcard";
+static bool g_failFileWrites = false;
 
 const char* simSdRoot() { return g_sdRoot.c_str(); }
 void simSetSdRoot(const char* path) { g_sdRoot = path ? path : "sdcard"; }
+void simSetFileWriteFailure(bool fail) { g_failFileWrites = fail; }
 
 std::string simSdHostPath(const char* devicePath) {
     std::string p = devicePath ? devicePath : "";
@@ -42,6 +44,7 @@ static void ensureParentDirs(const std::string& hostPath) {
 
 bool File32::open(const char* path, oflag_t mode) {
     close();
+    _writeError = false;
     const std::string host = simSdHostPath(path);
 
     struct stat st;
@@ -75,14 +78,39 @@ bool File32::open(const char* path, oflag_t mode) {
     return _fp != nullptr;
 }
 
-void File32::close() {
-    if (_fp) { fclose(_fp); _fp = nullptr; }
+size_t File32::write(uint8_t c) {
+    if (!_fp || g_failFileWrites) {
+        _writeError = true;
+        return 0;
+    }
+    const size_t written = fwrite(&c, 1, 1, _fp);
+    if (written != 1) _writeError = true;
+    return written;
+}
+
+size_t File32::write(const uint8_t* buf, size_t n) {
+    if (!_fp || g_failFileWrites) {
+        _writeError = true;
+        return 0;
+    }
+    const size_t written = fwrite(buf, 1, n, _fp);
+    if (written != n) _writeError = true;
+    return written;
+}
+
+bool File32::close() {
+    bool success = !_writeError;
+    if (_fp) {
+        if (fclose(_fp) != 0) success = false;
+        _fp = nullptr;
+    }
     if (_dir) { closedir(_dir); _dir = nullptr; }
     _dirPath.clear();
     _name.clear();
     _isDir = false;
     _size = 0;
     _sizeCached = false;
+    return success;
 }
 
 int File32::read() {

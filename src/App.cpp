@@ -251,7 +251,7 @@ void App::update() {
 
         case AppState::LOGGING:
             HAL::inst().bluetooth().setMode(E_Type_BT_Mode::idle);
-            _ride.update(rideState, state_prev);
+            if (!_ride.update(rideState, state_prev)) state = AppState::IDLE;
             break;
         
         case AppState::PAUSED:
@@ -344,7 +344,7 @@ void App::handleAppEvent(const AppEvent& e) {
             break;
 
         case AppEventType::NewLap:
-            _ride.newLap(state);
+            if (!_ride.newLap(state)) state = AppState::IDLE;
             break;
 
         case AppEventType::ConnectBluetooth:

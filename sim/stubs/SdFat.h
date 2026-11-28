@@ -32,6 +32,7 @@ typedef uint8_t oflag_t;
 /** Root of the simulated card on the host filesystem. */
 const char* simSdRoot();
 void        simSetSdRoot(const char* path);
+void        simSetFileWriteFailure(bool fail);
 
 /** Maps a device path ("/activity_1.fit") to a host path. */
 std::string simSdHostPath(const char* devicePath);
@@ -45,16 +46,26 @@ public:
     // IStorage::openFile, so move semantics have to work.
     File32(const File32&) = delete;
     File32& operator=(const File32&) = delete;
-    File32(File32&& o) noexcept : _fp(o._fp) { o._fp = nullptr; }
+    File32(File32&& o) noexcept : _fp(o._fp), _writeError(o._writeError) {
+        o._fp = nullptr;
+        o._writeError = false;
+    }
     File32& operator=(File32&& o) noexcept {
-        if (this != &o) { close(); _fp = o._fp; o._fp = nullptr; }
+        if (this != &o) {
+            close();
+            _fp = o._fp;
+            _writeError = o._writeError;
+            o._fp = nullptr;
+            o._writeError = false;
+        }
         return *this;
     }
 
     bool open(const char* path, oflag_t mode = O_RDONLY);
-    void close();
+    bool close();
     bool isOpen() const { return _fp != nullptr || _dir != nullptr; }
     explicit operator bool() const { return isOpen(); }
+    bool getWriteError() const { return !_fp || _writeError; }
 
     // Directory iteration (used by SDCardSystem::listFiles). openNext(&dir,
     // O_READ) steps through dir's entries; getName/getName8/isDir/fileSize
@@ -67,8 +78,8 @@ public:
     bool isHidden() const { return false; }
     bool isSystem() const { return false; }
 
-    size_t write(uint8_t c) override { return _fp ? fwrite(&c, 1, 1, _fp) : 0; }
-    size_t write(const uint8_t* buf, size_t n) override { return _fp ? fwrite(buf, 1, n, _fp) : 0; }
+    size_t write(uint8_t c) override;
+    size_t write(const uint8_t* buf, size_t n) override;
     size_t write(const void* buf, size_t n) { return write((const uint8_t*)buf, n); }
 
     int  read(void* buf, size_t n) { return _fp ? (int)fread(buf, 1, n, _fp) : -1; }
@@ -78,7 +89,9 @@ public:
     uint32_t fileSize();
     int  available();
     int  peek();
-    void flush() { if (_fp) fflush(_fp); }
+    void flush() {
+        if (!_fp || fflush(_fp) != 0) _writeError = true;
+    }
 
 private:
     FILE* _fp = nullptr;
@@ -88,6 +101,7 @@ private:
     bool    _isDir = false;          // cached isDir from last openNext()
     uint32_t _size = 0;              // cached size from last openNext()
     bool    _sizeCached = false;     // true when _size came from openNext()
+    bool    _writeError = false;
 };
 
 class SdFat32 {
