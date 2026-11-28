@@ -337,11 +337,24 @@ void BluetoothSystem::loadDevices() {
             newDevice.type = device["type"];
             newDevice.saved = true;
 
-            createDevice(newDevice);
+            bool deviceExists = false;
             {
                 BluetoothRegistryGuard guard;
-                deviceList.push_back(newDevice);
+                for (auto& existingDevice : deviceList) {
+                    if (existingDevice.MAC == newDevice.MAC) {
+                        memcpy(existingDevice.name, newDevice.name,
+                               sizeof(existingDevice.name));
+                        existingDevice.type = newDevice.type;
+                        existingDevice.saved = true;
+                        deviceExists = true;
+                        break;
+                    }
+                }
+                if (!deviceExists) {
+                    deviceList.push_back(newDevice);
+                }
             }
+            createDevice(newDevice);
             Serial.print("Loaded: "); Serial.println(newDevice.name);
         }
         dataFile.close();
