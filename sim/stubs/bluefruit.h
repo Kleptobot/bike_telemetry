@@ -115,7 +115,7 @@ public:
 
 class BluefruitScanner {
 public:
-    void start(uint16_t = 0) { _running = true; }
+    bool start(uint16_t = 0) { _running = true; return true; }
     void stop() { _running = false; }
     void resume() { _running = true; }
     void restartOnDisconnect(bool) {}
@@ -141,7 +141,7 @@ public:
     void simAdvertise(ble_gap_evt_adv_report_t* report) {
         if (_running && _rx) _rx(report);
     }
-    bool running() const { return _running; }
+    bool isRunning() const { return _running; }
 
 private:
     scan_cb_t _rx = nullptr;

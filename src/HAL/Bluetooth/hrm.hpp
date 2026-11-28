@@ -44,8 +44,10 @@ public:
   virtual ~hrm(){};
 
   static void create_hrm(MacAddress MAC) {
-    btDevices.emplace_back(std::unique_ptr<hrm>(new hrm(MAC)));
-    _hrmDevices.push_back(static_cast<hrm*>(btDevices.back().get()));
+    std::shared_ptr<hrm> device(new hrm(MAC));
+    BluetoothRegistryGuard guard;
+    btDevices.push_back(device);
+    _hrmDevices.push_back(device.get());
   };
 
   static data_record getHRM();

@@ -5,6 +5,7 @@
 #include <vector>
 #include <ArduinoJson.h>
 #include <functional>
+#include <atomic>
 
 #include "BT_Device.hpp"
 #include "csc.hpp"
@@ -105,7 +106,9 @@ class BluetoothSystem {
     // They now only enqueue, and update() applies the changes.
     static SpscRing<BluetoothDevice, 8> pendingDiscovered;
     static SpscRing<MacAddress, 8> pendingDisconnected;
-    static volatile bool deviceListDirty;   // set by callbacks, cleared by update()
+    static MacAddress pendingDiscoveryMACs[7];
+    static uint8_t pendingDiscoveryCount;
+    static std::atomic<bool> deviceListDirty;   // set by callbacks, cleared by update()
 
     /** Applies queued BLE events to deviceList. Main loop only. */
     static void drainPendingEvents();
@@ -130,10 +133,9 @@ class BluetoothSystem {
     static void scan_discovery(ble_gap_evt_adv_report_t* report);
 
     /**
-    * Callback invoked by BT_Device when a device is removed from btDevices
-    * due to an unexpected disconnect (e.g. device powered off / out of range).
-    * Marks the matching deviceList entry as not connected (without un-saving it)
-    * and notifies the UI via deviceListCallback.
+    * Callback invoked by BT_Device after an unexpected disconnect (e.g. device
+    * powered off / out of range). Queues the event for update() to mark the
+    * matching deviceList entry disconnected and notify the UI.
     * @param MAC address of the device that was disconnected
     */
     static void onDeviceUnexpectedDisconnect(MacAddress MAC);

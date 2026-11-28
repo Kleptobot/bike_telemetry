@@ -4,14 +4,10 @@
 std::vector<cps*> cps::_cpsDevices;
 
 void cps::cps_notify_callback(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len) {
-  //itterate the members of the bt device base
-  for (cps* dev : _cpsDevices) {
-    //compare the conn handle of the evt with the conn handle of the device servic (static cast to a cps safe because we know the type)
-    if (chr->connHandle() == dev->cps_serv.connHandle()) {
-      //call the underlying notify method for the instance (again static cast)
-      dev->cps_notify(chr, data, len);
-      return;
-    }
+  if (!chr) return;
+  const auto device = BT_Device::getDeviceWithConnectionHandle(chr->connHandle());
+  if (device && device->getType() == E_Type_BT_Device::bt_cps) {
+    static_cast<cps*>(device.get())->cps_notify(chr, data, len);
   }
 }
 

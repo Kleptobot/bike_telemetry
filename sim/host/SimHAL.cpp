@@ -210,7 +210,7 @@ static void ensureSensorFixture() {
 static bool connectSensor(const uint8_t* mac, uint16_t conn,
                           uint16_t measUuid, uint16_t featUuid,
                           uint8_t feat8, uint16_t feat16) {
-    BT_Device* dev = BT_Device::getDeviceWithMAC(MacAddress(mac));
+    const auto dev = BT_Device::getDeviceWithMAC(MacAddress(mac));
     if (!dev) return false;   // loadDevices() has not run yet (App BOOT)
     for (auto* chr : BLEClientCharacteristic::all()) {
         if (chr->uuid() == featUuid) {

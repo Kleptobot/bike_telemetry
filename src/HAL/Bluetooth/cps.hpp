@@ -87,8 +87,10 @@ class cps : public BT_Device {
     
     static void create_cps(MacAddress MAC)
     {
-      btDevices.push_back(std::unique_ptr<cps>(new cps(MAC)));
-      _cpsDevices.push_back(static_cast<cps*>(btDevices.back().get()));
+      std::shared_ptr<cps> device(new cps(MAC));
+      BluetoothRegistryGuard guard;
+      btDevices.push_back(device);
+      _cpsDevices.push_back(device.get());
     };
 
     static void cps_notify_callback(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len);

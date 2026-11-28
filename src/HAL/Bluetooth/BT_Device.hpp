@@ -11,6 +11,7 @@
 #include "HAL/BluetoothInterface.hpp"
 #include "MAC.hpp"
 #include "DebugConfig.hpp"
+#include "BluetoothRegistryGuard.hpp"
 
 #define     GATT_BAT_UUID                           0x180F
 #define     GATT_BAT_MEASUREMENT_UUID               0x2A19
@@ -54,20 +55,22 @@ class BT_Device {
     bool _begun = false;
     uint16_t _conn_handle = BLE_CONN_HANDLE_INVALID;
     E_Type_BT_Device bt_type = E_Type_BT_Device::bt_csc;
-    static std::vector<std::unique_ptr<BT_Device>> btDevices;
+    static std::vector<std::shared_ptr<BT_Device>> btDevices;
     bool _disconnected = false;
 
     BT_Device(){};
     virtual void removeFromLocalList() {};
+    void disconnectForRemoval();
 
   public:
     virtual ~BT_Device() {};
     
-    static BT_Device* getDeviceWithMAC(MacAddress MAC);
+    static std::shared_ptr<BT_Device> getDeviceWithMAC(MacAddress MAC);
+    static std::shared_ptr<BT_Device> getDeviceWithConnectionHandle(uint16_t connHandle);
 
     static void removeDeviceWithMAC(MacAddress MAC);
 
-    static void removeDevice(std::unique_ptr<BT_Device> device);
+    static void removeDevice(std::shared_ptr<BT_Device> device);
 
     static void disconnect_callback(uint16_t conn_handle, uint8_t reason);
 

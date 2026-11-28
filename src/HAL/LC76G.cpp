@@ -19,14 +19,22 @@ bool LC76G::begin(TwoWire* wire) {
 void LC76G::pollResponseTimeouts() {
     uint32_t now = millis();
 
-    for (auto it = _responses.begin();it != _responses.end(); ) {
-        if ((now - it->sendTimeMs) > it->timeoutMs) {
-            if(it->callback)
-                it->callback(0, nullptr, it->userContext);        // call the callback but with no payload or args
+    // Callbacks may queue another command, which can reallocate _responses.
+    // Track the original entries by index and erase each expired entry before
+    // invoking its callback so no iterator or reference survives user code.
+    size_t remaining = _responses.size();
+    size_t index = 0;
+    while (remaining > 0 && index < _responses.size()) {
+        const PendingResponse response = _responses[index];
+        --remaining;
 
-            it = _responses.erase(it);
+        if ((now - response.sendTimeMs) > response.timeoutMs) {
+            _responses.erase(_responses.begin() + index);
+            if (response.callback) {
+                response.callback(0, nullptr, response.userContext);
+            }
         } else {
-            ++it;
+            ++index;
         }
     }
 }

@@ -101,8 +101,10 @@ class csc : public BT_Device {
     
     static void create_csc(MacAddress MAC)
     {
-      btDevices.push_back(std::unique_ptr<csc>(new csc(MAC)));
-      _cscDevices.push_back(static_cast<csc*>(btDevices.back().get()));
+      std::shared_ptr<csc> device(new csc(MAC));
+      BluetoothRegistryGuard guard;
+      btDevices.push_back(device);
+      _cscDevices.push_back(device.get());
     };
 
     // --- Measurement-frame surface (see HAL/Measurements.hpp) ----------------

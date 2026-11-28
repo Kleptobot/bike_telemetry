@@ -5,14 +5,10 @@ std::vector<csc*> csc::_cscDevices;
 uint32_t csc::_nextSourceId = 0;
 
 void csc::csc_notify_callback(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len) {
-  //itterate the members of the bt device base
-  for (csc* dev : _cscDevices) {
-    //compare the conn handle of the evt with the conn handle of the device servic (static cast to a csc, safe because we know the type)
-    if (chr->connHandle() == dev->csc_serv.connHandle()) {
-      //call the underlying notify method for the instance (again static cast)
-      dev->csc_notify(chr, data, len);
-      return;
-    }
+  if (!chr) return;
+  const auto device = BT_Device::getDeviceWithConnectionHandle(chr->connHandle());
+  if (device && device->getType() == E_Type_BT_Device::bt_csc) {
+    static_cast<csc*>(device.get())->csc_notify(chr, data, len);
   }
 }
 

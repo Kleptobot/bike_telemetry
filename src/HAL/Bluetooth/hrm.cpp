@@ -3,14 +3,10 @@
 std::vector<hrm*> hrm::_hrmDevices;
 
 void hrm::hrm_notify_callback(BLEClientCharacteristic* chr, uint8_t* data, uint16_t len) {
-  //itterate the members of the bt device base
-  for (hrm* dev : _hrmDevices) {
-    //compare the conn handle of the evt with the conn handle of the device servic (static cast to an hrm safe because we know the type)
-    if (chr->connHandle() == dev->hrm_serv.connHandle()) {
-      //call the underlying notify method for the instance (again static cast)
-      dev->hrm_notify(chr, data, len);
-      return;
-    }
+  if (!chr) return;
+  const auto device = BT_Device::getDeviceWithConnectionHandle(chr->connHandle());
+  if (device && device->getType() == E_Type_BT_Device::bt_hrm) {
+    static_cast<hrm*>(device.get())->hrm_notify(chr, data, len);
   }
 }
 
