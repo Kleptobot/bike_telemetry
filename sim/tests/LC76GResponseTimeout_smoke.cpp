@@ -16,6 +16,7 @@ public:
     File32 openFile(const char*, oflag_t) override { return File32(); }
     bool exists(const char*) override { return false; }
     bool remove(const char*) override { return false; }
+    bool rename(const char*, const char*) override { return false; }
     bool listFiles(const char*, StorageEntry*, uint8_t, uint8_t& outCount) override {
         outCount = 0;
         return false;

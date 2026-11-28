@@ -17,6 +17,7 @@ public:
     // Generic file accessors
     File32 openFile(const char* path, oflag_t mode) override;
     bool remove(const char* path) override;
+    bool rename(const char* oldPath, const char* newPath) override;
     bool exists(const char* path) override;
     bool listFiles(const char* dir, StorageEntry* out, uint8_t max,
                    uint8_t& outCount) override;

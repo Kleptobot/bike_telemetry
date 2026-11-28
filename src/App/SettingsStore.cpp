@@ -2,14 +2,114 @@
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
+#include <cstdio>
+
+namespace {
+constexpr size_t SETTINGS_PATH_CAPACITY = 64;
+
+bool makeSettingsSiblingPath(const char* path, const char* suffix,
+                             char* out, size_t outSize) {
+    const int length = snprintf(out, outSize, "%s%s", path, suffix);
+    if (length < 0 || static_cast<size_t>(length) >= outSize) {
+        Serial.printf("[SettingsStore] settings path is too long: %s\n", path);
+        return false;
+    }
+    return true;
+}
+
+bool recoverSettingsFile(IStorage& storage, const char* path,
+                         bool preparingForWrite) {
+    char tempPath[SETTINGS_PATH_CAPACITY];
+    char backupPath[SETTINGS_PATH_CAPACITY];
+    if (!makeSettingsSiblingPath(path, ".tmp", tempPath, sizeof(tempPath)) ||
+        !makeSettingsSiblingPath(path, ".bak", backupPath, sizeof(backupPath))) {
+        return false;
+    }
+
+    if (!storage.exists(path) && storage.exists(backupPath) &&
+        !storage.rename(backupPath, path)) {
+        Serial.printf("[SettingsStore] failed to restore backup for %s\n", path);
+        return false;
+    }
+
+    if (storage.exists(path) && storage.exists(backupPath) &&
+        !storage.remove(backupPath)) {
+        Serial.printf("[SettingsStore] failed to remove stale backup for %s\n", path);
+        if (preparingForWrite) return false;
+    }
+
+    if (preparingForWrite && storage.exists(tempPath) &&
+        !storage.remove(tempPath)) {
+        Serial.printf("[SettingsStore] failed to remove incomplete temporary file for %s\n",
+                      path);
+        return false;
+    }
+    return true;
+}
+
+void removeTemporaryFile(IStorage& storage, const char* tempPath) {
+    if (storage.exists(tempPath) && !storage.remove(tempPath)) {
+        Serial.printf("[SettingsStore] failed to remove temporary file %s\n", tempPath);
+    }
+}
+
+bool writeJsonWithBackup(IStorage& storage, const char* path,
+                         JsonDocument& document) {
+    char tempPath[SETTINGS_PATH_CAPACITY];
+    char backupPath[SETTINGS_PATH_CAPACITY];
+    if (!makeSettingsSiblingPath(path, ".tmp", tempPath, sizeof(tempPath)) ||
+        !makeSettingsSiblingPath(path, ".bak", backupPath, sizeof(backupPath)) ||
+        !recoverSettingsFile(storage, path, true)) {
+        return false;
+    }
+
+    File32 dataFile = storage.openFile(tempPath, FILE_WRITE);
+    if (!dataFile) {
+        Serial.printf("[SettingsStore] failed to open %s for writing\n", tempPath);
+        removeTemporaryFile(storage, tempPath);
+        return false;
+    }
+
+    const size_t expected = measureJson(document);
+    const size_t written = serializeJson(document, dataFile);
+    const bool synced = dataFile.sync();
+    const bool writeError = dataFile.getWriteError();
+    dataFile.close();
+    if (written != expected || !synced || writeError) {
+        Serial.printf("[SettingsStore] failed to write complete settings file %s\n", path);
+        removeTemporaryFile(storage, tempPath);
+        return false;
+    }
+
+    // The serialized byte count and sync result verify this generated JSON
+    // without allocating a second document, which is costly for layouts.
+    const bool hadOriginal = storage.exists(path);
+    if (hadOriginal && !storage.rename(path, backupPath)) {
+        Serial.printf("[SettingsStore] failed to preserve existing settings file %s\n", path);
+        removeTemporaryFile(storage, tempPath);
+        return false;
+    }
+
+    if (!storage.rename(tempPath, path)) {
+        Serial.printf("[SettingsStore] failed to install new settings file %s\n", path);
+        if (hadOriginal && !storage.rename(backupPath, path)) {
+            Serial.printf("[SettingsStore] failed to restore existing settings file %s\n",
+                          path);
+        }
+        removeTemporaryFile(storage, tempPath);
+        return false;
+    }
+
+    if (hadOriginal && storage.exists(backupPath) && !storage.remove(backupPath)) {
+        Serial.printf("[SettingsStore] saved %s but could not remove its backup\n", path);
+    }
+    return true;
+}
+}
 
 void SettingsStore::begin(IStorage* storage, DataModel* model) {
     _storage = storage;
     _model = model;
-}
-
-void SettingsStore::replaceFile(const char* path) {
-    if (_storage->exists(path)) _storage->remove(path);
 }
 
 void SettingsStore::saveBiometrics() {
@@ -28,18 +128,12 @@ void SettingsStore::saveBiometrics() {
     doc["zone4Start"] = a.zone4Start;
     doc["zone5Start"] = a.zone5Start;
 
-    replaceFile("/biometrics.txt");
-    File32 dataFile = _storage->openFile("/biometrics.txt", FILE_WRITE);
-    if (!dataFile) {
-        Serial.println("[SettingsStore] failed to open /biometrics.txt for writing");
-        return;
-    }
-    serializeJson(doc, dataFile);
-    dataFile.close();
+    writeJsonWithBackup(*_storage, "/biometrics.txt", doc);
 }
 
 void SettingsStore::loadBiometrics() {
     if (!_storage || !_model) return;
+    if (!recoverSettingsFile(*_storage, "/biometrics.txt", false)) return;
 
     if (_storage->exists("/biometrics.txt")) {
         Serial.println("Found biometrics.txt");
@@ -86,18 +180,12 @@ void SettingsStore::saveBikeStats() {
     doc["autoLapMode"] = autoLapModeToString(a.autoLapMode);
     doc["autoLapValue"] = a.autoLapValue;
 
-    replaceFile("/bikeStats.txt");
-    File32 dataFile = _storage->openFile("/bikeStats.txt", FILE_WRITE);
-    if (!dataFile) {
-        Serial.println("[SettingsStore] failed to open /bikeStats.txt for writing");
-        return;
-    }
-    serializeJson(doc, dataFile);
-    dataFile.close();
+    writeJsonWithBackup(*_storage, "/bikeStats.txt", doc);
 }
 
 void SettingsStore::loadBikeStats() {
     if (!_storage || !_model) return;
+    if (!recoverSettingsFile(*_storage, "/bikeStats.txt", false)) return;
 
     if (_storage->exists("/bikeStats.txt")) {
         Serial.println("Found bikeStats.txt");
@@ -145,18 +233,12 @@ void SettingsStore::saveLayout() {
         d[j]["type"] = topicDisplayName(l.displays[j].type);
     }
 
-    replaceFile("/layout.txt");
-    File32 dataFile = _storage->openFile("/layout.txt", FILE_WRITE);
-    if (!dataFile) {
-        Serial.println("[SettingsStore] failed to open /layout.txt for writing");
-        return;
-    }
-    serializeJson(doc, dataFile);
-    dataFile.close();
+    writeJsonWithBackup(*_storage, "/layout.txt", doc);
 }
 
 void SettingsStore::loadLayout() {
     if (!_storage || !_model) return;
+    if (!recoverSettingsFile(*_storage, "/layout.txt", false)) return;
 
     if (_storage->exists("/layout.txt")) {
         Serial.println("Found layout.txt");
@@ -198,18 +280,12 @@ void SettingsStore::saveTime() {
     JsonDocument doc;
     doc["UTCOffset"] = _model->time().get().offset();
 
-    replaceFile("/time.txt");
-    File32 dataFile = _storage->openFile("/time.txt", FILE_WRITE);
-    if (!dataFile) {
-        Serial.println("[SettingsStore] failed to open /time.txt for writing");
-        return;
-    }
-    serializeJson(doc, dataFile);
-    dataFile.close();
+    writeJsonWithBackup(*_storage, "/time.txt", doc);
 }
 
 void SettingsStore::loadTime() {
     if (!_storage || !_model) return;
+    if (!recoverSettingsFile(*_storage, "/time.txt", false)) return;
 
     if (_storage->exists("/time.txt")) {
         Serial.println("Found time.txt");
@@ -243,27 +319,13 @@ bool SettingsStore::saveGpsSettings(const GpsSettings& settings) {
         rates.add(settings.nmeaRates[i]);
     }
 
-    if (_storage->exists("/gpsConfig.txt") && !_storage->remove("/gpsConfig.txt")) {
-        Serial.println("[SettingsStore] failed to replace /gpsConfig.txt");
-        return false;
-    }
-    File32 dataFile = _storage->openFile("/gpsConfig.txt", FILE_WRITE);
-    if (!dataFile) {
-        Serial.println("[SettingsStore] failed to open /gpsConfig.txt for writing");
-        return false;
-    }
-    const size_t expected = measureJson(doc);
-    const size_t written = serializeJson(doc, dataFile);
-    dataFile.close();
-    if (written != expected) {
-        Serial.println("[SettingsStore] failed to write /gpsConfig.txt");
-        return false;
-    }
-    return true;
+    return writeJsonWithBackup(*_storage, "/gpsConfig.txt", doc);
 }
 
 void SettingsStore::loadGpsSettings() {
-    if (!_storage || !_model || !_storage->exists("/gpsConfig.txt")) return;
+    if (!_storage || !_model ||
+        !recoverSettingsFile(*_storage, "/gpsConfig.txt", false) ||
+        !_storage->exists("/gpsConfig.txt")) return;
 
     Serial.println("Found gpsConfig.txt");
     File32 dataFile = _storage->openFile("/gpsConfig.txt", FILE_READ);

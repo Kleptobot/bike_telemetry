@@ -38,6 +38,11 @@ bool SDCardSystem::remove(const char* path) {
     return sd.remove(path);
 }
 
+bool SDCardSystem::rename(const char* oldPath, const char* newPath) {
+    if (!mounted) return false;
+    return sd.rename(oldPath, newPath);
+}
+
 bool SDCardSystem::listFiles(const char* dir, StorageEntry* out, uint8_t max,
                              uint8_t& outCount) {
     outCount = 0;

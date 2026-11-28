@@ -22,8 +22,6 @@ public:
 private:
     IStorage* _storage = nullptr;
     DataModel* _model = nullptr;
-
-    void replaceFile(const char* path);
 };
 
 #endif /* SETTINGS_STORE_H */

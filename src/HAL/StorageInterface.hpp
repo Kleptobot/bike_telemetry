@@ -18,6 +18,7 @@ public:
     virtual File32 openFile(const char* path, oflag_t mode) = 0;
     virtual bool exists(const char* path) = 0;
     virtual bool remove(const char* path) = 0;
+    virtual bool rename(const char* oldPath, const char* newPath) = 0;
     // List up to `max` entries in `dir`, filling `out`. outCount is set to the
     // number of entries written. Returns false on I/O error or if the card is
     // not mounted. "." and ".." are never reported.

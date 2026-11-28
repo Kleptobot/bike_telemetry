@@ -84,6 +84,7 @@ public:
 
     int  read(void* buf, size_t n) { return _fp ? (int)fread(buf, 1, n, _fp) : -1; }
     int  read();
+    bool sync();
     bool seekSet(uint32_t pos) { return _fp && fseek(_fp, (long)pos, SEEK_SET) == 0; }
     uint32_t curPosition() const { return _fp ? (uint32_t)ftell(_fp) : 0; }
     uint32_t fileSize();
@@ -110,6 +111,7 @@ public:
     void end() { _mounted = false; }
     bool exists(const char* path);
     bool remove(const char* path);
+    bool rename(const char* oldPath, const char* newPath);
     bool mkdir(const char* path, bool pFlag = true);
 
 private:

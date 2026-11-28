@@ -113,6 +113,11 @@ bool File32::close() {
     return success;
 }
 
+bool File32::sync() {
+    if (!_fp || fflush(_fp) != 0) _writeError = true;
+    return !_writeError;
+}
+
 int File32::read() {
     if (!_fp) return -1;
     int c = fgetc(_fp);
@@ -200,6 +205,13 @@ bool SdFat32::exists(const char* path) {
 
 bool SdFat32::remove(const char* path) {
     return ::remove(simSdHostPath(path).c_str()) == 0;
+}
+
+bool SdFat32::rename(const char* oldPath, const char* newPath) {
+    if (exists(newPath)) return false;
+    const std::string oldHostPath = simSdHostPath(oldPath);
+    const std::string newHostPath = simSdHostPath(newPath);
+    return ::rename(oldHostPath.c_str(), newHostPath.c_str()) == 0;
 }
 
 bool SdFat32::mkdir(const char* path, bool) {

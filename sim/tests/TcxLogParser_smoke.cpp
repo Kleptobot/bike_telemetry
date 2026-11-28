@@ -25,6 +25,9 @@ public:
     bool remove(const char* path) override {
         return SdFat32().remove(path);
     }
+    bool rename(const char* oldPath, const char* newPath) override {
+        return SdFat32().rename(oldPath, newPath);
+    }
     bool listFiles(const char*, StorageEntry*, uint8_t, uint8_t& outCount) override {
         outCount = 0;
         return true;
