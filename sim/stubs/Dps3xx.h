@@ -13,4 +13,9 @@ public:
     int16_t startMeasureBothCont(int16_t, int16_t, int16_t, int16_t) { return 0; }
     int16_t getContResults(float* temp, uint8_t& tempCount, float* prs, uint8_t& prsCount);
 };
+
+void simSetDpsResultCounts(uint8_t temperatureCount, uint8_t pressureCount,
+                           int16_t resultCode);
+void simSetPressurePa(float pa);
+void simSetBaroTempC(float c);
 #endif

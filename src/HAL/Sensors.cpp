@@ -1,4 +1,5 @@
 #include "Sensors.hpp"
+#include <cmath>
 
 namespace {
     // Observed interval between consecutive accepted samples, clamped into
@@ -83,34 +84,39 @@ bool SensorSystem::update(bool i2cBusy) {
         ret = _dps.getContResults(temperature, temperatureCount, pressure, pressureCount);
         //_dps.measureTempOnce(f32_DSP_Temp, 7);
         //_dps.measurePressureOnce(f32_DSP_Pa, 7);
-        if (ret != 0)
-        {
+        if (ret != 0 || temperatureCount == 0 || pressureCount == 0) {
             // Serial.print("FAIL! ret = ");
             _dpsValid = false;
-        }
-        else
-        {
-            dps_dat.f32_DSP_Temp=0;
-            for (int16_t i = 0; i < temperatureCount; i++)
-            {
-            dps_dat.f32_DSP_Temp+=temperature[i];
+        } else {
+            float temperatureSum = 0.0f;
+            for (uint8_t i = 0; i < temperatureCount; ++i) {
+                temperatureSum += temperature[i];
             }
-            dps_dat.f32_DSP_Temp = dps_dat.f32_DSP_Temp/(float)temperatureCount;
 
-            dps_dat.f32_DSP_Pa=0;
-            for (int16_t i = 0; i < pressureCount; i++)
-            {
-            dps_dat.f32_DSP_Pa+=pressure[i];
+            float pressureSum = 0.0f;
+            for (uint8_t i = 0; i < pressureCount; ++i) {
+                pressureSum += pressure[i];
             }
-            dps_dat.f32_DSP_Pa = dps_dat.f32_DSP_Pa/(float)pressureCount;
-            _dpsValid = true;
 
-            // Frame stamping: only successful fetches count as samples, so
-            // the interval is success-to-success rather than attempt-to-attempt.
-            const uint32_t nowMs = millis();
-            _dpsDtMs = observedDt(nowMs, _dpsOkTime);
-            _dpsOkTime = nowMs;
-            ++_dpsSeq;
+            const float averageTemperature =
+                temperatureSum / static_cast<float>(temperatureCount);
+            const float averagePressure =
+                pressureSum / static_cast<float>(pressureCount);
+            if (!std::isfinite(averageTemperature) ||
+                !std::isfinite(averagePressure)) {
+                _dpsValid = false;
+            } else {
+                dps_dat.f32_DSP_Temp = averageTemperature;
+                dps_dat.f32_DSP_Pa = averagePressure;
+                _dpsValid = true;
+
+                // Frame stamping: only successful fetches count as samples,
+                // so the interval is success-to-success, not attempt-to-attempt.
+                const uint32_t nowMs = millis();
+                _dpsDtMs = observedDt(nowMs, _dpsOkTime);
+                _dpsOkTime = nowMs;
+                ++_dpsSeq;
+            }
         }
         dps_dat.dpsValid = _dpsValid;
         if (dpsCallback) {
