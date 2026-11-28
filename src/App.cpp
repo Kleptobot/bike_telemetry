@@ -166,7 +166,20 @@ void App::update() {
     // Any periodic application-level behavior here
     const DataBus& bus = model.bus();
 
-    model.SD().update ({HAL::inst().SDMounted(),!HAL::inst().inputs().SD_Det.state});
+    const bool sdMounted = HAL::inst().SDMounted();
+    model.SD().update({sdMounted, !HAL::inst().inputs().SD_Det.state});
+    if (sdMounted && !_sdWasMounted && state != AppState::BOOT) {
+        _sdSettingsReloadPending = true;
+    }
+    if (!sdMounted) {
+        _sdSettingsReloadPending = false;
+    }
+    if (_sdSettingsReloadPending && state == AppState::IDLE) {
+        Serial.println("[App] SD card mounted; reloading settings.");
+        _sdSettingsReloadPending = false;
+        state = AppState::BOOT;
+    }
+    _sdWasMounted = sdMounted;
 
     if (!appEvents.empty()) {
         handleAppEvent(appEvents.front());

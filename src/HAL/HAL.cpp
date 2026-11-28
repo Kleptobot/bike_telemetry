@@ -85,15 +85,22 @@ void HAL::init(timeData* date) {
         inputSystem.update(false);
         delay(50);
     }
-    if (!inputs().SD_Det.state) {   //SD card pin is inverted, low means card is present
-        while (!storageSystem.init(date)) {
-            Serial.println("SD card detected, initializing...");
-            delay(200);
-        }
-    } else {
-        Serial.println("No SD card detected.");
-    }
+    reInitStorage(date);
     _LC76G.begin(&Wire);
+}
+
+void HAL::updateStorageMount() {
+    if (!_storageRetryEnabled || storageSystem.isMounted() || !_storageDate) return;
+
+    // SD_DET is active-low. Keep the retry policy enabled while no card is
+    // present so insertion is detected even if its input edge was missed.
+    if (inputs().SD_Det.state) return;
+
+    const uint32_t now = millis();
+    if (now - _lastStorageInitAttemptMs < SD_INIT_RETRY_INTERVAL_MS) return;
+
+    _lastStorageInitAttemptMs = now;
+    storageSystem.init(_storageDate);
 }
 
 void HAL::update() {
@@ -110,6 +117,7 @@ void HAL::update() {
     const uint32_t inT0 = micros();
     const bool inputsUpdated = inputSystem.update(foreignBusy);
     _dbgInBusyUs += micros() - inT0;
+    updateStorageMount();
     if(inputsUpdated) {
         //rule 2: postpone the GNSS's next cycle start after foreign use
         _LC76G.i2c_wait();

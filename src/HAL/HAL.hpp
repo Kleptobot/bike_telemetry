@@ -25,10 +25,15 @@ class HAL {
     IStorage* SD() { return &storageSystem; }
     BluetoothSystem& bluetooth() { return bluetoothSystem; }
     void reInitStorage(timeData* date) {
-        while (!storageSystem.init(date)) {
-            Serial.println("SD card detected, initializing...");
-            delay(200);
+        _storageDate = date;
+        _storageRetryEnabled = true;
+        if (inputs().SD_Det.state) {
+            Serial.println("No SD card detected.");
+            return;
         }
+
+        _lastStorageInitAttemptMs = millis();
+        storageSystem.init(date);
     }
 
     void sleep();
@@ -40,7 +45,10 @@ class HAL {
     void resetGPS();
 
     bool SDMounted() const { return storageSystem.isMounted(); };
-    void unMountSD() {storageSystem.unMount(); };
+    void unMountSD() {
+        _storageRetryEnabled = false;
+        storageSystem.unMount();
+    }
 
     // Complete acquisition snapshot, rebuilt once per tick (see
     // HAL/Measurements.hpp). Read-side contract for the App layer: raw facts
@@ -67,6 +75,10 @@ class HAL {
     BluetoothSystem bluetoothSystem;
     SDCardSystem storageSystem;
     LC76G _LC76G;
+    timeData* _storageDate = nullptr;
+    uint32_t _lastStorageInitAttemptMs = 0;
+    bool _storageRetryEnabled = false;
+    static constexpr uint32_t SD_INIT_RETRY_INTERVAL_MS = 2000;
 
     // private memeber variables
     uint8_t _rxBuffer[1024];
@@ -115,6 +127,7 @@ class HAL {
     bool startPendingGpsNmeaRateSync();
     void refreshFrame();
     void debugBusSummary();
+    void updateStorageMount();
 
     //
 };

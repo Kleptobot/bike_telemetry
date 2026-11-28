@@ -68,6 +68,8 @@ private:
     uint32_t _lastRenderMillis = 0;
     bool _gpsSettingsLoaded = false;
     bool _gpsRateSyncStarted = false;
+    bool _sdWasMounted = false;
+    bool _sdSettingsReloadPending = false;
     // Idle auto-sleep state
     uint32_t _lastActivityMs = 0;  // timestamp of the last button press/hold
     bool _idleActive = false;      // true while in IDLE, re-arms the countdown on entry
