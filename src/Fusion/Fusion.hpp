@@ -121,16 +121,18 @@ public:
 
     // Zero the accumulated ride distance. Called by App when logging starts
     // or the SD card state changes (previously TelemetryDataProvider::resetDistance).
-    // Ride-scoped accumulators that share the distance's lifetime (energy,
-    // calories, TSS, time-in-zone) reset here too, via FitnessFusion::reset().
+    // Ride-scoped energy and FitnessFusion accumulators reset here too.
     void resetDistance() {
         _totalDistanceM = 0.0f;
         _gpsTotalDistanceM = 0.0f;
         _wheelTotalDistanceM = 0.0f;
+        _energyKj = 0.0f;
         _fitness.reset();
         _shiftCount = 0;
         _hasStableGear = false;
         _shiftConfirmTicks = 0;
+        _totalAscentM = 0.0f;
+        _totalDescentM = 0.0f;
     }
 
     const DerivedChannels& out() const { return _out; }
